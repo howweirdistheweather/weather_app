@@ -103,7 +103,12 @@ This document spells it all out as far as what they have and how to get it
 https://www.ndbc.noaa.gov/docs/ndbc_web_data_guide.pdf  
 
 And this is a quick example of what we can get, some ~hourly buoy data in a text file  
-https://www.ndbc.noaa.gov/view_text_file.php?filename=42040h2001.txt.gz&dir=data/historical/stdmet/  
+https://www.ndbc.noaa.gov/view_text_file.php?filename=42040h2001.txt.gz&dir=data/historical/stdmet/
+
+Most stations have very limited data, back to 2005 or so. Here is one in Alaska going back to 2002:
+https://www.ndbc.noaa.gov/station_history.php?station=46080
+
+Buoy data includes some columns not avaiable for onshore stations like wave height and period, and water temperature.
 
 ## **LCD - Local Climatological Data**
 
