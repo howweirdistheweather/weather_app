@@ -149,7 +149,9 @@ def create_dag(dag_id,
                     na_values       = ['', ' ', '-', '_', '+']
                 )
                 lcd_df.loc[:, target_features] = lcd_df[target_features].apply(clean_hourly).astype(float)
-                cleaned_df = lcd_df.set_index("DATE")[target_features]
+                ## Adding station_id to output
+                lcd_df['station_id'] = station_id
+                cleaned_df = lcd_df.set_index("DATE")[['station_id'] + target_features]
                 cleaned_df.to_sql("lcd_incoming", if_exists = "append", con = src_conn)
             except:
                 raise ValueError(f"Couldn't load to staging database: {year_csv_file}")
@@ -195,7 +197,7 @@ for dag_number, station_id in enumerate(list(station_ids)):
                     'max_active_runs': 1
                     }
 
-    schedule = '@daily'
+    schedule = '@once'
 
     # dag_number = n
 
