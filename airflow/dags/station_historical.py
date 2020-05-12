@@ -1,7 +1,7 @@
 from datetime import datetime
 from glob import glob
 import pandas as pd, numpy as np
-
+## wtf
 from airflow import DAG
 from airflow.models import Variable
 from airflow.hooks.postgres_hook import PostgresHook # appearantly only good for reads but not writes? wtf
@@ -13,7 +13,7 @@ import logging
 
 def create_dag(dag_id, 
                schedule,
-               dag_number,
+               station_id,
                default_args):
 
     pg_dsn          = Variable.get('pg_dsn', default_var="postgresql://hwitw:hwitw@localhost:5432/hwitw_lake")
@@ -130,7 +130,9 @@ def create_dag(dag_id,
         src_conn = create_engine(pg_dsn)
         df = pd.read_sql("select * from pg_catalog.pg_tables", con = src_conn)
         incoming_table_exists = df.query('tablename == "lcd_incoming"').shape[0]
-        logging.info(incoming_table_exists)
+        # logging.info(f"starting new import for {station_id}")
+        # logging.info(args)
+        # logging.info(incoming_table_exists)
         ## Iterate through years to find local CSV files matching station in context
         for year in range(start_year, end_year + 1):
             year_directory = f"{data_dir}/{year}"
@@ -140,6 +142,7 @@ def create_dag(dag_id,
             try:
                 year_csv = glob(year_csv_file)
                 year_csv = (year_csv[:1] or [False])[0]
+                logging.info(f"Loading file: {year_csv}")
                 lcd_df = pd.read_csv(
                     year_csv, 
                     encoding        = "UTF8", 
@@ -152,6 +155,7 @@ def create_dag(dag_id,
                 ## Adding station_id to output
                 lcd_df['station_id'] = station_id
                 cleaned_df = lcd_df.set_index("DATE")[['station_id'] + target_features]
+                # logging.info(cleaned_df.head())
                 cleaned_df.to_sql("lcd_incoming", if_exists = "append", con = src_conn)
             except:
                 raise ValueError(f"Couldn't load to staging database: {year_csv_file}")
@@ -167,7 +171,6 @@ def create_dag(dag_id,
         provide_context = True,
         python_callable = fetch_station,
         op_kwargs       = dict(station_id = station_id),
-        catchup         = False,
         dag             = dag
     )
 
@@ -177,7 +180,6 @@ def create_dag(dag_id,
         provide_context = True,
         python_callable = extract_load_station_csv,
         op_kwargs       = dict(station_id = station_id),
-        catchup         = False,
         dag             = dag
     )
 
@@ -194,7 +196,7 @@ for dag_number, station_id in enumerate(list(station_ids)):
 
     default_args = {'owner': 'airflow',
                     'start_date': datetime.today(),
-                    'max_active_runs': 1
+                    'max_active_runs': 1,
                     }
 
     schedule = '@once'
