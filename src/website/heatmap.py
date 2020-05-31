@@ -1,6 +1,7 @@
 # render a web page heatmap
 # Copyright (C) 2020 HWITW project
 #
+import sys
 import io
 import re
 import pandas as pd
@@ -17,62 +18,60 @@ import panel as pn
 #seaborn.set()
 #pn.extension()
 
-# define main columns of interest and verify that they exist
-main_column_list = [
-    'DATE',
-    'HourlyAltimeterSetting',
-    'HourlyDewPointTemperature',
-    'HourlyDryBulbTemperature',
-    'HourlyPrecipitation',
-    'HourlyPresentWeatherType',
-    'HourlyPressureChange',
-    'HourlyPressureTendency',               
-    'HourlyRelativeHumidity',
-    'HourlySkyConditions',
-    'HourlySeaLevelPressure',
-    'HourlyStationPressure',
-    'HourlyVisibility',
-    'HourlyWetBulbTemperature',
-    'HourlyWindDirection',
-    'HourlyWindGustSpeed',
-    'HourlyWindSpeed'
-]
+import psycopg2
 
-def make_column_str( a ):
-    the_str = ""
-    for i in range( len(a) ):
-        the_str += a[i]
-        if i < len(a) - 1:
-            the_str += ','
+class HData:
 
-    return the_str
+    def __init__( self ):
+        self.db_conn_str         ='host=localhost dbname=hwitw_lake user=hwitw password=hwitw' 
+        self.station_name        ='Homer'
+        self.main_column_list    = None #['none','none2']
+        self.column_init         = "none3"
+        self.method_names        = [ 'mean', 'min', 'max' ]
+        self.method_name_init    = self.method_names[0]
+        pass
 
-numeric_const_pattern = r"[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?"
+    def init2( self ):
+        if self.main_column_list == None :
+            self.get_collist()
 
-def objtofloat( a:object ):
-    if type(a) == float:
-        return a    
-    
-    if type(a) == str:
-        b = re.search(numeric_const_pattern, a)
-        if type(b) == type(None):
-            return np.nan
-        
-        c = b.group()
-        return float( c )
-    
-    return np.nan
+    # get the column list
+    def get_collist( self ):
+        sys.stderr.write( 'dbg: get_collist\n' )
+        # Establish a connection to the database by creating a cursor object
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(  self.db_conn_str )
+        # Create a new cursor
+        cur = conn.cursor()
+
+        # get the column list
+        sql = "SELECT * FROM lcd_incoming LIMIT 1"
+        homer = pd.read_sql(
+                sql,
+                con = conn,
+                parse_dates={'DATE': '%Y-%m-%d %H:%M:%S'},
+                index_col='DATE' )
+
+        #homer.set_index( 'DATE' )
+        self.main_column_list = list(homer.columns)
+        self.column_init = self.main_column_list[1]
+            
+        # Close the cursor and connection to so the server can allocate
+        # bandwidth to other requests
+        cur.close()
+        conn.close()    
+
 
 # clean columns and create a dataframe for the heatmap
 def create_heat_df( station_df:pd.DataFrame, column_a:str, method_a:str ):
-    df_clean = station_df
-    df_clean[ column_a ] = df_clean[ column_a ].apply( objtofloat )
+ #   df_clean = station_df
+#    df_clean[ column_a ] = df_clean[ column_a ].apply( objtofloat )
     #homer.info()
     #homer['HourlyStationPressure'].value_counts()
     #homer[ "HourlyStationPressure" ].plot()
 
     # resample to Daily frequency
-    heat_df = df_clean[ [column_a] ]
+    heat_df = station_df[ [column_a] ]
     heat_df = heat_df.resample('D')
     if method_a == 'mean' :
         heat_df = heat_df.mean()
@@ -107,29 +106,25 @@ def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, me
 
         return data
 
-column_init = main_column_list[11]
-method_names = [ 'mean', 'min', 'max' ]
-method_name_init = method_names[0]
-
 # WARNING: df_column and df_method ARE USER INPUT AND HAVE NOT BEEN SANITIZED. UNSAFE!
-def create_station_hmap_png( df_column:str, df_method:str ):
+def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
     
     if df_column == None:
-        df_column = column_init
+        df_column = hdat.column_init
 
     if df_method == None:
-        df_method = method_name_init
+        df_method = hdat.method_name_init
 
-    # connect and verify columns
     station_name = 'Homer'
-    conn = sqlite3.connect("lcd_daily.db")#, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES )
 
+    # Establish a connection to the database by creating a cursor object
+    # Connect to the PostgreSQL database
+    conn = psycopg2.connect( hdat.db_conn_str )
+    # Create a new cursor
     cur = conn.cursor()
-    cur.execute( "SELECT %s FROM daily LIMIT 1" % make_column_str(main_column_list) ) # if this fails we got the columns wrong
-    cur.close()
 
     # get some datas and graph
-    sql = "SELECT %s FROM daily ORDER BY DATE" % make_column_str(main_column_list)
+    sql = "SELECT * FROM lcd_incoming ORDER BY \"DATE\""
     homer = pd.read_sql(
             sql,
             con = conn,
@@ -137,12 +132,19 @@ def create_station_hmap_png( df_column:str, df_method:str ):
             index_col='DATE' )
 
     #homer.set_index( 'DATE' )
+
+    # Close the cursor and connection to so the server can allocate
+    # bandwidth to other requests
+    cur.close()
+    conn.close()
+    
     return create_hmap_rawpng( homer, station_name, df_column, df_method )
 
-def create_hmap_pn( junk ):
+def create_hmap_pn( hdat:HData ):
+
     # create dropdown, init with HourlyStationPressure #11
-    column_dropdown = pn.widgets.Select( name='Column', options=main_column_list, value=column_init )
-    method_dropdown = pn.widgets.Select( name='Method', options=method_names, value=method_name_init )
+    column_dropdown = pn.widgets.Select( name='Column', options=hdat.main_column_list, value=hdat.column_init )
+    method_dropdown = pn.widgets.Select( name='Method', options=hdat.method_names, value=hdat.method_name_init )
 
     # @pn.depends( column_dropdown.param.value, watch=True )
     # def on_column( col_a ):
