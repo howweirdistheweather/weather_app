@@ -30,7 +30,8 @@ RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/11/main/pg_hba.con
 
 # now copy everything else into place. changes to src will 'docker build' faster this way
 # so we don't have to do all of the above everytime we change source code
-COPY README.md hwitw_entrypoint.sh webauth.py webapp.py heatmap.py templates /app/
+COPY README.md hwitw_entrypoint.sh webauth.py webapp.py heatmap.py /app/
+COPY templates /app/templates
 
 # Expose the PostgreSQL port
 EXPOSE 5432
