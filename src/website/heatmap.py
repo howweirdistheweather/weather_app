@@ -23,17 +23,48 @@ import psycopg2
 class HData:
 
     def __init__( self ):
-        self.db_conn_str         ='host=localhost dbname=hwitw_lake user=hwitw password=hwitw' 
-        self.station_name        ='Homer'
+        self.db_conn_str         = 'host=localhost dbname=hwitw_lake user=hwitw password=hwitw' 
+        self.station_list        = None
+        self.station_id          = '0'        
         self.main_column_list    = None #['none','none2']
-        self.column_init         = "none3"
+        self.column_init         = 'nocol'
         self.method_names        = [ 'mean', 'min', 'max' ]
         self.method_name_init    = self.method_names[0]
         pass
 
     def init2( self ):
-        if self.main_column_list == None :
-            self.get_collist()
+        if self.station_list == None:
+            self.get_stationlist()
+
+        if self.main_column_list == None:
+            self.get_collist()        
+
+    def set_station_id( self, s_id:str ):
+        if s_id != None:
+            self.station_id = s_id
+
+    # get the station list
+    def get_stationlist( self ):
+        sys.stderr.write( 'dbg: get_stationlist\n' )
+        # Establish a connection to the database by creating a cursor object
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(  self.db_conn_str )
+        # Create a new cursor
+        cur = conn.cursor()
+
+        # get the column list
+        sql = "SELECT DISTINCT station_id FROM lcd_incoming"
+        station_df = pd.read_sql(
+                sql,
+                con = conn )
+#        sys.stderr.write(stations['station_id'].astype( str ) )
+        stations = station_df['station_id'].astype( str )
+        self.station_list = stations.values.tolist()
+        
+        self.station_id = self.station_list[0]
+            
+        cur.close()
+        conn.close()    
 
     # get the column list
     def get_collist( self ):
@@ -56,13 +87,11 @@ class HData:
         self.main_column_list = list(homer.columns)
         self.column_init = self.main_column_list[1]
             
-        # Close the cursor and connection to so the server can allocate
-        # bandwidth to other requests
         cur.close()
         conn.close()    
 
 
-# clean columns and create a dataframe for the heatmap
+# process station dataframe into a heatmap datagrame
 def create_heat_df( station_df:pd.DataFrame, column_a:str, method_a:str ):
  #   df_clean = station_df
 #    df_clean[ column_a ] = df_clean[ column_a ].apply( objtofloat )
@@ -115,8 +144,6 @@ def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
     if df_method == None:
         df_method = hdat.method_name_init
 
-    station_name = 'Homer'
-
     # Establish a connection to the database by creating a cursor object
     # Connect to the PostgreSQL database
     conn = psycopg2.connect( hdat.db_conn_str )
@@ -124,25 +151,25 @@ def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
     cur = conn.cursor()
 
     # get some datas and graph
-    sql = "SELECT * FROM lcd_incoming ORDER BY \"DATE\""
+    sql = "SELECT * FROM lcd_incoming WHERE station_id=%(p0)s ORDER BY \"DATE\""
     homer = pd.read_sql(
             sql,
             con = conn,
+            params = { 'p0':hdat.station_id },
             parse_dates={'DATE': '%Y-%m-%d %H:%M:%S'},
             index_col='DATE' )
 
     #homer.set_index( 'DATE' )
 
-    # Close the cursor and connection to so the server can allocate
-    # bandwidth to other requests
     cur.close()
     conn.close()
-    
-    return create_hmap_rawpng( homer, station_name, df_column, df_method )
+    sys.stderr.write( hdat.station_id )
+    return create_hmap_rawpng( homer, hdat.station_id, df_column, df_method )
 
 def create_hmap_pn( hdat:HData ):
 
-    # create dropdown, init with HourlyStationPressure #11
+    # create dropdowns
+    station_dropdown = pn.widgets.Select( name='Station', options=hdat.station_list, value=hdat.station_id )
     column_dropdown = pn.widgets.Select( name='Column', options=hdat.main_column_list, value=hdat.column_init )
     method_dropdown = pn.widgets.Select( name='Method', options=hdat.method_names, value=hdat.method_name_init )
 
@@ -158,21 +185,38 @@ def create_hmap_pn( hdat:HData ):
     #     print( met_name_a )
         #main_pn[1] = create_hmap( current_column, met_name_a )
 
-    column_dropdown.jscallback(
-        args={'method_obj':method_dropdown},
+    station_dropdown.jscallback(
+        args={ 'station_obj':station_dropdown,
+               'column_obj':column_dropdown,
+               'method_obj':method_dropdown
+        },
         value="""
             var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_col=${cb_obj.value}&df_method=${method_obj.value}`;
+            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}`;
+        """
+    )
+
+    column_dropdown.jscallback(
+        args={ 'station_obj':station_dropdown,
+               'column_obj':column_dropdown,
+               'method_obj':method_dropdown
+        },
+        value="""
+            var plot_img = document.getElementById('plot_img');
+            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}`;
         """
     )
 
     method_dropdown.jscallback(
-        args={'column_obj':column_dropdown},
+        args={ 'station_obj':station_dropdown,
+               'column_obj':column_dropdown,
+               'method_obj':method_dropdown
+        },
         value="""
             var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_col=${column_obj.value}&df_method=${cb_obj.value}`;
+            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}`;
         """
     )
 
-    main_pn = pn.Row( column_dropdown, method_dropdown )
+    main_pn = pn.Row( station_dropdown, column_dropdown, method_dropdown )
     return main_pn

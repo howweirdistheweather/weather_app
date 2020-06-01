@@ -41,8 +41,13 @@ def index():
 @app.route('/plot0.png')
 @requires_auth
 def plot0():
-	df_col = request.args.get("df_col")
-	df_method = request.args.get( "df_method" )	
+	# init if not already
+	hdat.init2()
+
+	hdat.set_station_id( request.args.get( 'df_station' ) )
+	df_col = request.args.get( 'df_col' )
+	df_method = request.args.get( 'df_method' )
+
 	raw_png_data = heatmap.create_station_hmap_png( hdat, df_col, df_method )
 	return Response( raw_png_data, mimetype='image/png')
 
