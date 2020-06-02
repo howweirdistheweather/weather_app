@@ -11,6 +11,7 @@ import sqlite3, errno, os
 import matplotlib       # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')   # ..must do this before import pyplot
 from matplotlib import pyplot
+from matplotlib.colors import LinearSegmentedColormap
 
 import seaborn
 import panel as pn
@@ -28,7 +29,7 @@ class HData:
         self.station_id          = '0'        
         self.main_column_list    = None #['none','none2']
         self.column_init         = 'nocol'
-        self.method_names        = [ 'mean', 'min', 'max' ]
+        self.method_names        = [ 'AVG', 'MIN', 'MAX' ]
         self.method_name_init    = self.method_names[0]
         pass
 
@@ -99,31 +100,43 @@ def create_heat_df( station_df:pd.DataFrame, column_a:str, method_a:str ):
     #homer['HourlyStationPressure'].value_counts()
     #homer[ "HourlyStationPressure" ].plot()
 
-    # resample to Daily frequency
-    heat_df = station_df[ [column_a] ]
-    heat_df = heat_df.resample('D')
-    if method_a == 'mean' :
-        heat_df = heat_df.mean()
-    elif method_a == 'min':
-        heat_df = heat_df.min()
-    else:
-        heat_df = heat_df.max()
-#    heat_df = method_a( heat_df ) # call aggregation method
+    # resample to Daily frequency    
+    # heat_df = station_df[ [column_a] ]
+    # heat_df = heat_df.resample('D')
+    # if method_a == 'mean' :
+    #     heat_df = heat_df.mean()
+    # elif method_a == 'min':
+    #     heat_df = heat_df.min()
+    # else:
+    #     heat_df = heat_df.max()
+   
+    # # create year and day columns and pivot
+    # heat_df['year'] = heat_df.index.year
+    # heat_df['day'] = heat_df.index.dayofyear
+
+    # drop leap year week 53's
+    heat_df = station_df[ station_df.theweek <= 52 ]
+    heat_df = heat_df.pivot( index='theyear', columns='theweek', values='xval' )
     
-    # create year and day columns and pivot
-    heat_df['year'] = heat_df.index.year
-    heat_df['day'] = heat_df.index.dayofyear
-    heat_df = heat_df.pivot( index='year', columns='day', values=column_a )
  
     return heat_df
 
 def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, met_a:str ):
         hdf = create_heat_df( station_df, col_a, met_a )
-        # create panel and plot
-        fig = pyplot.figure(figsize=(10,12))        
+        # create plot
+
+        boundaries = [ 0.0, 0.33, 0.33, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries
+        hex_colors = [ '#FFE0E0','#FFF0F0', '#AAFFAA', '#AAFFAA','#0000FF' ]
+        colors=list(zip(boundaries, hex_colors))
+        custom1_map = LinearSegmentedColormap.from_list(
+            name='custom1',
+            colors=colors,
+        )
+
+        fig = pyplot.figure(figsize=(10,8))        
         ax = fig.subplots()
         ax.set_title( station_name + " - " + col_a + " - " + met_a )
-        hmap = seaborn.heatmap( ax=ax, data=hdf, linewidths=0, cmap='PuBuGn' )
+        hmap = seaborn.heatmap( ax=ax, data=hdf, linewidths=0.75, cmap=custom1_map, square=True ) #'PuBuGn'
         ax.invert_yaxis()
         #fig.tight_layout()
         pyplot.tight_layout()
@@ -135,36 +148,46 @@ def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, me
 
         return data
 
-# WARNING: df_column and df_method ARE USER INPUT AND HAVE NOT BEEN SANITIZED. UNSAFE!
 def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
     
-    if df_column == None:
+    # SANITIZE df_column and df_method. these are user input so we need to watch
+    # out for SQL injection type attacks
+    if df_column == None or df_column not in hdat.main_column_list:
         df_column = hdat.column_init
 
-    if df_method == None:
+    if df_method == None or df_method not in hdat.method_names:
         df_method = hdat.method_name_init
 
     # Establish a connection to the database by creating a cursor object
-    # Connect to the PostgreSQL database
     conn = psycopg2.connect( hdat.db_conn_str )
-    # Create a new cursor
     cur = conn.cursor()
 
     # get some datas and graph
-    sql = "SELECT * FROM lcd_incoming WHERE station_id=%(p0)s ORDER BY \"DATE\""
-    homer = pd.read_sql(
-            sql,
-            con = conn,
-            params = { 'p0':hdat.station_id },
-            parse_dates={'DATE': '%Y-%m-%d %H:%M:%S'},
-            index_col='DATE' )
+#    sql = "SELECT * FROM lcd_incoming WHERE station_id=%(psid)s " #ORDER BY \"DATE\""
+    # stationdf = pd.read_sql(
+    #         sql,
+    #         con = conn,
+    #         params = { 'pcol':df_column, 'psid':hdat.station_id },
+    #         parse_dates={'DATE': '%Y-%m-%d %H:%M:%S'},
+    #         index_col='DATE' )
 
     #homer.set_index( 'DATE' )
 
+    agg_str = """%s("%s")""" % (df_method, df_column)
+
+    sql = """SELECT DATE_PART('year', "DATE") as "theyear",
+                    DATE_PART('week', "DATE") as "theweek",
+                    %s AS "xval" """ % agg_str + """
+                    from lcd_incoming
+                    where station_id = %(psid)s group by theyear, theweek"""
+    stationdf = pd.read_sql(
+        sql,
+        con = conn,
+        params= { 'psid':hdat.station_id } )
+
     cur.close()
     conn.close()
-    sys.stderr.write( hdat.station_id )
-    return create_hmap_rawpng( homer, hdat.station_id, df_column, df_method )
+    return create_hmap_rawpng( stationdf, hdat.station_id, df_column, df_method )
 
 def create_hmap_pn( hdat:HData ):
 
