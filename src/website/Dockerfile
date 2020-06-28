@@ -11,7 +11,7 @@ RUN pip3 --no-cache-dir install -r hwitw_requirements.txt
 
 # install packages
 RUN apt-get update && \
-    apt-get install --no-install-recommends --yes sudo postgresql-11 && \
+    apt-get install --no-install-recommends --yes sudo postgresql-11 bash && \
     apt-get clean
 
 # init postgres db

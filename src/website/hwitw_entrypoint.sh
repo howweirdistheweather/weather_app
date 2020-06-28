@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # docker image entrypoint for hwitw
 
 # start postgres
