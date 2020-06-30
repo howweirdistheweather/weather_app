@@ -11,7 +11,7 @@ RUN pip3 --no-cache-dir install -r hwitw_requirements.txt
 
 # install packages
 RUN apt-get update && \
-    apt-get install --no-install-recommends --yes sudo postgresql-11 bash && \
+    apt-get install --no-install-recommends --yes sudo postgresql-11 bash nginx && \
     apt-get clean
 
 # init postgres db
@@ -21,21 +21,27 @@ RUN sudo -u postgres pg_ctlcluster 11 main start && \
     /app/hwitw_initdb.sh && \
     # cleanly stop db
     sudo -u postgres pg_ctlcluster 11 main stop && \
-    # done with the dbdump
+    # done with the dbdump file
     rm /app/hwitw_db_dump.bak
 
 # fix postgres conf to allow any IP
 RUN echo "listen_addresses='*'" >> /etc/postgresql/11/main/postgresql.conf
 RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/11/main/pg_hba.conf
 
+# fix nginx defaults
+RUN rm /etc/nginx/sites-enabled/default
+# make nginx err log to stdout
+RUN ln -sf /dev/stdout /var/log/nginx/access.log && ln -sf /dev/stderr /var/log/nginx/error.log
+
 # now copy everything else into place. changes to src will 'docker build' faster this way
 # so we don't have to do all of the above everytime we change source code
-COPY README.md hwitw_entrypoint.sh webauth.py webapp.py heatmap.py /app/
+COPY README.md hwitw_entrypoint.sh wsgi.py webauth.py webapp.py heatmap.py /app/
 COPY templates /app/templates
+COPY nginx /etc/nginx
 
 # Expose the PostgreSQL port
 EXPOSE 5432
 
 # run the app server
-EXPOSE 5000
+EXPOSE 80
 CMD ["./hwitw_entrypoint.sh"]
