@@ -10,6 +10,7 @@ from webauth import requires_auth
 
 # notebooks need this: pn.extension('plotly')
 app = Flask(__name__)
+hdat = heatmap.HData()
 
 ## Static Files Config
 @app.route('/js/<path:path>')
@@ -50,8 +51,11 @@ def index():
 	if current_feature_name == None:
 		current_feature_name = "Sepal Length"
 
-	# Create the panel
-	apanel = heatmap.create_hmap_pn( current_feature_name )
+	# init if not already
+	hdat.init2()
+
+	# Create the panel	
+	apanel = heatmap.create_hmap_pn( hdat )
 	 
 	# Embed into HTML via Flask Render
 	bokeh_script, bokeh_div = components( apanel.get_root() )
@@ -67,9 +71,14 @@ def index():
 @app.route('/plot0.png')
 @requires_auth
 def plot0():
-	df_col = request.args.get("df_col")
-	df_method = request.args.get( "df_method" )	
-	raw_png_data = heatmap.create_station_hmap_png( df_col, df_method )
+	# init if not already
+	hdat.init2()
+
+	hdat.set_station_id( request.args.get( 'df_station' ) )
+	df_col = request.args.get( 'df_col' )
+	df_method = request.args.get( 'df_method' )
+
+	raw_png_data = heatmap.create_station_hmap_png( hdat, df_col, df_method )
 	return Response( raw_png_data, mimetype='image/png')
 
 # With debug=True, Flask server will auto-reload 

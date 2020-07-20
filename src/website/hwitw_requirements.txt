@@ -3,4 +3,5 @@ numpy
 pandas
 seaborn
 panel
-
+psycopg2
+sqlalchemy
