@@ -37,6 +37,7 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log && ln -sf /dev/stderr /var/log/
 # so we don't have to do all of the above everytime we change source code
 COPY README.md hwitw_entrypoint.sh wsgi.py webauth.py webapp.py heatmap.py /app/
 COPY templates /app/templates
+COPY static /app/static
 COPY nginx /etc/nginx
 
 # Expose the PostgreSQL port
