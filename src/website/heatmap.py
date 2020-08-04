@@ -94,14 +94,21 @@ def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, me
             name='custom1',
             colors=colors,
         )
-
-        fig = pyplot.figure(figsize=(10,8))        
+                
+        fig = pyplot.figure(figsize=(6,4), dpi=700)
         ax = fig.subplots()
-        ax.set_title( station_name + " - " + col_a + " - " + met_a )
+        ax.set_title( station_name + " - " + col_a + " - " + met_a, fontsize=8 )
         hmap = seaborn.heatmap( ax=ax, data=hdf, linewidths=0.75, cmap=custom1_map, square=True ) #'PuBuGn'
         ax.invert_yaxis()
-        #fig.tight_layout()
-        pyplot.tight_layout()
+
+        #seaborn.set( font_scale=0.5 )
+        hmap.set( xlabel=None, ylabel=None )
+        hmap.set_xticks( [0.5, 4.5, 8.5, 13.5, 17.5, 22.5, 26.5, 30.5, 35.5, 39.5, 43.5, 48.5] )
+        hmap.set_xticklabels( ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], fontsize=6, rotation=90 )
+        hmap.set_yticklabels( hmap.get_ymajorticklabels(), fontsize=6, rotation=10 )
+        #tick_spacing = 4
+        #ax.xaxis.set_major_locator( matplotlib.ticker.MultipleLocator( tick_spacing ) )
+        fig.tight_layout()
 
         buf = io.BytesIO()
         fig.savefig( buf, format='png' )

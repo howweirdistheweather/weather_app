@@ -41,6 +41,10 @@ def team():
 def contact():
 	return render_template("contact.html")
 
+@app.route('/terms', methods=['GET'] )
+def terms():
+	return render_template("terms.html")
+
 
 # Index page
 @app.route('/', methods=['GET'] )
