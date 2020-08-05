@@ -86,15 +86,19 @@ def create_heat_df( station_df:pd.DataFrame, column_a:str, method_a:str ):
 
 def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, met_a:str ):
         hdf = create_heat_df( station_df, col_a, met_a )
-        # create plot
-        boundaries = [ 0.0, 0.33, 0.33, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries
-        hex_colors = [ '#FFE0E0','#FFF0F0', '#AAFFAA', '#AAFFAA','#0000FF' ]
+        # setup colors
+        hcolor0 = '#FFE0E0'
+        hcolor1 = '#AAFFAA'
+        hcolor2 = '#AAAAFF'
+        boundaries = [ 0.0, 0.33, 0.33, 0.66, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries        
+        hex_colors = [ hcolor0, hcolor0, hcolor1, hcolor1, hcolor2, hcolor2 ]
         colors=list(zip(boundaries, hex_colors))
         custom1_map = LinearSegmentedColormap.from_list(
             name='custom1',
             colors=colors,
         )
-                
+        
+        # create plot
         fig = pyplot.figure(figsize=(6,4), dpi=700)
         ax = fig.subplots()
         ax.set_title( station_name + " - " + col_a + " - " + met_a, fontsize=8 )
@@ -110,6 +114,7 @@ def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, me
         #ax.xaxis.set_major_locator( matplotlib.ticker.MultipleLocator( tick_spacing ) )
         fig.tight_layout()
 
+        # create png
         buf = io.BytesIO()
         fig.savefig( buf, format='png' )
         pyplot.close( fig )
