@@ -24,7 +24,7 @@ class HData:
     def __init__( self ):
         self.db_conn_str         = 'postgresql://hwitw:hwitw@localhost:5432/hwitw_lake'
         self.station_list        = None
-        self.station_id          = '0'        
+        self.station_id          = '0'
         self.main_column_list    = None #['none','none2']
         self.column_init         = 'nocol'
         self.method_names        = [ 'AVG', 'MIN', 'MAX' ]
@@ -80,16 +80,22 @@ class HData:
 def create_heat_df( station_df:pd.DataFrame, column_a:str, method_a:str ):
     # drop leap year week 53's
     heat_df = station_df[ station_df.theweek <= 52 ]
-    heat_df = heat_df.pivot( index='theyear', columns='theweek', values='xval' )    
- 
+    heat_df['theyear'] = heat_df['theyear'].astype(int) # so they don't print as floats like 1950.0
+    heat_df = heat_df.pivot( index='theyear', columns='theweek', values='xval' )
+    
     return heat_df
+
+def month_to_week( nmonth ):
+    import datetime
+    day_of_year = datetime.date( year=datetime.datetime.now().year, month=nmonth, day=1 ).timetuple().tm_yday
+    return day_of_year * 52 / 365 
 
 def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, met_a:str ):
         hdf = create_heat_df( station_df, col_a, met_a )
         # setup colors
-        hcolor0 = '#FFE0E0'
-        hcolor1 = '#AAFFAA'
-        hcolor2 = '#AAAAFF'
+        hcolor0 = '#edf8b1'
+        hcolor1 = '#7fcdbb'
+        hcolor2 = '#2c7fb8'
         boundaries = [ 0.0, 0.33, 0.33, 0.66, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries        
         hex_colors = [ hcolor0, hcolor0, hcolor1, hcolor1, hcolor2, hcolor2 ]
         colors=list(zip(boundaries, hex_colors))
@@ -99,15 +105,21 @@ def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, me
         )
         
         # create plot
-        fig = pyplot.figure(figsize=(6,4), dpi=700)
+        fig = pyplot.figure(figsize=(6,4))#, dpi=500)
         ax = fig.subplots()
         ax.set_title( station_name + " - " + col_a + " - " + met_a, fontsize=8 )
-        hmap = seaborn.heatmap( ax=ax, data=hdf, linewidths=0.75, cmap=custom1_map, square=True ) #'PuBuGn'
+        hmap = seaborn.heatmap( ax=ax, data=hdf, linewidths=0.75, cmap=custom1_map, square=True )
         ax.invert_yaxis()
 
         #seaborn.set( font_scale=0.5 )
         hmap.set( xlabel=None, ylabel=None )
-        hmap.set_xticks( [0.5, 4.5, 8.5, 13.5, 17.5, 22.5, 26.5, 30.5, 35.5, 39.5, 43.5, 48.5] )
+        
+        # calc locations of week tick marks
+        week_tick = []
+        for i in range(0,12):
+            week_tick.append( month_to_week( i+1 ) )
+        
+        hmap.set_xticks( week_tick )
         hmap.set_xticklabels( ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], fontsize=6, rotation=90 )
         hmap.set_yticklabels( hmap.get_ymajorticklabels(), fontsize=6, rotation=10 )
         #tick_spacing = 4
@@ -116,7 +128,7 @@ def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, me
 
         # create png
         buf = io.BytesIO()
-        fig.savefig( buf, format='png' )
+        fig.savefig( buf, format='png', dpi=1000 )
         pyplot.close( fig )
         data=buf.getvalue()
 
