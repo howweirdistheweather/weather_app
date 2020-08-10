@@ -81,6 +81,8 @@ def plot0():
 	hdat.set_station_id( request.args.get( 'df_station' ) )
 	df_col = request.args.get( 'df_col' )
 	df_method = request.args.get( 'df_method' )
+	hdat.range_v1 = request.args.get( 'rv1', type=float, default=0.33 )
+	hdat.range_v2 = request.args.get( 'rv2', type=float, default=0.66 )
 
 	raw_png_data = heatmap.create_station_hmap_png( hdat, df_col, df_method )
 	return Response( raw_png_data, mimetype='image/png')

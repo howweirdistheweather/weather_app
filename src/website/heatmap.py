@@ -28,7 +28,9 @@ class HData:
         self.main_column_list    = None #['none','none2']
         self.column_init         = 'nocol'
         self.method_names        = [ 'AVG', 'MIN', 'MAX' ]
-        self.method_name_init    = self.method_names[0]
+        self.method_name_init    = self.method_names[0]        
+        self.range_v1            = 0.33     # color slider range value 1
+        self.range_v2            = 0.66     # slider value 2
         pass
 
     def init2( self ):
@@ -90,13 +92,23 @@ def month_to_week( nmonth ):
     day_of_year = datetime.date( year=datetime.datetime.now().year, month=nmonth, day=1 ).timetuple().tm_yday
     return day_of_year * 52 / 365 
 
-def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, met_a:str ):
+def create_hmap_rawpng( station_df:pd.DataFrame, hdat:HData, col_a:str, met_a:str ):
         hdf = create_heat_df( station_df, col_a, met_a )
+        hvmin = hdf.values.min()
+        hvmax = hdf.values.max()
+
         # setup colors
         hcolor0 = '#edf8b1'
         hcolor1 = '#7fcdbb'
         hcolor2 = '#2c7fb8'
-        boundaries = [ 0.0, 0.33, 0.33, 0.66, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries        
+        
+        hb0 = 0.0        
+        hb1 = hdat.range_v1
+        hb2 = hdat.range_v2
+        hb3 = 1.0
+        
+        #boundaries = [ 0.0, 0.33, 0.33, 0.66, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries        
+        boundaries = [ hb0, hb1, hb1, hb2, hb2, hb3 ]
         hex_colors = [ hcolor0, hcolor0, hcolor1, hcolor1, hcolor2, hcolor2 ]
         colors=list(zip(boundaries, hex_colors))
         custom1_map = LinearSegmentedColormap.from_list(
@@ -105,12 +117,21 @@ def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, me
         )
         
         # create plot
-        fig = pyplot.figure(figsize=(6,4))#, dpi=500)
+        fig = pyplot.figure(figsize=(4,4))#, dpi=500)
         ax = fig.subplots()
-        ax.set_title( station_name + " - " + col_a + " - " + met_a, fontsize=8 )
-        hmap = seaborn.heatmap( ax=ax, data=hdf, linewidths=0.75, cmap=custom1_map, square=True )
+        ax.set_title( hdat.station_id + " - " + col_a + " - " + met_a, fontsize=8 )
+        hmap = seaborn.heatmap( 
+            ax=ax, 
+            data=hdf,
+#            vmin=hdat.range_v0,
+#            vmax=hdat.range_v3,
+            linewidths=1, 
+            linecolor='white', 
+            cmap=custom1_map, 
+            square=True, 
+            cbar=True )
         ax.invert_yaxis()
-
+        
         #seaborn.set( font_scale=0.5 )
         hmap.set( xlabel=None, ylabel=None )
         
@@ -128,7 +149,7 @@ def create_hmap_rawpng( station_df:pd.DataFrame, station_name:str, col_a:str, me
 
         # create png
         buf = io.BytesIO()
-        fig.savefig( buf, format='png', dpi=1000 )
+        fig.savefig( buf, format='png', dpi=500 )
         pyplot.close( fig )
         data=buf.getvalue()
 
@@ -158,14 +179,16 @@ def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
         con = conn,
         params= { 'psid':hdat.station_id } )
 
-    return create_hmap_rawpng( stationdf, hdat.station_id, df_column, df_method )
+    return create_hmap_rawpng( stationdf, hdat, df_column, df_method )
 
 def create_hmap_pn( hdat:HData ):
 
-    # create dropdowns
+    # create widgets
     station_dropdown = pn.widgets.Select( name='Station', options=hdat.station_list, value=hdat.station_id )
     column_dropdown = pn.widgets.Select( name='Column', options=hdat.main_column_list, value=hdat.column_init )
     method_dropdown = pn.widgets.Select( name='Method', options=hdat.method_names, value=hdat.method_name_init )   
+
+    range_slider = pn.widgets.RangeSlider( name='Range', start=0.0, end=1.0, value=( hdat.range_v1, hdat.range_v2), step=0.05 )
 
     station_dropdown.jscallback(
         args={ 'station_obj':station_dropdown,
@@ -200,5 +223,20 @@ def create_hmap_pn( hdat:HData ):
         """
     )
 
-    main_pn = pn.Row( station_dropdown, column_dropdown, method_dropdown )
+    range_slider.jscallback(
+        args={ 'station_obj':station_dropdown,
+               'column_obj':column_dropdown,
+               'method_obj':method_dropdown,
+               'range_obj':range_slider
+        },
+        value="""
+            var plot_img = document.getElementById('plot_img');
+            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
+        """
+    )
+
+    main_pn = pn.Column(
+        pn.Row( station_dropdown, column_dropdown, method_dropdown, width=700 ),
+        pn.Row( range_slider, width=200 )
+    )
     return main_pn
