@@ -101,12 +101,12 @@ def create_hmap_rawpng( station_df:pd.DataFrame, hdat:HData, col_a:str, met_a:st
         hcolor0 = '#edf8b1'
         hcolor1 = '#7fcdbb'
         hcolor2 = '#2c7fb8'
-        
+
         hb0 = 0.0        
         hb1 = hdat.range_v1
         hb2 = hdat.range_v2
         hb3 = 1.0
-        
+
         #boundaries = [ 0.0, 0.33, 0.33, 0.66, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries        
         boundaries = [ hb0, hb1, hb1, hb2, hb2, hb3 ]
         hex_colors = [ hcolor0, hcolor0, hcolor1, hcolor1, hcolor2, hcolor2 ]
@@ -115,31 +115,36 @@ def create_hmap_rawpng( station_df:pd.DataFrame, hdat:HData, col_a:str, met_a:st
             name='custom1',
             colors=colors,
         )
-        
+
         # create plot
-        fig = pyplot.figure(figsize=(4,4))#, dpi=500)
+        fig = pyplot.figure(figsize=(4.8,4))#, dpi=500)
         ax = fig.subplots()
-        ax.set_title( hdat.station_id + " - " + col_a + " - " + met_a, fontsize=8 )
+        ax.set_title( hdat.station_id + " - " + col_a + " - " + met_a, fontsize=8 )        
         hmap = seaborn.heatmap( 
             ax=ax, 
             data=hdf,
 #            vmin=hdat.range_v0,
 #            vmax=hdat.range_v3,
-            linewidths=1, 
+            linewidths=0.65, 
             linecolor='white', 
             cmap=custom1_map, 
             square=True, 
-            cbar=True )
+            cbar=True,
+            rasterized=True )
+
+        # set cbar font size
+        cbar = ax.collections[0].colorbar      
+        cbar.ax.tick_params(labelsize=6)
+
         ax.invert_yaxis()
-        
         #seaborn.set( font_scale=0.5 )
         hmap.set( xlabel=None, ylabel=None )
-        
+
         # calc locations of week tick marks
         week_tick = []
         for i in range(0,12):
             week_tick.append( month_to_week( i+1 ) )
-        
+
         hmap.set_xticks( week_tick )
         hmap.set_xticklabels( ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], fontsize=6, rotation=90 )
         hmap.set_yticklabels( hmap.get_ymajorticklabels(), fontsize=6, rotation=10 )
@@ -149,7 +154,7 @@ def create_hmap_rawpng( station_df:pd.DataFrame, hdat:HData, col_a:str, met_a:st
 
         # create png
         buf = io.BytesIO()
-        fig.savefig( buf, format='png', dpi=500 )
+        fig.savefig( buf, format='png', dpi=400 )
         pyplot.close( fig )
         data=buf.getvalue()
 
@@ -182,7 +187,6 @@ def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
     return create_hmap_rawpng( stationdf, hdat, df_column, df_method )
 
 def create_hmap_pn( hdat:HData ):
-
     # create widgets
     station_dropdown = pn.widgets.Select( name='Station', options=hdat.station_list, value=hdat.station_id )
     column_dropdown = pn.widgets.Select( name='Column', options=hdat.main_column_list, value=hdat.column_init )
@@ -193,33 +197,36 @@ def create_hmap_pn( hdat:HData ):
     station_dropdown.jscallback(
         args={ 'station_obj':station_dropdown,
                'column_obj':column_dropdown,
-               'method_obj':method_dropdown
+               'method_obj':method_dropdown,
+               'range_obj':range_slider
         },
         value="""
             var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}`;
+            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
         """
     )
 
     column_dropdown.jscallback(
         args={ 'station_obj':station_dropdown,
                'column_obj':column_dropdown,
-               'method_obj':method_dropdown
+               'method_obj':method_dropdown,
+               'range_obj':range_slider
         },
         value="""
             var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}`;
+            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
         """
     )
 
     method_dropdown.jscallback(
         args={ 'station_obj':station_dropdown,
                'column_obj':column_dropdown,
-               'method_obj':method_dropdown
+               'method_obj':method_dropdown,
+               'range_obj':range_slider
         },
         value="""
             var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}`;
+            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
         """
     )
 
