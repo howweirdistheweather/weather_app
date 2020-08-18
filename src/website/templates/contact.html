@@ -1,21 +1,89 @@
 {% extends 'base.html' %}
+{% block additional_header %}
+    <style>
+    .jumbotron {
+        background: #358CCE;
+        color: #FFF;
+        border-radius: 0px;
+    }
+    .jumbotron-sm { 
+        padding-top: 24px;
+        padding-bottom: 24px; 
+    }
+    .jumbotron small {
+        color: #FFF;
+    }
+    .h1 small {
+        font-size: 24px;
+    }
+    </style>
+{% endblock %}
 
-{% block title %}Contact{% endblock %}
+{% block title %}Contact Us{% endblock %}
 
 {% block content %}
-<p class="lead mb-4">
-    Contact Us - check out this tutorial:  https://code.tutsplus.com/tutorials/intro-to-flask-adding-a-contact-page--net-28982
+<p class="lead mb-4 w-100">
+    Feel free contact us.
 </p>
 
-<div class="w-100" style="background-image: url(img/weather-1.jpg); height: 300px; background-position: center;" ></div>
 
-<p>
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed accumsan, tellus a consequat cursus, orci eros eleifend elit, id molestie arcu mauris et tortor. Mauris suscipit lectus ligula, et posuere eros pharetra eget. Sed congue a turpis quis vehicula. Aenean efficitur nibh sit amet orci laoreet, eu facilisis felis cursus. Fusce suscipit, metus vitae tincidunt convallis, libero risus tempus lorem, at bibendum augue nibh in nunc. Donec laoreet tempus fringilla. Donec eget libero quam. Vestibulum auctor eleifend suscipit. Cras a magna risus. Aliquam consequat non libero a fringilla. Integer lobortis convallis tellus et dignissim. Nunc interdum, lectus nec ultrices pulvinar, lectus nunc commodo justo, in blandit dui magna in ante.
-</p>
-<p>
-    Quisque vitae nibh eget leo cursus ornare nec in nunc. Nam fermentum tortor tortor, et tincidunt dui ultrices at. Nulla mollis suscipit lacus, sed scelerisque leo tincidunt sit amet. Nunc nec augue nec dui malesuada eleifend interdum at arcu. Aenean a mi odio. Phasellus et elementum tellus, eu convallis nisi. Suspendisse potenti. In congue mollis neque, at vehicula augue ornare ac. Sed sed interdum lectus, vitae commodo nunc. Phasellus sapien erat, dignissim et auctor et, dictum eget libero. Nam consequat magna vel accumsan pretium.
-</p>
-<p>
-    Fusce hendrerit eleifend odio id convallis. Sed interdum a neque quis lacinia. Fusce non nunc eu tortor mollis cursus. Nullam luctus justo nulla, in pellentesque tellus vulputate nec. Vestibulum volutpat cursus nisl sed hendrerit. Nullam vitae ligula a arcu luctus viverra. Aliquam dolor sapien, volutpat a tellus et, aliquet dignissim felis. Proin consectetur lectus non turpis facilisis sagittis. Nulla quis lobortis sem. Praesent sodales, orci lobortis sollicitudin consectetur, nibh lacus laoreet tortor, ut malesuada justo massa a mi. Nulla pulvinar nunc ut ipsum lacinia, in vulputate sem vulputate. Donec sit amet vestibulum tortor, vehicula dapibus sem.
-</p>
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="well well-sm">
+                <form>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="name">
+                                Name</label>
+                            <input type="text" class="form-control" id="name" placeholder="Enter name" required="required" />
+                        </div>
+                        <div class="form-group">
+                            <label for="email">
+                                Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-addon"><span class="glyphicon glyphicon-envelope"></span>
+                                </span>
+                                <input type="email" class="form-control" id="email" placeholder="Enter email" required="required" /></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="subject">
+                                Subject</label>
+                            <select id="subject" name="subject" class="form-control" required="required">
+                                <option value="na" selected="">Choose One:</option>
+                                <option value="service">General Customer Service</option>
+                                <option value="suggestions">Suggestions</option>
+                                <option value="product">Product Support</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="name">
+                                Message</label>
+                            <textarea name="message" id="message" class="form-control" rows="9" cols="25" required="required"
+                                placeholder="Message"></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary pull-right" id="btnContactUs">
+                            Send Message</button>
+                    </div>
+                </div>
+                </form>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <form>
+                <legend><span class="glyphicon glyphicon-globe"></span> Snail  Mail</legend>
+                <address>
+                    <strong>How Weird is The Weather</strong><br>
+                    PO Box 164<br />
+                    Seldovia, AK 99663
+                </address>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

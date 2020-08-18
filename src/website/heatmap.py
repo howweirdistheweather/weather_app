@@ -1,9 +1,7 @@
 # render a web page heatmap
 # Copyright (C) 2020 HWITW project
 #
-import sys
-import io
-import re
+import sys, io, re, logging
 import pandas as pd
 import numpy as np
 import sqlalchemy
@@ -21,7 +19,12 @@ import panel as pn
 
 class HData:
 
-    def __init__( self ):
+    logging_level   = logging.DEBUG # also:  logging.INFO and others (google!)
+    logging_format  = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging         = logging.getLogger('hdata')
+
+    def __init__( self, **kwargs ):
+
         self.db_conn_str         = 'postgresql://hwitw:hwitw@localhost:5432/hwitw_lake'
         self.station_list        = None
         self.station_id          = '0'
@@ -31,22 +34,61 @@ class HData:
         self.method_name_init    = self.method_names[0]        
         self.range_v1            = 0.33     # color slider range value 1
         self.range_v2            = 0.66     # slider value 2
-        pass
+        
+        # The basic idea here is that it's possible to override class variables / attributes when
+        # passed via init method:
+        # 
+        # hdata = HData(range_v1 = .55)
+        #
+        # In Python, you can catch named parameters with **whatever.  They show up as a dictionary in 
+        # functions.  Makes your classes quite a bit more flexible.  c++ equivalent:  https://github.com/cheshirekow/kwargs
+        for attribute, value in kwargs.items():
+            if hasattr(self, attribute): # if self has an attribute
+                setattr(self, attribute, value) # override it to one passed from class INIT
+
+        self.set_logging()
 
     def init2( self ):
         if self.station_list == None:
-            self.get_stationlist()
+            self.set_stationlist()
 
         if self.main_column_list == None:
-            self.get_collist()        
+            self.set_collist()   
+
+    def set_logging(self):
+        """ 
+            set_logging()
+
+            Binds instance of custom logging to class method for debugging, and info messages.  Static settings
+            can be overridden
+
+            ex: 
+                self.logging.debug("something happened")
+                self.logging.warning("careful there buddy")
+                self.logging.error("something really bad happened")
+                self.logging.info("The script ran again..")
+        """
+        # Setup logging level
+        self.logging.setLevel(self.logging_level)
+
+        # Add streamhandling
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.DEBUG)
+
+        # Config log formatting
+        formatter = logging.Formatter(self.logging_format)
+        handler.setFormatter(formatter)
+
+        # Add handler
+        self.logging.addHandler(handler)
 
     def set_station_id( self, s_id:str ):
         if s_id != None:
             self.station_id = s_id
 
     # get the station list
-    def get_stationlist( self ):
-        sys.stderr.write( 'dbg: get_stationlist\n' )     
+    def set_stationlist( self ):
+        self.logging.debug( 'get_stationlist' )     
         # Connect to the PostgreSQL database
         conn = sqlalchemy.create_engine( self.db_conn_str )
 
@@ -60,9 +102,45 @@ class HData:
         self.station_list = stations.values.tolist()
         self.station_id = self.station_list[0]
 
+    def get_stationlist(self):
+        return self.station_list
+
+    def get_collist(self):
+        """
+            get_collist
+
+            This may seem silly but it does make the library a little easier to use in terms of workflow.  Another
+            placeholder for future work if we might want to pre-validate any data, we can filter out which columns 
+            good to use here.
+        """
+        return self.main_column_list
+
+    def get_method_names(self):
+        """
+            get_method_names()
+
+            Mainly this is a placeholder for future method_name handling for more complex processing potentially.
+        """
+        return self.method_names
+
+    def get_init(self):
+        """
+            get_init()
+            
+            Builds initial state for app UI elements.
+
+            routes: /weather/init
+        """
+        initial_states = dict(
+            stations    = self.get_stationlist(),
+            variables   = self.get_collist(),
+            methods     = self.get_method_names()
+        )
+        return initial_states
+
     # get the column list
-    def get_collist( self ):
-        sys.stderr.write( 'dbg: get_collist\n' )
+    def set_collist( self ):
+        self.logging.debug( 'get_collist' )
         # Connect to the PostgreSQL database
         conn = sqlalchemy.create_engine( self.db_conn_str )
 
