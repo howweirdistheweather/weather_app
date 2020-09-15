@@ -97,10 +97,24 @@ def get_init_json():
 	hdat.logging.debug(app_config)
 	return jsonify(app_config)
 
-@app.route('/weather/<station_id>', methods = ['GET'] )
+@app.route('/weather/<station_id>', methods = ['GET', 'POST'] )
 def get_weather_json(station_id = 25507):
-	result = heatmap.create_heat_df()
-	return jsonify(["test"])
+	content = request.get_json(silent=True)
+	
+	if set(content.keys()) == set(["column_a", "method_a"]):
+		status_code = 200
+		message = "Request OK"
+	else:
+		status_code = 400
+		message = "Valid keys include 'column_[n]' and 'method_[n]'."
+
+	response = dict(status = status_code, message = message)
+	
+	if status_code == 200:
+		response['data'] = hdat.get_station_weather(**content)
+		#print("data:", response['data'])
+	
+	return jsonify(response), status_code
 
 # Index page
 @app.route('/', methods=['GET'] )
