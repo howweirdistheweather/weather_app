@@ -86,7 +86,18 @@ class HData:
         if s_id != None:
             self.station_id = s_id
 
-    # get the station list
+    def get_station_df( self ):
+        # Connect to the PostgreSQL database
+        conn = sqlalchemy.create_engine( self.db_conn_str )
+
+        # get the column list
+        sql = "SELECT DISTINCT station_id FROM lcd_incoming"
+        station_df = pd.read_sql(
+                sql,
+                con = conn )
+        return station_df
+
+    # get the station list    
     def set_stationlist( self ):
         self.logging.debug( 'get_stationlist' )     
         # Connect to the PostgreSQL database
@@ -155,9 +166,52 @@ class HData:
         self.main_column_list = list(homer.columns)
         self.column_init = self.main_column_list[1]
 
+    def get_station_weather( self, station_id:int = 0, column_a:str = "", method_a:str = "") -> list:
+        # SANITIZE df_column and df_method. these are user input so we need to watch
+        # out for SQL injection type attacks
+        if column_a == None or column_a not in self.main_column_list:
+            column_a = self.column_init
+
+        if method_a == None or method_a not in self.method_names:
+            method_a = self.method_name_init
+
+        # Connect to the PostgreSQL database
+        conn = sqlalchemy.create_engine( self.db_conn_str )    
+
+        sql = f"""SELECT 
+                    EXTRACT(YEAR FROM TO_DATE("DATE", 'YYYY-MM-DD"T"HH24:MI:SS:MS"Z"')) AS year,
+                    EXTRACT(WEEK FROM TO_DATE("DATE", 'YYYY-MM-DD"T"HH24:MI:SS:MS"Z"')) AS week,
+                    {method_a}("{column_a}") AS "xval"
+                    FROM lcd_incoming
+                    WHERE station_id = %(psid)s
+                    GROUP BY year, week
+                    ORDER BY year, week"""
+
+        weather = pd.read_sql(
+            sql,
+            con = conn,
+            params= { 'psid': self.station_id } 
+        )
+
+        # Build a reverse index for cartesian Y axis.  Should also handle gaps.
+        year_max, year_min = weather['year'].max(), weather['year'].min()
+        year_map = {year: index for index, year in enumerate(range(int(year_max), int(year_min)-1, -1))}
+
+        ## Convert to cartesian format for echart. 2020 = index/row 0 in coordinate matrix
+        weather['y_index'] = weather['year'].map(lambda year: year_map[int(year)])
+
+        ## Handle NaN values for xval
+        weather['xval'] = weather['xval'].replace({np.nan: '-'})
+
+        # Return weather records
+        return list(weather.round(4).T.to_dict().values())
 
 # process station dataframe into a heatmap datagrame
 def create_heat_df( station_df:pd.DataFrame, column_a:str, method_a:str ):
+    
+    if not station_df:
+        station_df = self.get_station_df()
+
     # drop leap year week 53's
     heat_df = station_df[ station_df.theweek <= 52 ]
     heat_df['theyear'] = heat_df['theyear'].astype(int) # so they don't print as floats like 1950.0
