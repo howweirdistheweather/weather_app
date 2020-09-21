@@ -27,7 +27,7 @@ class HData:
         self.station_id          = '0'
         self.main_column_list    = None #['none','none2']
         self.column_init         = 'nocol'
-        self.method_names        = [ 'AVG', 'MIN', 'MAX' ]
+        self.method_names        = [ 'MEDIAN','AVG', 'MIN', 'MAX' ]
         self.method_name_init    = self.method_names[0]        
         self.range_v1            = 0.33     # color slider range value 1
         self.range_v2            = 0.66     # slider value 2
@@ -38,7 +38,9 @@ class HData:
             self.get_stationlist()
 
         if self.main_column_list == None:
-            self.get_collist()        
+            self.get_collist()
+
+        create_pg_median( self.db_conn_str )  
 
     def set_station_id( self, s_id:str ):
         if s_id != None:
@@ -78,13 +80,73 @@ class HData:
         self.column_init = self.main_column_list[1]
 
 
-# process station dataframe into a heatmap datagrame
+# this gives us a median() function in postgres
+def create_pg_median( db_conn_str:str ):
+
+    # func_sql = """CREATE OR REPLACE FUNCTION _final_median(numeric[])
+    #        RETURNS numeric AS
+    #         $$
+    #         SELECT AVG(val)
+    #         FROM (
+    #             SELECT val
+    #             FROM unnest($1) val
+    #             ORDER BY 1
+    #             LIMIT  2 - MOD(array_upper($1, 1), 2)
+    #             OFFSET CEIL(array_upper($1, 1) / 2.0) - 1
+    #         ) sub;
+    #         $$
+    #         LANGUAGE 'sql' IMMUTABLE;
+
+    #         DROP AGGREGATE IF EXISTS median(numeric);
+    #         CREATE AGGREGATE median(numeric) (
+    #         SFUNC=array_append,
+    #         STYPE=numeric[],
+    #         FINALFUNC=_final_median,
+    #         INITCOND='{}'
+    #         );"""
+
+    func_sql = """CREATE OR REPLACE FUNCTION _final_median(anyarray) RETURNS float8 AS $$ 
+                WITH q AS
+                (
+                    SELECT val
+                    FROM unnest($1) val
+                    WHERE VAL IS NOT NULL
+                    ORDER BY 1
+                ),
+                cnt AS
+                (
+                    SELECT COUNT(*) as c FROM q
+                )
+                SELECT AVG(val)::float8
+                FROM 
+                (
+                    SELECT val FROM q
+                    LIMIT  2 - MOD((SELECT c FROM cnt), 2)
+                    OFFSET GREATEST(CEIL((SELECT c FROM cnt) / 2.0) - 1,0)  
+                ) q2;
+                $$ LANGUAGE sql IMMUTABLE;
+
+                DROP AGGREGATE IF EXISTS median(anyelement);
+                CREATE AGGREGATE median(anyelement) (
+                SFUNC=array_append,
+                STYPE=anyarray,
+                FINALFUNC=_final_median,
+                INITCOND='{}'
+                );"""
+
+    # Connect to the PostgreSQL database and execute the sql
+    conn = sqlalchemy.create_engine( db_conn_str )    
+#    try:
+    sql_result = conn.execute( func_sql )        
+#    except:# sqlalchemy  psycopg2.errors.DuplicateFunction:
+#        raise RuntimeError( "Crap median!!" )
+
+# process station dataframe into a heatmap data
 def create_heat_df( station_df:pd.DataFrame, column_a:str, method_a:str ):
     # drop leap year week 53's
     heat_df = station_df[ station_df.theweek <= 52 ]
     heat_df['theyear'] = heat_df['theyear'].astype(int) # so they don't print as floats like 1950.0
     heat_df = heat_df.pivot( index='theyear', columns='theweek', values='xval' )
-    
     return heat_df
 
 def month_to_week( nmonth ):
@@ -93,72 +155,72 @@ def month_to_week( nmonth ):
     return day_of_year * 52 / 365 
 
 def create_hmap_rawpng( station_df:pd.DataFrame, hdat:HData, col_a:str, met_a:str ):
-        hdf = create_heat_df( station_df, col_a, met_a )
-        hvmin = hdf.values.min()
-        hvmax = hdf.values.max()
+    hdf = create_heat_df( station_df, col_a, met_a )
+    hvmin = hdf.values.min()
+    hvmax = hdf.values.max()
 
-        # setup colors
-        hcolor0 = '#edf8b1'
-        hcolor1 = '#7fcdbb'
-        hcolor2 = '#2c7fb8'
+    # setup colors
+    hcolor0 = '#edf8b1'
+    hcolor1 = '#7fcdbb'
+    hcolor2 = '#2c7fb8'
 
-        hb0 = 0.0        
-        hb1 = hdat.range_v1
-        hb2 = hdat.range_v2
-        hb3 = 1.0
+    hb0 = 0.0        
+    hb1 = hdat.range_v1
+    hb2 = hdat.range_v2
+    hb3 = 1.0
 
-        #boundaries = [ 0.0, 0.33, 0.33, 0.66, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries        
-        boundaries = [ hb0, hb1, hb1, hb2, hb2, hb3 ]
-        hex_colors = [ hcolor0, hcolor0, hcolor1, hcolor1, hcolor2, hcolor2 ]
-        colors=list(zip(boundaries, hex_colors))
-        custom1_map = LinearSegmentedColormap.from_list(
-            name='custom1',
-            colors=colors,
-        )
+    #boundaries = [ 0.0, 0.33, 0.33, 0.66, 0.66, 1.0 ]#hdf.values.min, hdf.values.max ]  # custom boundaries        
+    boundaries = [ hb0, hb1, hb1, hb2, hb2, hb3 ]
+    hex_colors = [ hcolor0, hcolor0, hcolor1, hcolor1, hcolor2, hcolor2 ]
+    colors=list(zip(boundaries, hex_colors))
+    custom1_map = LinearSegmentedColormap.from_list(
+        name='custom1',
+        colors=colors,
+    )
 
-        # create plot
-        fig = pyplot.figure(figsize=(4.8,4))#, dpi=500)
-        ax = fig.subplots()
-        ax.set_title( hdat.station_id + " - " + col_a + " - " + met_a, fontsize=8 )        
-        hmap = seaborn.heatmap( 
-            ax=ax, 
-            data=hdf,
+    # create plot
+    fig = pyplot.figure(figsize=(4.8,4))#, dpi=500)
+    ax = fig.subplots()
+    ax.set_title( hdat.station_id + " - " + col_a + " - " + met_a, fontsize=8 )        
+    hmap = seaborn.heatmap( 
+        ax=ax, 
+        data=hdf,
 #            vmin=hdat.range_v0,
 #            vmax=hdat.range_v3,
-            linewidths=0.65, 
-            linecolor='white', 
-            cmap=custom1_map, 
-            square=True, 
-            cbar=True,
-            rasterized=True )
+        linewidths=0.65, 
+        linecolor='white', 
+        cmap=custom1_map, 
+        square=True, 
+        cbar=True,
+        rasterized=True )
 
-        # set cbar font size
-        cbar = ax.collections[0].colorbar      
-        cbar.ax.tick_params(labelsize=6)
+    # set cbar font size
+    cbar = ax.collections[0].colorbar      
+    cbar.ax.tick_params(labelsize=6)
 
-        ax.invert_yaxis()
-        #seaborn.set( font_scale=0.5 )
-        hmap.set( xlabel=None, ylabel=None )
+    ax.invert_yaxis()
+    #seaborn.set( font_scale=0.5 )
+    hmap.set( xlabel=None, ylabel=None )
 
-        # calc locations of week tick marks
-        week_tick = []
-        for i in range(0,12):
-            week_tick.append( month_to_week( i+1 ) )
+    # calc locations of week tick marks
+    week_tick = []
+    for i in range(0,12):
+        week_tick.append( month_to_week( i+1 ) )
 
-        hmap.set_xticks( week_tick )
-        hmap.set_xticklabels( ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], fontsize=6, rotation=90 )
-        hmap.set_yticklabels( hmap.get_ymajorticklabels(), fontsize=6, rotation=10 )
-        #tick_spacing = 4
-        #ax.xaxis.set_major_locator( matplotlib.ticker.MultipleLocator( tick_spacing ) )
-        fig.tight_layout()
+    hmap.set_xticks( week_tick )
+    hmap.set_xticklabels( ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], fontsize=6, rotation=90 )
+    hmap.set_yticklabels( hmap.get_ymajorticklabels(), fontsize=6, rotation=10 )
+    #tick_spacing = 4
+    #ax.xaxis.set_major_locator( matplotlib.ticker.MultipleLocator( tick_spacing ) )
+    fig.tight_layout()
 
-        # create png
-        buf = io.BytesIO()
-        fig.savefig( buf, format='png', dpi=400 )
-        pyplot.close( fig )
-        data=buf.getvalue()
+    # create png
+    buf = io.BytesIO()
+    fig.savefig( buf, format='png', dpi=400 )
+    pyplot.close( fig )
+    data=buf.getvalue()
 
-        return data
+    return data
 
 def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
     # SANITIZE df_column and df_method. these are user input so we need to watch
@@ -172,7 +234,7 @@ def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
     # Connect to the PostgreSQL database
     conn = sqlalchemy.create_engine( hdat.db_conn_str )    
 
-    agg_str = """%s("%s")""" % (df_method, df_column)
+    agg_str = """%s("%s")""" % (df_method, df_column)    
 
     sql = """SELECT DATE_PART('year', "DATE") as "theyear",
                     DATE_PART('week', "DATE") as "theweek",
