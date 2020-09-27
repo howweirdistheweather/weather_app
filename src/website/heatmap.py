@@ -25,6 +25,7 @@ class HData:
         self.db_conn_str         = 'postgresql://hwitw:hwitw@localhost:5432/hwitw_lake'
         self.station_list        = None
         self.station_id          = '0'
+        self.station_data        = None
         self.main_column_list    = None #['none','none2']
         self.column_init         = 'nocol'
         self.method_names        = [ 'MEDIAN','AVG', 'MIN', 'MAX' ]
@@ -42,9 +43,17 @@ class HData:
 
         create_pg_median( self.db_conn_str )  
 
-    def set_station_id( self, s_id:str ):
-        if s_id != None:
-            self.station_id = s_id
+    def set_station_id( self, s_title:str ):
+        if s_title != None:
+            self.station_id = s_title[:5] #first 5 chars
+
+    def get_stationtitle( self ):
+        s_title = 'unknown'
+        for sstr in self.station_list:
+            if sstr[:5] == self.station_id:
+                s_title = sstr
+
+        return s_title
 
     # get the station list
     def get_stationlist( self ):
@@ -52,15 +61,30 @@ class HData:
         # Connect to the PostgreSQL database
         conn = sqlalchemy.create_engine( self.db_conn_str )
 
-        # get the column list
+        # get the list of stations that actually have data in the db
         sql = "SELECT DISTINCT station_id FROM lcd_incoming"
         station_df = pd.read_sql(
                 sql,
                 con = conn )
 
         stations = station_df['station_id'].astype( str )
-        self.station_list = stations.values.tolist()
-        self.station_id = self.station_list[0]
+
+        # get station meta data
+        station_meta = pd.read_sql(
+            sql = "SELECT * FROM stations_in",
+            con = conn
+        )
+
+        self.station_list = []
+        for sta_id in stations.values:
+            sn_df = station_meta.loc[ station_meta['WBAN'] == sta_id]
+            station_name = sn_df.iloc[0]['STATIONNAME']
+            sstr = sta_id + " " + station_name
+            self.station_list.append( sstr )
+
+#        self.station_list = stations.values.tolist()
+        # first 5 chars of station_list item is station id
+        self.station_id = self.station_list[0][:5]
 
     # get the column list
     def get_collist( self ):
@@ -70,13 +94,13 @@ class HData:
 
         # get the column list
         sql = "SELECT * FROM lcd_incoming LIMIT 1"
-        homer = pd.read_sql(
+        columns_df = pd.read_sql(
                 sql,
                 con = conn,
                 parse_dates={'DATE': '%Y-%m-%d %H:%M:%S'},
                 index_col='DATE' )
 
-        self.main_column_list = list(homer.columns)
+        self.main_column_list = list(columns_df.columns)
         self.column_init = self.main_column_list[1]
 
 
@@ -181,7 +205,13 @@ def create_hmap_rawpng( station_df:pd.DataFrame, hdat:HData, col_a:str, met_a:st
     # create plot
     fig = pyplot.figure(figsize=(4.8,4))#, dpi=500)
     ax = fig.subplots()
-    ax.set_title( hdat.station_id + " - " + col_a + " - " + met_a, fontsize=8 )        
+    
+    if len(hdat.station_data.index):
+        title_str = hdat.station_data.iloc[0]['STATIONNAME'] + " - " + hdat.station_id
+    else:
+        title_str = hdat.station_id
+
+    ax.set_title( title_str + " - " + col_a + " - " + met_a, fontsize=8 )        
     hmap = seaborn.heatmap( 
         ax=ax, 
         data=hdf,
@@ -234,23 +264,36 @@ def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
     # Connect to the PostgreSQL database
     conn = sqlalchemy.create_engine( hdat.db_conn_str )    
 
+    # get station meta data
+    hdat.station_data = pd.read_sql(
+        sql = "SELECT * FROM stations_in WHERE \"WBAN\" = %(pwban)s LIMIT 1",
+        con = conn,
+        params = { 'pwban':hdat.station_id }
+    )
+    #station_data.info()
+    #print( hdat.station_data.head() )   
+
+    # main data query
     agg_str = """%s("%s")""" % (df_method, df_column)    
 
     sql = """SELECT DATE_PART('year', "DATE") as "theyear",
                     DATE_PART('week', "DATE") as "theweek",
                     %s AS "xval" """ % agg_str + """
                     from lcd_incoming
-                    where station_id = %(psid)s group by theyear, theweek"""
-    stationdf = pd.read_sql(
+                    where station_id = %(psid)s group by theyear, theweek"""                    
+    
+    main_df = pd.read_sql(
         sql,
         con = conn,
-        params= { 'psid':hdat.station_id } )
+        params = { 'psid':hdat.station_id }
+    )
 
-    return create_hmap_rawpng( stationdf, hdat, df_column, df_method )
+    return create_hmap_rawpng( main_df, hdat, df_column, df_method )
 
 def create_hmap_pn( hdat:HData ):
     # create widgets
-    station_dropdown = pn.widgets.Select( name='Station', options=hdat.station_list, value=hdat.station_id )
+    # the station dropdown now contains the station title (station id + station name)
+    station_dropdown = pn.widgets.Select( name='Station', options=hdat.station_list, value=hdat.get_stationtitle() )
     column_dropdown = pn.widgets.Select( name='Column', options=hdat.main_column_list, value=hdat.column_init )
     method_dropdown = pn.widgets.Select( name='Method', options=hdat.method_names, value=hdat.method_name_init )   
 

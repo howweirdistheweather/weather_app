@@ -12,9 +12,15 @@
 	<body style="background-color: darkgray;">
 	-->
 
-	{{ bokeh_script|safe }}
-	{{ bokeh_div|safe }}
-	{{ pn_embed|safe }}
-	<img src="plot0.png" id="plot_img" height="650px" />
+	{{ bokeh_script|safe }}	
+	<div class="column">
+		<div class="row">
+			{{ bokeh_div|safe }}
+			{{ pn_embed|safe }}
+		</div>
+		<div class="row">
+			<img src="plot0.png" id="plot_img" height="650px" />
+		</div>
+	</div>
 
 {% endblock %}

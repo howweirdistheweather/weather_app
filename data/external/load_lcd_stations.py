@@ -4,7 +4,6 @@
 from sqlalchemy import create_engine, types as sqt                 # DOA for postgresql
 import urllib.request as request
 from io import StringIO
-#import wget
 import pandas as pd
 
 def fetch_lcd_stationlist():
@@ -60,21 +59,6 @@ def main():
             dtype      = { 'USAF':sqt.String,'WBAN':sqt.String, 'STATIONNAME':sqt.String, 'CTRY':sqt.String, 'STATE':sqt.String, 'ICAO':sqt.String }            
         )
         
-        # lcd_df.loc[:, target_features] = lcd_df[target_features].apply(clean_hourly).astype(float)
-        #     ## Adding station_id to output
-        #     lcd_df['station_id'] = station_id
-
-        #     ## Get max day for station in database
-        #     sql = f"""
-        #         SELECT TO_CHAR(TO_DATE(MAX("DATE"), 'YYYY-MM-DD'), 'YYYYMMDD') AS last_date 
-        #         FROM lcd_incoming 
-        #         WHERE station_id = {station_id}
-        #     """
-        #     df = pd.read_sql(sql, con = src_conn).get('last_date')
-        #     last_date = df.iloc[0]
-
-        # cleaned_df.to_sql("lcd_incoming", if_exists = "append", con = src_conn)
-        # logging.info(f"Successfully loaded {cleaned_df.shape[0]} new daily record(s)")
     except:
         raise ValueError(f"Couldn't load database.")
 
