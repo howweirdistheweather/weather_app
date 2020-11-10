@@ -104,7 +104,7 @@ class HData:
         self.column_init = self.main_column_list[1]
 
 
-# this gives us a median() function in postgres
+# this gives us a median() function in postgres. Found somewhere on the www.
 def create_pg_median( db_conn_str:str ):
 
     # func_sql = """CREATE OR REPLACE FUNCTION _final_median(numeric[])
@@ -290,7 +290,7 @@ def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
 
     return create_hmap_rawpng( main_df, hdat, df_column, df_method )
 
-def create_hmap_pn( hdat:HData ):
+def create_hmap_pn( hdat:HData ):        
     # create widgets
     # the station dropdown now contains the station title (station id + station name)
     station_dropdown = pn.widgets.Select( name='Station', options=hdat.station_list, value=hdat.get_stationtitle() )
@@ -299,54 +299,34 @@ def create_hmap_pn( hdat:HData ):
 
     range_slider = pn.widgets.RangeSlider( name='Range', start=0.0, end=1.0, value=( hdat.range_v1, hdat.range_v2), step=0.05 )
 
+    # the javascript for all the controls is the same
+    a_args={
+        'station_obj':station_dropdown,
+        'column_obj':column_dropdown,
+        'method_obj':method_dropdown,
+        'range_obj':range_slider
+    }
+    a_value="""
+        var plot_img = document.getElementById('plot_img');
+        plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
+    """
+
     station_dropdown.jscallback(
-        args={ 'station_obj':station_dropdown,
-               'column_obj':column_dropdown,
-               'method_obj':method_dropdown,
-               'range_obj':range_slider
-        },
-        value="""
-            var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
-        """
+        args=a_args, value=a_value
     )
 
     column_dropdown.jscallback(
-        args={ 'station_obj':station_dropdown,
-               'column_obj':column_dropdown,
-               'method_obj':method_dropdown,
-               'range_obj':range_slider
-        },
-        value="""
-            var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
-        """
+        args=a_args, value=a_value
     )
 
     method_dropdown.jscallback(
-        args={ 'station_obj':station_dropdown,
-               'column_obj':column_dropdown,
-               'method_obj':method_dropdown,
-               'range_obj':range_slider
-        },
-        value="""
-            var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
-        """
+        args=a_args, value=a_value
     )
 
     range_slider.jscallback(
-        args={ 'station_obj':station_dropdown,
-               'column_obj':column_dropdown,
-               'method_obj':method_dropdown,
-               'range_obj':range_slider
-        },
-        value="""
-            var plot_img = document.getElementById('plot_img');
-            plot_img.src = `plot0.png?df_station=${station_obj.value}&df_col=${column_obj.value}&df_method=${method_obj.value}&rv1=${range_obj.value[0]}&rv2=${range_obj.value[1]}`;
-        """
+        args=a_args, value=a_value
     )
-
+    
     main_pn = pn.Column(
         pn.Row( station_dropdown, column_dropdown, method_dropdown, width=700 ),
         pn.Row( range_slider, width=200 )
