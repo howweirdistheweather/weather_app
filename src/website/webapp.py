@@ -5,8 +5,13 @@ from flask import Flask, render_template, request, Response, send_from_directory
 from bokeh.embed import components
 #from bokeh.plotting import figure
 #import plotly.graph_objs as go
+import html
 import heatmap
 from webauth import requires_auth
+import folium
+import folium.plugins
+import sqlalchemy
+import pandas as pd
 
 # notebooks need this: pn.extension('plotly')
 app = Flask(__name__)
@@ -86,6 +91,64 @@ def plot0():
 
 	raw_png_data = heatmap.create_station_hmap_png( hdat, df_col, df_method )
 	return Response( raw_png_data, mimetype='image/png')
+
+# station map
+@app.route('/station_map')
+@requires_auth
+def station_map():
+	### query station metadata table
+	# Connect to the PostgreSQL database
+	conn = sqlalchemy.create_engine( hdat.db_conn_str )    
+
+	# get station meta data
+	station_data = pd.read_sql(
+		sql = "SELECT * FROM stations_in", # 16131 WHERE \"STATE\"='AK' LIMIT 800",
+		con = conn
+		#params = { 'pwban':hdat.station_id }
+	)
+	# create follium map	
+	#lat, long = station_data[ station_data['stationname'].str.contains( 'Seldovia' )][['lat','lon']].values[0]
+	lat = 59
+	lon = -151
+
+	f_map = folium.Map(
+    	location   = (lat, lon),
+    	tiles      = 'Stamen Terrain',
+    	zoom_start = 6
+	)
+
+	# for automatic zoom clustering we use a markercluster. we add the markers to it instead of to the map object.
+	# ..and now we are using FastMarkerCluster which can handle thousands of markers.
+	marker_data = []
+	marker_cluster = folium.plugins.FastMarkerCluster( name='ICD Stations', data=marker_data ).add_to( f_map )
+
+	## Add markers from DataFrame
+	def apply_markers(row):
+		# some station names have backticks and other weird stuff I guess. It needs to be proper html.
+		# if no name is present use stationid as the name
+		sname = row['STATIONNAME']
+		if sname == None:
+			sname = row['STATIONID']
+		else:
+    		# folium chokes on backticks for some reason. get rid of any.
+			sname = sname.replace( '`', '' )			
+			#sname = html.escape( sname, quote=True )
+			
+		# create and add tooltip
+		mark_lat = row['LAT']
+		mark_lon = row['LON']
+		if not pd.isnull( mark_lat ) and not pd.isnull( mark_lon ):
+			tooltip_meta = f"<div style='width: 300px;'><strong>{sname}</strong></br>"
+			tooltip_meta += f"id: {row['STATIONID']}</br> elev/m: {row['ELEVM']}</br>"
+			tooltip_meta += f"start: {row['BEGIN']}</br> end: {row['END']}</div>"
+			folium.Marker(location=[mark_lat,mark_lon], popup=folium.Popup( tooltip_meta, parse_html=False ) ).add_to( marker_cluster ) #add_to( f_map )
+
+	station_data.apply( apply_markers, axis = 1 )
+	
+	return render_template(
+		"station_map.html",
+		f_map = f_map._repr_html_()
+	)
 
 # With debug=True, Flask server will auto-reload 
 # when there are code changes
