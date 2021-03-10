@@ -290,6 +290,59 @@ def create_station_hmap_png( hdat:HData, df_column:str, df_method:str ):
 
     return create_hmap_rawpng( main_df, hdat, df_column, df_method )
 
+def create_hmap_json( station_df:pd.DataFrame, hdat:HData, col_a:str, met_a:str ):
+    hdf = create_heat_df( station_df, col_a, met_a )
+    hvmin = hdf.values.min()
+    hvmax = hdf.values.max()
+
+    if len(hdat.station_data.index):
+        title_str = hdat.station_data.iloc[0]['STATIONNAME'] + " - " + hdat.station_id
+    else:
+        title_str = hdat.station_id
+
+    #ax.set_title( title_str + " - " + col_a + " - " + met_a, fontsize=8 )        
+
+    return hdf.to_json(orient='values')
+
+def create_station_hmap_json( hdat:HData, df_column:str, df_method:str ):
+    # SANITIZE df_column and df_method. these are user input so we need to watch
+    # out for SQL injection type attacks
+    if df_column == None or df_column not in hdat.main_column_list:
+        df_column = hdat.column_init
+
+    if df_method == None or df_method not in hdat.method_names:
+        df_method = hdat.method_name_init
+
+    # Connect to the PostgreSQL database
+    conn = sqlalchemy.create_engine( hdat.db_conn_str )    
+
+    # get station meta data
+    hdat.station_data = pd.read_sql(
+        sql = "SELECT * FROM stations_in WHERE \"WBAN\" = %(pwban)s LIMIT 1",
+        con = conn,
+        params = { 'pwban':hdat.station_id }
+    )
+    #station_data.info()
+    #print( hdat.station_data.head() )   
+
+    # main data query
+    agg_str = """%s("%s")""" % (df_method, df_column)    
+
+    sql = """SELECT DATE_PART('year', "DATE") as "theyear",
+                    DATE_PART('week', "DATE") as "theweek",
+                    %s AS "xval" """ % agg_str + """
+                    from lcd_incoming
+                    where station_id = %(psid)s group by theyear, theweek"""                    
+    
+    main_df = pd.read_sql(
+        sql,
+        con = conn,
+        params = { 'psid':hdat.station_id }
+    )
+
+    return create_hmap_json( main_df, hdat, df_column, df_method )
+
+
 def create_hmap_pn( hdat:HData ):        
     # create widgets
     # the station dropdown now contains the station title (station id + station name)

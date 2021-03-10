@@ -13,8 +13,11 @@ import folium.plugins
 import sqlalchemy
 import pandas as pd
 
+from flask_cors import CORS
+
 # notebooks need this: pn.extension('plotly')
 app = Flask(__name__)
+CORS(app)
 hdat = heatmap.HData()
 
 ## Static Files Config
@@ -91,6 +94,25 @@ def plot0():
 
 	raw_png_data = heatmap.create_station_hmap_png( hdat, df_col, df_method )
 	return Response( raw_png_data, mimetype='image/png')
+
+# return plot data as json
+@app.route('/plot0.json')
+@requires_auth
+def plot0json():
+	# init if not already
+	hdat.init2()
+
+	hdat.set_station_id( request.args.get( 'df_station' ) )
+	df_col = request.args.get( 'df_col' )
+	df_method = request.args.get( 'df_method' )
+	hdat.range_v1 = request.args.get( 'rv1', type=float, default=0.33 )
+	hdat.range_v2 = request.args.get( 'rv2', type=float, default=0.66 )
+
+	json_data = heatmap.create_station_hmap_json( hdat, df_col, df_method )
+	
+	resp = Response( json_data, mimetype='application/json')
+	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
+	return resp
 
 # station map
 @app.route('/station_map')
