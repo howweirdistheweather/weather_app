@@ -6,6 +6,7 @@ from bokeh.embed import components
 #from bokeh.plotting import figure
 #import plotly.graph_objs as go
 import html
+import json
 import heatmap
 from webauth import requires_auth
 import folium
@@ -17,7 +18,7 @@ from flask_cors import CORS
 
 # notebooks need this: pn.extension('plotly')
 app = Flask(__name__)
-CORS(app)
+CORS(app) # CORS headers to make devel easier
 hdat = heatmap.HData()
 
 ## Static Files Config
@@ -105,11 +106,41 @@ def plot0json():
 	hdat.set_station_id( request.args.get( 'df_station' ) )
 	df_col = request.args.get( 'df_col' )
 	df_method = request.args.get( 'df_method' )
-	hdat.range_v1 = request.args.get( 'rv1', type=float, default=0.33 )
-	hdat.range_v2 = request.args.get( 'rv2', type=float, default=0.66 )
+	#hdat.range_v1 = request.args.get( 'rv1', type=float, default=0.33 )
+	#hdat.range_v2 = request.args.get( 'rv2', type=float, default=0.66 )
 
 	json_data = heatmap.create_station_hmap_json( hdat, df_col, df_method )
 	
+	resp = Response( json_data, mimetype='application/json')
+	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
+	return resp
+
+# return column/reading-type list as json
+@app.route('/readingtypes.json')
+@requires_auth
+def readingtypesjson():
+	#init if not already
+	hdat.init2()
+
+	json_data = json.dumps( hdat.main_column_list )
+
+	resp = Response( json_data, mimetype='application/json')
+	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
+	return resp
+
+# return station metadata table as json
+@app.route('/stationsmeta.json')
+@requires_auth
+def stationsmetajson():
+	#init if not already
+	hdat.init2()
+
+	sm_type = request.args.get( 'sm_type', default='allco' )
+	sm_co = request.args.get( 'sm_co', default='D33DB33F' )
+	sm_state = request.args.get( 'sm_state', default='D33DB33F' )
+	
+	json_data = hdat.get_stationsmeta( sm_type, sm_co, sm_state )
+
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
 	return resp

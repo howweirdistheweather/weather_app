@@ -41,7 +41,7 @@ class HData:
         if self.main_column_list == None:
             self.get_collist()
 
-        create_pg_median( self.db_conn_str )  
+       # this is causing a db concurrency error: create_pg_median( self.db_conn_str )  
 
     def set_station_id( self, s_title:str ):
         if s_title != None:
@@ -85,6 +85,35 @@ class HData:
 #        self.station_list = stations.values.tolist()
         # first 5 chars of station_list item is station id
         self.station_id = self.station_list[0][:5]
+
+    # get the station meta table as json
+    def get_stationsmeta( self, sm_type, sm_co, sm_state ):
+        sys.stderr.write( 'dbg: get_stationsmeta sm_type:' + sm_type + ' sm_co:' + sm_co + ' sm_state:' + sm_state + '\n' )
+        # Connect to the database
+        conn = sqlalchemy.create_engine( self.db_conn_str )
+
+        sql = ''
+        params1 = None
+
+        if sm_type == 'state' and sm_state == 'null':    # let 'null' be a wildcard
+            sql = "SELECT * FROM stations_in WHERE \"CTRY\" = %(sm_co)s ORDER BY \"STATIONNAME\""
+            params1 = { 'sm_co':sm_co }
+        elif sm_type == 'state':            
+            sql = "SELECT * FROM stations_in WHERE \"CTRY\" = %(sm_co)s AND \"STATE\" = %(sm_state)s ORDER BY \"STATIONNAME\""
+            params1 = { 'sm_co':sm_co, 'sm_state':sm_state }
+        elif sm_type == 'co':
+            sql = "SELECT DISTINCT \"STATE\" FROM stations_in WHERE \"CTRY\" = %(sm_co)s ORDER BY \"STATE\""
+            params1 = { 'sm_co':sm_co }
+        else:
+            sql = "SELECT DISTINCT \"CTRY\" FROM stations_in ORDER BY \"CTRY\""
+
+        # get station meta data
+        station_meta = pd.read_sql(
+            sql = sql,
+            con = conn,
+            params = params1
+        )
+        return station_meta.to_json(orient='records')
 
     # get the column list
     def get_collist( self ):
