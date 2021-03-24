@@ -115,6 +115,19 @@ def plot0json():
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
 	return resp
 
+# return aggregation methods list as json
+@app.route('/aggmethods.json')
+@requires_auth
+def aggmethodsjson():
+	#init if not already
+	hdat.init2()
+
+	json_data = json.dumps( hdat.method_names )
+
+	resp = Response( json_data, mimetype='application/json')
+	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
+	return resp
+
 # return column/reading-type list as json
 @app.route('/readingtypes.json')
 @requires_auth
