@@ -35,9 +35,10 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log && ln -sf /dev/stderr /var/log/
 
 # now copy everything else into place. changes to src will 'docker build' faster this way
 # so we don't have to do all of the above everytime we change source code
-COPY README.md hwitw_entrypoint.sh wsgi.py webauth.py webapp.py heatmap.py /app/
+COPY README.md hwitw_entrypoint.sh wsgi.py webauth.py webapp.py heatmap.py htpasswd /app/
 COPY templates /app/templates
 COPY static /app/static
+COPY ngroot /app/ngroot
 COPY nginx /etc/nginx
 
 # Expose the PostgreSQL port

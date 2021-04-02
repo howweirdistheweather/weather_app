@@ -6,3 +6,5 @@ seaborn
 panel
 psycopg2
 sqlalchemy
+folium
+flask_cors

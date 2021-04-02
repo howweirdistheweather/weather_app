@@ -21,42 +21,8 @@ app = Flask(__name__)
 CORS(app) # CORS headers to make devel easier
 hdat = heatmap.HData()
 
-## Static Files Config
-@app.route('/js/<path:path>')
-def get_js(path):
-    return send_from_directory('static/js', path)
-
-@app.route('/css/<path:path>')
-def get_css(path):
-    return send_from_directory('static/css', path)
-
-@app.route('/img/<path:path>')
-def get_img(path):
-    return send_from_directory('static/assets/img', path)
-
-@app.route('/example', methods=['GET'] )
-def example():
-	return render_template("example.html")
-
-@app.route('/about', methods=['GET'] )
-def about():
-	return render_template("about.html")
-
-@app.route('/team', methods=['GET'] )
-def team():
-	return render_template("team.html")
-
-@app.route('/contact', methods=['GET'] )
-def contact():
-	return render_template("contact.html")
-
-@app.route('/terms', methods=['GET'] )
-def terms():
-	return render_template("terms.html")
-
-
 # Index page
-@app.route('/', methods=['GET'] )
+@app.route('/wxapp', methods=['GET'] )
 @requires_auth
 def index():
 	# Determine the selected feature
@@ -81,7 +47,7 @@ def index():
 	)
 
 # png plot
-@app.route('/plot0.png')
+@app.route('/wxapp/plot0.png')
 @requires_auth
 def plot0():
 	# init if not already
@@ -97,7 +63,7 @@ def plot0():
 	return Response( raw_png_data, mimetype='image/png')
 
 # return plot data as json
-@app.route('/plot0.json')
+@app.route('/wxapp/plot0.json')
 @requires_auth
 def plot0json():
 	# init if not already
@@ -116,7 +82,7 @@ def plot0json():
 	return resp
 
 # return aggregation methods list as json
-@app.route('/aggmethods.json')
+@app.route('/wxapp/aggmethods.json')
 @requires_auth
 def aggmethodsjson():
 	#init if not already
@@ -129,7 +95,7 @@ def aggmethodsjson():
 	return resp
 
 # return column/reading-type list as json
-@app.route('/readingtypes.json')
+@app.route('/wxapp/readingtypes.json')
 @requires_auth
 def readingtypesjson():
 	#init if not already
@@ -142,7 +108,7 @@ def readingtypesjson():
 	return resp
 
 # return station metadata table as json
-@app.route('/stationsmeta.json')
+@app.route('/wxapp/stationsmeta.json')
 @requires_auth
 def stationsmetajson():
 	#init if not already
@@ -159,7 +125,7 @@ def stationsmetajson():
 	return resp
 
 # station map
-@app.route('/station_map')
+@app.route('/wxapp/station_map')
 @requires_auth
 def station_map():
 	### query station metadata table
