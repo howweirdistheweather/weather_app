@@ -1,0 +1,10 @@
+gunicorn
+flask
+numpy
+pandas
+seaborn
+panel
+psycopg2
+sqlalchemy
+folium
+flask_cors
