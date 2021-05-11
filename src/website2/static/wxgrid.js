@@ -387,7 +387,7 @@ function RenderGrid()
 
             // get measurement, years are reversed order, & calculate fill color
             var fillcol = 0;
-	    let shape_rend = 'crispEdges';	// render the contigous blocks with crispedges
+	        let shape_rend = 'crispEdges';	// render the contigous blocks with crispedges
             var bsize = boxsize;
             var mx = wx_grdata[num_years-1-j][i];
             if ( mx == null )
@@ -398,8 +398,8 @@ function RenderGrid()
                 mx = (mx - wx_grdata_min) / data_range; // normalize mx 0..1
                 if ( mx < wx_range_val0 ){
                     fillcol = color0;
-		    shape_rend = 'auto';		// draw the blue grid blocks with AntiAliasing
-		}
+		            shape_rend = 'auto';		// draw the blue grid blocks with AntiAliasing
+		        }
                 else if ( mx < wx_range_val1 ){
                     fillcol = color1;
                     bsize = boxspace;   // bigger square
@@ -414,7 +414,7 @@ function RenderGrid()
             sx = i * boxspace + off_x;
             draw.rect( bsize, bsize ).move( sx, sy ).attr({
                 'fill':fillcol,
-        	'shape-rendering':shape_rend,
+                'shape-rendering':shape_rend,
                 'stroke-width': 0 
             });
         }

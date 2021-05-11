@@ -19,63 +19,20 @@ from flask_cors import CORS
 # notebooks need this: pn.extension('plotly')
 app = Flask(__name__)
 CORS(app) # CORS headers to make devel easier
-hdat = heatmap.HData()
+hdat = heatmap.HData( fake_data=True )
 
-# Index page
-@app.route('/wxapp', methods=['GET'] )
-@requires_auth
-def index():
-	# Determine the selected feature
-	current_feature_name = request.args.get("feature_name")
-	if current_feature_name == None:
-		current_feature_name = "Sepal Length"
-
-	# init if not already
-	hdat.init2()
-
-	# Create the panel	
-	apanel = heatmap.create_hmap_pn( hdat )
-	 
-	# Embed into HTML via Flask Render
-	bokeh_script, bokeh_div = components( apanel.get_root() )
-	return render_template( 
-		"index.html", 
-		#pn_embed=apanel.embed(),
-		bokeh_script=bokeh_script, 
-		bokeh_div=bokeh_div,
-		current_feature_name=current_feature_name
-	)
-
-# png plot
-@app.route('/wxapp/plot0.png')
-@requires_auth
-def plot0():
-	# init if not already
-	hdat.init2()
-
-	hdat.set_station_id( request.args.get( 'df_station' ) )
-	df_col = request.args.get( 'df_col' )
-	df_method = request.args.get( 'df_method' )
-	hdat.range_v1 = request.args.get( 'rv1', type=float, default=0.33 )
-	hdat.range_v2 = request.args.get( 'rv2', type=float, default=0.66 )
-
-	raw_png_data = heatmap.create_station_hmap_png( hdat, df_col, df_method )
-	return Response( raw_png_data, mimetype='image/png')
 
 # return plot data as json
 @app.route('/wxapp/plot0.json')
 @requires_auth
 def plot0json():
-	# init if not already
-	hdat.init2()
-
-	hdat.set_station_id( request.args.get( 'df_station' ) )
+	station_id = request.args.get( 'df_station' )
 	df_col = request.args.get( 'df_col' )
 	df_method = request.args.get( 'df_method' )
 	#hdat.range_v1 = request.args.get( 'rv1', type=float, default=0.33 )
 	#hdat.range_v2 = request.args.get( 'rv2', type=float, default=0.66 )
 
-	json_data = heatmap.create_station_hmap_json( hdat, df_col, df_method )
+	json_data = heatmap.create_station_hmap_json( hdat, station_id, df_col, df_method )
 	
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
@@ -85,10 +42,7 @@ def plot0json():
 @app.route('/wxapp/aggmethods.json')
 @requires_auth
 def aggmethodsjson():
-	#init if not already
-	hdat.init2()
-
-	json_data = json.dumps( hdat.method_names )
+	json_data = hdat.get_aggmethods_json()
 
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
@@ -98,10 +52,7 @@ def aggmethodsjson():
 @app.route('/wxapp/readingtypes.json')
 @requires_auth
 def readingtypesjson():
-	#init if not already
-	hdat.init2()
-
-	json_data = json.dumps( hdat.main_column_list )
+	json_data = hdat.get_collist_json()
 
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
@@ -111,14 +62,11 @@ def readingtypesjson():
 @app.route('/wxapp/stationsmeta.json')
 @requires_auth
 def stationsmetajson():
-	#init if not already
-	hdat.init2()
-
 	sm_type = request.args.get( 'sm_type', default='allco' )
 	sm_co = request.args.get( 'sm_co', default='D33DB33F' )
 	sm_state = request.args.get( 'sm_state', default='D33DB33F' )
 	
-	json_data = hdat.get_stationsmeta( sm_type, sm_co, sm_state )
+	json_data = hdat.get_stationsmeta_json( sm_type, sm_co, sm_state )
 
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
