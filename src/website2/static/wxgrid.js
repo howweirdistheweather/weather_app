@@ -1,15 +1,82 @@
 /// HWITW project Copyright (C) 2021
-// initialize as an array of zeros. an empty grid.
-var wx_grdata = Array(60).fill().map(() => Array(52).fill(0)); //Array.from(Array(50), () => new Array(52));   // init empty/zero grid
+// initialize as an array LoadWXGrid( st_dropdown.value, reading_dropdown.value, reading_dropdown2.value)of zeros. an empty grid.
+var wx_grdata = {"Reading Type":Array(60).fill().map(() => Array(52).fill(0)),"Reading Type2":Array(60).fill().map(() => Array(52).fill(0))}; //Array.from(Array(50), () => new Array(52));   // init empty/zero grid
 var wx_grdata_min = 0.0;
 var wx_grdata_max = 1.0;
 var wx_range_val0 = 0.33;
 var wx_range_val1 = 0.66;
+var weight_val = 0.01
+var weight_val2 = 0.01
 var wxapp_folder = '/wxapp/'    // base folder/url of python app stuff
+var next_id_num = 0
+var reding_dropdowns = []
+var direction_dropdowns = []
+var wheght_sliders = []
+var wheght_setexis = []
 
+function makeNewElement(id, type, atributes) {
+	var theDiv = document.getElementById(id);
+	var content = document.createElement(type);
+	var atibutes_to_set = Object.keys(atributes);
+	for (atibute_to_set of atibutes_to_set) {
+		content.setAttribute(atibute_to_set, atributes[atibute_to_set]);
+	}
+	theDiv.appendChild(content);
+}
+
+function makeNewMeasurmeant() {
+	makeNewElement("measurements","div",{"style":"text-align: center;","id":"measurement"+next_id_num});
+	makeNewElement("measurement"+next_id_num,"select",{"id":"gr-reading_dropdown"+next_id_num});
+	reding_dropdowns.push(document.getElementById('gr-reading_dropdown'+next_id_num));
+	
+	reading_dropdowns[next_id_num].onchange =
+	    function () {
+	        LoadWXGrid( st_dropdown.value, reading_dropdown.value, reading_dropdown2.value);
+	    };
+	LoadReadingDropdown(next_id_num);
+	
+	makeNewElement("measurement"+next_id_num,"select",{"id":"gr-direction_dropdown"+next_id_num});
+	
+	// create direction dropdown
+	var direction_dropdown = document.getElementById('gr-direction_dropdown'+next_id_num);
+	direction_dropdown.onchange =
+	    function () {
+	        RenderGrid();
+	    };
+	LoadDirectionDropdown(next_id_num);
+	
+	makeNewElement("measurement"+next_id_num,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+next_id_num});
+	makeNewElement("weight_slider_holder"+next_id_num,"div",{"style":"margin: 0 auto; width: 200px; height: 20px;","id":"weight_slider"+next_id_num});
+	makeNewElement("measurement"+next_id_num,"div",{"style":"padding-bottom: 20px;","class":"column","id":"weight_stext_div"+next_id_num});
+	makeNewElement("weight_stext_div"+next_id_num,"div",{"style":"display: inline-block; margin-left: 10px; color: cornflowerblue; padding-top: 10px;","class":"row","id":"weight_stext"+next_id_num});
+	
+	wheght_setexis.push(document.getElementById( 'weight_stext'+next_id_num ));
+
+	// create the range slider
+	wheght_sliders.push(document.getElementById('weight_slider'+next_id_num));
+	noUiSlider.create( weight_sliders[next_id_num], {
+	    start: [50],
+	    connect: false,
+	    range: {
+	        'min': 1,
+	        'max': 100
+	    },     
+	});
+	
+	weight_sliders[next_id_num].noUiSlider.on('update', function (values, handle) {
+	    var weight_val = values[0] / 100;
+	    // update text and redraw wx grid
+	    wheght_setexis[next_id_num].textContent = weight_val.toFixed(2);
+		RenderGrid()
+	});
+	next_id_num++
+}
 // make wx_grdata an array of zeros
-function ClearWXGridData() {
-    wx_grdata = Array(60).fill().map(() => Array(52).fill(0)); //Array.from(Array(50), () => new Array(52));   // init empty/zero grid
+function ClearWXGridData( reading_type , reading_type2 ) {
+	var reading_type = reading_type
+    wx_grdata = {}; //Array.from(Array(50), () => new Array(52));   // init empty/zero grid
+	wx_grdata[reading_type] = Array(60).fill().map(() => Array(52).fill(0))
+	wx_grdata[reading_type2] = Array(60).fill().map(() => Array(52).fill(0))
     wx_grdata_min = 0.0;
     wx_grdata_max = 1.0;    
 }
@@ -52,19 +119,13 @@ function ResetStationDropdown() {
     st_dropdown.selectedIndex = 0;
     st_dropdown.onchange =
         function() {
-            LoadWXGrid( st_dropdown.value, reading_dropdown.value, agg_dropdown.value );
+            LoadWXGrid( st_dropdown.value, reading_dropdown.value, reading_dropdown2.value);
         };
 }
 
-// create reading-type dropdown
-var reading_dropdown = document.getElementById('gr-reading_dropdown');
-reading_dropdown.onchange =
-    function () {
-        LoadWXGrid( st_dropdown.value, reading_dropdown.value, agg_dropdown.value );
-    };
-LoadReadingDropdown();
 
-function LoadReadingDropdown() {
+
+function LoadReadingDropdown(num) {
     // get list of reading types
     const co_url = wxapp_folder + 'readingtypes.json'
     fetch( co_url, {    method:'GET',
@@ -80,15 +141,15 @@ function LoadReadingDropdown() {
 
             response.json().then(
                 function(data) {
-                    reading_dropdown.options.length = 0;                    
+                    reading_dropdowns[num].options.length = 0;                    
                     let option;
                     for (let i = 0; i < data.length; i++) {
                         option = document.createElement('option');
                         option.text = data[i];
                         option.value = data[i];
-                        reading_dropdown.add(option);
+                        reading_dropdowns[num].add(option);
                     }
-                    reading_dropdown.selectedIndex = 1; // skip 0 station_id
+                    reading_dropdowns[num].selectedIndex = 1; // skip 0 station_id
                 }
             );
         }
@@ -98,47 +159,20 @@ function LoadReadingDropdown() {
     });
 }
 
-// create aggregation method dropdown
-var agg_dropdown = document.getElementById('gr-agg_dropdown');
-agg_dropdown.onchange =
-    function () {
-        LoadWXGrid( st_dropdown.value, reading_dropdown.value, agg_dropdown.value );
-    };
-LoadAggDropdown();
-
-function LoadAggDropdown() {
-    // get list of aggregation methods from server
-    const co_url = wxapp_folder + 'aggmethods.json'
-    fetch( co_url, {    method:'GET',
-                        headers: {'Authorization': 'Basic ' + btoa(cred_str)}
-                    }
-    )
-    .then(
-        function( response ) {
-            if ( response.status !== 200 ) {
-                console.warn('Problemo with fetch aggmethods. Status Code: ' + response.status );
-                return;
-            }
-
-            response.json().then(
-                function(data) {
-                    agg_dropdown.options.length = 0;                    
-                    let option;
-                    for (let i = 0; i < data.length; i++) {
-                        option = document.createElement('option');
-                        option.text = data[i];
-                        option.value = data[i];
-                        agg_dropdown.add(option);
-                    }
-                    agg_dropdown.selectedIndex = 0;
-                }
-            );
-        }
-    )
-    .catch(function(err) {
-        console.error('Fetch Error -', err);
-    });
+function LoadDirectionDropdown(num) {
+    // get list of reading types
+    
+    direction_dropdowns[num].options.length = 0;                    
+    let option;
+    for (let i = 0; i < 2; i++) {
+        option = document.createElement('option');
+        option.text = ['High','Low'][i];
+        option.value = [[1,0],[(-1),1]][i];
+        direction_dropdowns[num].add(option);
+    }
+    direction_dropdowns[num].selectedIndex = 0;
 }
+// create direction dropdown
 
 // get list of countries
 const co_url = wxapp_folder + 'stationsmeta.json'
@@ -173,6 +207,7 @@ fetch( co_url, {    method:'GET',
 });
 
 /// get list of states in selected country
+/// get list of states in selected country
 function LoadStates( current_country ) {
     ResetStateDropdown();
 
@@ -195,7 +230,9 @@ function LoadStates( current_country ) {
                         option = document.createElement('option');
                         option.text = data[i].STATE;
                         option.value = data[i].STATE;
-                        state_dropdown.add(option);
+                  if ( data[i].CTRY == current_country ) {
+                           state_dropdown.add(option);
+                  }
                     }
                     ResetStationDropdown();
                 }                
@@ -230,7 +267,9 @@ function LoadStations( current_country, current_state ){
                         option = document.createElement('option');
                         option.text = data[i].STATIONNAME + '  ('+data[i].STATIONID+')';
                         option.value = data[i].WBAN;// .STATIONID;
-                        st_dropdown.add(option);
+                  if (data[i].STATE == current_state) {
+                           st_dropdown.add(option);
+                  }
                     }
                 }
             );
@@ -242,8 +281,8 @@ function LoadStations( current_country, current_state ){
 }
 
 // get slider range text objects
-var wx_stext_val0 = document.getElementById( 'gr_stext0' );
-var wx_stext_val1 = document.getElementById( 'gr_stext1' );
+var wx_stext_val4 = document.getElementById( 'gr_stext0' );
+var wx_stext_val5 = document.getElementById( 'gr_stext1' );
 
 // create the range slider
 var wx_slider = document.getElementById('gr_slider');
@@ -261,8 +300,8 @@ wx_slider.noUiSlider.on('update', function (values, handle) {
     wx_range_val0 = values[0] / 100;
     wx_range_val1 = values[1] / 100;
     // update text and redraw wx grid
-    wx_stext_val0.textContent = wx_range_val0.toFixed(2);
-    wx_stext_val1.textContent = wx_range_val1.toFixed(2);
+    wx_stext_val4.textContent = wx_range_val0.toFixed(2);
+    wx_stext_val5.textContent = wx_range_val1.toFixed(2);
     RenderGrid();
 //    diffDivs[0].innerHTML = values[1] - values[0];
   //  diffDivs[1].innerHTML = values[2] - values[1];
@@ -272,12 +311,16 @@ wx_slider.noUiSlider.on('update', function (values, handle) {
 //var testurl = "plot0.json";
 // using port 88 here to get around CORS block
 //var testurl = "http://localhost:5000/plot0.json?df_station=13743 RONALD REAGAN WASHINGTON NATL AP&df_col=HourlySeaLevelPressure&df_method=MEDIAN";
-function LoadWXGrid( station_id, reading_type, agg_method ) {
+function LoadWXGrid( station_id, reading_types) {
+	// make modifiers into arrays
+	
     // clear existing wxgriddata
-    ClearWXGridData();
+    ClearWXGridData(reading_type, reading_type2);
     RenderGrid();
+	makeNewMeasurmeant()
+	document.getElementById('gr_title').textContent =  'Loading...';
     // AJAX the JSON
-    var wxgrid_url = wxapp_folder + `plot0.json?df_station=${station_id}&df_col=${reading_type}&df_method=${agg_method}`;
+    var wxgrid_url = wxapp_folder + `plot0.json?df_station=${station_id}&df_methods=${reading_types}`;
     fetch( wxgrid_url, {   method:'GET',
                             headers: {'Authorization': 'Basic ' + btoa(cred_str)}
                         }
@@ -293,26 +336,14 @@ function LoadWXGrid( station_id, reading_type, agg_method ) {
                 function(data) {
                     // parse JSON and determine some stuff
                     wx_grdata = data;//JSON.parse( data.response );
-                    // determine min/max
-                    num_j = Object.keys(wx_grdata).length;
-                    num_i = Object.keys(wx_grdata[0]).length;
-                    console.log( num_j + ' years & ' + num_i + ' weeks received.' );
-                    wx_grdata_min = Number.MAX_VALUE;
-                    wx_grdata_max = Number.MIN_VALUE;
-                    for ( var j = 0; j < num_j; j++ ){
-                        for ( var i = 0; i < num_i; i++ ){
-                            var val = wx_grdata[j][i];
-                            if ( val != null )
-                            {                    
-                                wx_grdata_min = Math.min( val, wx_grdata_min );
-                                wx_grdata_max = Math.max( val, wx_grdata_max );
-                            }
-                        }
-                    }
+					console.log( num_n + ' years & ' + num_m + ' weeks received.' );
+					
 
-                    // set the title and render the grid
-                    document.getElementById('gr_title').textContent =  num_j + ' years x ' + num_i + ' weeks received.';
-                    RenderGrid();
+                    // set the title and render the grig
+                    wx_data = RenderGrid();
+				    num_j = Object.keys(wx_data).length;
+				    num_i = Object.keys(wx_data[0]).length;
+					document.getElementById('gr_title').textContent =  num_j + ' years x ' + num_i + ' weeks received.';
                 }
             );
         }
@@ -341,12 +372,45 @@ function RenderGrid()
     var boxspace = 9;      // total space from unit to unit
 
     var num_weeks = 52;
-    var num_years = 45;
-    num_years = Object.keys(wx_grdata).length;
-    num_weeks = Object.keys(wx_grdata[0]).length;
+    var num_years = 60;
+    num_years = Object.keys(wx_grdata[reading_dropdown.value]).length;
+    num_weeks = Object.keys(wx_grdata[reading_dropdown.value][0]).length;
 
     // autoscale/normalize
-    var data_range = wx_grdata_max - wx_grdata_min;
+	var modifier = direction_dropdown.value.split(',')
+	var modifier2 = direction_dropdown2.value.split(',')
+	for ( var k = 0; k < 2; k++ ){
+		modifier[k] = parseInt(modifier[k])
+		modifier2[k] = parseInt(modifier2[k])
+	}
+	var wx_data = []
+	// not sure why i had to put the constants but it was crashing otherwize
+	var reading_type = reading_dropdown.value
+	var reading_type2 = reading_dropdown2.value
+	var grid1 = wx_grdata[reading_type];
+	var grid2 = wx_grdata[reading_type2];
+	for ( var n = 0; n < num_years; n++ ) {
+		wx_data.push([]);
+		for ( var m = 0; m < num_weeks; m++ ) {
+			wx_data[n].push(((grid1[n][m]*modifier[0]+modifier[1])*weight_val + (grid2[n][m]*modifier2[0]+modifier2[1])*weight_val2)/(weight_val+weight_val2));
+		}
+	}
+    // determine min/max
+    num_n = Object.keys(wx_data).length;
+    num_m = Object.keys(wx_data[0]).length;
+    wx_data_min = Number.MAX_VALUE;
+    wx_data_max = Number.MIN_VALUE;
+    for ( var n = 0; n < num_n; n++ ){
+        for ( var m = 0; m < num_m; m++ ){
+            var val = wx_data[n][m];
+            if ( val != null )
+            {                    
+                wx_data_min = parseFloat(Math.min( val, wx_data_min ).toFixed(3));
+                wx_data_max = parseFloat(Math.max( val, wx_data_max ).toFixed(3));
+            }
+        }
+    }
+    var data_range = wx_data_max - wx_data_min;
 
     // var color0 = '#edf8b1';
     // var color1 = '#7fcdbb';
@@ -364,7 +428,6 @@ function RenderGrid()
     draw.attr({
         'shape-rendering':'crispEdges'
     });
-
     for( j=0; j<num_years; j++ )
     {
         sy = j * boxspace + off_y;
@@ -388,14 +451,14 @@ function RenderGrid()
             // get measurement, years are reversed order, & calculate fill color
             var fillcol = 0;
 	        let shape_rend = 'crispEdges';	// render the contigous blocks with crispedges
-            var bsize = boxsize;
-            var mx = wx_grdata[num_years-1-j][i];
+            var bsize = boxsize
+            var mx = wx_data[num_years-1-j][i];
             if ( mx == null )
                 fillcol = '#FFFFFF';    // nulls are this color
             else
             {
                 mx = Number.parseFloat( mx );
-                mx = (mx - wx_grdata_min) / data_range; // normalize mx 0..1
+                mx = (mx - wx_data_min) / data_range; // normalize mx 0..1
                 if ( mx < wx_range_val0 ){
                     fillcol = color0;
 		            shape_rend = 'auto';		// draw the blue grid blocks with AntiAliasing
@@ -473,15 +536,16 @@ function RenderGrid()
         rtext.move( lx, ly - (rtext_h/2) ); // center vertically
     }
     let off_rlabx = off_rbx + rb_w + range_bar_label_off_x;
-    let rlab3 = `${wx_grdata_max}`;
+    let rlab3 = `${wx_data_max}`;
     draw_rblabel( rlab3, off_rlabx, rb2_y );
 
-    let rlab2 = `${wx_grdata_min + (wx_range_val1 * data_range)}`;
-    draw_rblabel( rlab2, off_rlabx, rb1_y );
+    let rlab2 = (wx_data_min + (wx_range_val1 * data_range));
+    draw_rblabel( rlab2.toFixed(3), off_rlabx, rb1_y );
 
-    let rlab1 = `${wx_grdata_min + (wx_range_val0 * data_range)}`;
-    draw_rblabel( rlab1, off_rlabx, rb0_y );
+    let rlab1 = wx_data_min + (wx_range_val0 * data_range);
+    draw_rblabel( rlab1.toFixed(3), off_rlabx, rb0_y );
 
-    let rlab0 = `${wx_grdata_min}`;
+    let rlab0 = `${wx_data_min}`;
     draw_rblabel( rlab0, off_rlabx, rb2_y + rb_totalh );
+	return wx_data;
 }

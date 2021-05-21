@@ -24,7 +24,29 @@
       padding-top: 10px;
       margin-left: 10px;
       color:cornflowerblue;
-    }    
+    } 
+    #weight_slider{
+      margin: 0 auto;
+      width: 200px;
+      height: 20px;      
+    }
+    #weight_stext{
+      display: inline-block;
+      padding-top: 10px;
+      margin-left: 10px;
+      color:cornflowerblue;
+    }
+    #weight_slider2{
+      margin: 0 auto;
+      width: 200px;
+      height: 20px;      
+    } 
+    #weight_stext2{
+      display: inline-block;
+      padding-top: 10px;
+      margin-left: 10px;
+      color:cornflowerblue;
+	}  
   </style>
 </head>
 <body>
@@ -36,13 +58,29 @@
   </div>
   <hr>
   <div id=gr_plot>
-    <div style="text-align: center;">
-      <select id=gr-reading_dropdown><option>Reading Type</option></select>
-      <select id=gr-agg_dropdown><option>Aggregation Method</option></select>
-      <label id=gr_title>Loading...</label>
+	<div style="text-align: center;">
+	  <label id=gr_title>Loading...</label>
+    </div>
+	<div id=measurements>
+      <div style="text-align: center;">
+  		<select id=gr-reading_dropdown><option>Reading Type</option></select>
+		<select id=gr-direction_dropdown><option>Direction Type</option></select>
+        <div style="padding-top: 10px;"><div id=weight_slider></div></div>
+        <div style="padding-bottom: 20px;" class="row">
+          <div id=weight_stext class="column"></div>
+        </div>
+      </div>
+      <div style="text-align: center;">
+        <select id=gr-reading_dropdown2><option>Reading Type2</option></select>
+    	<select id=gr-direction_dropdown2><option>Direction Type2</option></select>
+        <div style="padding-top: 10px;"><div id=weight_slider2></div></div>
+        <div style="padding-bottom: 20px;" class="row">
+          <div id=weight_stext2 class="column"></div>
+        </div>
+      </div>
     </div>
     <div id=gr_mainctr style="text-align: center;">
-      <div style="padding-top: 20px;"><div id=gr_slider></div></div>
+      <div><div id=gr_slider></div></div>
       <div class="row">
         <div id=gr_stext0 class="column"></div>
         <div id=gr_stext1 class="column"></div>

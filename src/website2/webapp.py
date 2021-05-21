@@ -27,35 +27,27 @@ hdat = heatmap.HData( fake_data=True )
 @requires_auth
 def plot0json():
 	station_id = request.args.get( 'df_station' )
-	df_col = request.args.get( 'df_col' )
 	df_method = request.args.get( 'df_method' )
+	df_method2 = request.args.get( 'df_method2' )
 	#hdat.range_v1 = request.args.get( 'rv1', type=float, default=0.33 )
 	#hdat.range_v2 = request.args.get( 'rv2', type=float, default=0.66 )
 
-	json_data = heatmap.create_station_hmap_json( hdat, station_id, df_col, df_method )
+	json_data = heatmap.create_station_hmap_json( hdat, station_id, (df_method, df_method2) )
 	
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
-	return resp
-
-# return aggregation methods list as json
-@app.route('/wxapp/aggmethods.json')
-@requires_auth
-def aggmethodsjson():
-	json_data = hdat.get_aggmethods_json()
-
-	resp = Response( json_data, mimetype='application/json')
-	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
+	print(resp)
 	return resp
 
 # return column/reading-type list as json
 @app.route('/wxapp/readingtypes.json')
 @requires_auth
 def readingtypesjson():
-	json_data = hdat.get_collist_json()
+	json_data = hdat.get_aggmethods_json()
 
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
+	print(resp)
 	return resp
 
 # return station metadata table as json
@@ -70,6 +62,7 @@ def stationsmetajson():
 
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
+	print(resp)
 	return resp
 
 # station map
