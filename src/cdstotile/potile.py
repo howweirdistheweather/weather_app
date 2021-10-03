@@ -1,4 +1,4 @@
-# HWITW (C) 2021
+# HWITW Copyright (C) 2021
 #
 # a class to contain processed output tile data
 
