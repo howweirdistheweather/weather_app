@@ -108,7 +108,7 @@ def download_dataset( ds_name, dir_name, start_year, end_year, area_lat_long ):
 #                 os.rename( tempfullname, fullname )
 
 # hello
-print( f'** HWITW Copernicus data download tool v{app_version}**\n')
+print( f'** HWITW Copernicus data download tool v{app_version} **\n')
 
 # 0.25 degree resolution
 inp_lat = 59.64 # homer ak

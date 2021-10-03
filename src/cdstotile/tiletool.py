@@ -36,10 +36,15 @@ def kelvin_to_F( temp_k:float ):
     temp_f = (temp_k - 273.15) * 9/5 + 32
     return temp_f
 
+#kelvin list to fahrenheit
 def kelvin_to_F( temp_ka:list ):
-    temp_np = numpy.asarray( temp_ka )
+    # use numpy for speed
+    # NULL/NoneType will become NaN
+    temp_np = numpy.asarray( temp_ka, dtype=float )
     temp_fa = (temp_np - 273.15) * 9/5 + 32
-    return temp_fa.tolist() # convert back to list
+    # convert back to a list with NaN back to None.. we'll be outputting JSON which doesn't like NaN.
+    temp_fa2 = numpy.where( numpy.isnan(temp_fa), None, temp_fa )
+    return temp_fa2.tolist()
 
 # flatten, reshape, rearrange out netcdf dataset variable data into a 2D array
 # pass: netcdf dataset, short var name present in the dataset
@@ -218,7 +223,7 @@ load_netcdfs(   pot,
                 1950, 1978,
                 area0 )
 
-# temporary, dump temp average to a json text file
+# temporary: dump temp average to a json text file
 gnum = CalcQtrDegGridNum( area0 )
 outname = f'gn{gnum}-temp_avg.json'
 print( f'Output {outname}' )
