@@ -16,11 +16,10 @@ CORS(app) # CORS headers to make devel easier
 @app.route('/wxapp/getwxvar')
 @requires_auth
 def getwxvarjson():
-	var_name = request.args.get( 'vname')
 	var_lat = request.args.get( 'vlat' )
 	var_long = request.args.get( 'vlong' )
 
-	json_data = wxdata.get_wxvar( var_name, var_lat, var_long )
+	json_data = wxdata.get_wxvar( var_lat, var_long )
 	
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development

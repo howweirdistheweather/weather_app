@@ -12,24 +12,27 @@ import pandas as pd
 import numpy as np
 
 
-# from potile.py:
-# Processed Output for Tiles
-POT_TEMP_AVG       = 'temperature_avg'
-POT_TEMP_AVG_N     = 'temperature_avg_night'
-POT_TEMP_AVG_D     = 'temperature_avg_day'
+########################
+# from hpo.py:
+# HWITW Processed Output
+HPO_TEMP_AVG        ='temperature_avg'
+HPO_TEMP_AVG_N      ='temperature_avg_night'
+HPO_TEMP_AVG_D      ='temperature_avg_day'
+HPO_CEILING_AVG     ='ceiling_avg'
 
-POT_VARIABLES = [
-    POT_TEMP_AVG,
-    POT_TEMP_AVG_N,
-    POT_TEMP_AVG_D
+HPO_VARIABLES = [
+    HPO_TEMP_AVG,
+    HPO_TEMP_AVG_N,
+    HPO_TEMP_AVG_D,
+    HPO_CEILING_AVG
 ]
-
+#######################
 
 def get_wxvar_list():
-    return POT_VARIABLES
+    return HPO_VARIABLES
 
-def get_wxvar( var_name:str, var_lat:float, var_long:float ):
-    with open( 'gn862673-temp_avg.json', 'r') as infile:        
+def get_wxvar( var_lat:float, var_long:float ):
+    with open( 'gn862673-hwxpo.json', 'r') as infile:        
         wxvar_json = infile.read()
         infile.close()
     return wxvar_json

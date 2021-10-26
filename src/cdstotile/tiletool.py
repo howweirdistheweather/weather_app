@@ -1,4 +1,4 @@
-# utility to process downloaded netcdf files into tile data
+# utility to process downloaded netcdf files into processed output data
 # HWITW (C) 2021
 #
 import math
@@ -8,7 +8,7 @@ import json
 import numpy
 import netCDF4
 
-import potile
+import hwxpo
 
 # a helper class for printing color text
 class bcolors:
@@ -46,6 +46,16 @@ def kelvin_to_F( temp_ka:list ):
     temp_fa2 = numpy.where( numpy.isnan(temp_fa), None, temp_fa )
     return temp_fa2.tolist()
 
+#meter list to feet
+def meter_to_ft( dist_ma:list ):
+    # use numpy for speed
+    # NULL/NoneType will become NaN
+    dist_np = numpy.asarray( dist_ma, dtype=float )
+    dist_fta = (dist_np * 3.2808399)
+    # convert back to a list with NaN back to None.. we'll be outputting JSON which doesn't like NaN.
+    dist_fta2 = numpy.where( numpy.isnan(dist_fta), None, dist_fta )
+    return dist_fta2.tolist()
+
 # flatten, reshape, rearrange out netcdf dataset variable data into a 2D array
 # pass: netcdf dataset, short var name present in the dataset
 def reshape_nds( ds:netCDF4.Dataset, short_vn:str ):
@@ -62,7 +72,7 @@ def reshape_nds( ds:netCDF4.Dataset, short_vn:str ):
 # calculate weekly average of a variable
 # pass: netcdf dataset, short var name present in the dataset
 # returns: list
-def do_pot_avg( ds:netCDF4.Dataset, short_vn:str ):
+def do_hwxpo_avg( ds:netCDF4.Dataset, short_vn:str ):
     array_x = reshape_nds( ds, short_vn )    
     weekly_results = [0.0] * 52
     for week_num in range( 0, 52 ):
@@ -93,7 +103,7 @@ def do_pot_avg( ds:netCDF4.Dataset, short_vn:str ):
 # calculate weekly-NIGHTLY average of a variable
 # pass: netcdf dataset, short var name present in the dataset
 # returns: list
-def do_pot_avg_night( ds:netCDF4.Dataset, short_vn:str ):
+def do_hwxpo_avg_night( ds:netCDF4.Dataset, short_vn:str ):
     array_x = reshape_nds( ds, short_vn )
     
     # todo: adjust for local time
@@ -114,7 +124,7 @@ def do_pot_avg_night( ds:netCDF4.Dataset, short_vn:str ):
     return weekly_results
 
 
-def load_netcdfs( pout:potile.POTile, dir_name, start_year, end_year, area_lat_long ):
+def load_netcdfs( hpo:hwxpo.HWXPO(), dir_name, start_year, end_year, area_lat_long ):
     # calculate a unique number for each quarter degree on the planet.
     # makes having a unique filename for the coordinates simpler.
     grid_num = CalcQtrDegGridNum( area_lat_long )
@@ -150,9 +160,9 @@ def load_netcdfs( pout:potile.POTile, dir_name, start_year, end_year, area_lat_l
   
             # process it
             if short_var_name == CDSVAR_T2M[1]:
-                temp_avg = do_pot_avg( ds, short_var_name )
+                temp_avg = do_hwxpo_avg( ds, short_var_name )
                 temp_avg = kelvin_to_F( temp_avg )
-                pot.add_temp_avg( year, temp_avg )
+                hpo.add_temp_avg( year, temp_avg )
                 #yearly_results[yidx] = temp_avg
                 
                 # temp_avg_n = do_pot_avg_night( ds, short_var_name )
@@ -160,6 +170,12 @@ def load_netcdfs( pout:potile.POTile, dir_name, start_year, end_year, area_lat_l
 
                 # temp_avg_d = do_pot_avg_day( ds, short_var_name )
                 # yearly_results[yidx].temp.avg_day = temp_avg_d
+
+            if short_var_name == CDSVAR_CBH[1]:
+                ceiling_avg = do_hwxpo_avg( ds, short_var_name )
+                ceiling_avg = meter_to_ft( ceiling_avg )
+                hpo.add_ceiling_avg( year, ceiling_avg )
+
             else:
                 print( bcolors.WARNING + f'Unhandled variable type! {var_name} {short_var_name}' + bcolors.ENDC )
 
@@ -209,23 +225,36 @@ cds_variables = [
 ]
 
 # load and process netcdf files for this area0
-pot = potile.POTile()
+hpo = hwxpo.HWXPO()
 
 # era5 goes from 1979 to present
-load_netcdfs(   pot,
+load_netcdfs(   hpo,
                 'cds_era5',
                 1979, current_time.year,
                 area0 )
 
 # era5 back extension goes from 1950 to 1978
-load_netcdfs(   pot,
+load_netcdfs(   hpo,
                 'cds_era5_backext',
                 1950, 1978,
                 area0 )
 
-# temporary: dump temp average to a json text file
+# dump json
 gnum = CalcQtrDegGridNum( area0 )
-outname = f'gn{gnum}-temp_avg.json'
+outname = f'gn{gnum}-hwxpo.json'
 print( f'Output {outname}' )
 with open( outname, 'w') as outfile:
-    json.dump( pot.TempAvg, outfile )
+    json.dump( hpo.get_jodict(), outfile )
+
+# temporary: dump temp average to a json text file
+#gnum = CalcQtrDegGridNum( area0 )
+#outname = f'gn{gnum}-temp_avg.json'
+#print( f'Output {outname}' )
+#with open( outname, 'w') as outfile:
+#    json.dump( hpo.TempAvg, outfile )
+
+# dump ceiling avg to json text
+#outname = f'gn{gnum}-ceiling_avg.json'
+#print( f'Output {outname}' )
+#with open( outname, 'w') as outfile:
+#    json.dump( hpo.CeilingAvg, outfile )
