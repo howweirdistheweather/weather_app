@@ -107,18 +107,42 @@ def do_hwxpo_avg_night( ds:netCDF4.Dataset, short_vn:str ):
     array_x = reshape_nds( ds, short_vn )
     
     # todo: adjust for local time
-    # a simplistic definition of 'night'? remove all values from 18:00 to 06:00
-    # ..create an array of indexes to remove from array_x
-    ridx_array = [[0,0]] * 7
-    for week_num in range( 0, 52 ):
-        for day_num in range( 0, 7 ):
-            ridx_array[ day_num, 0 ] = 18 + (day_num * 24)
-            ridx_array[ day_num, 1 ] = 6 + (day_num * 24)
-    # remove them
-
+    # a simplistic definition of 'night'? 18:00 to 06:00
     weekly_results = [0.0] * 52
     for week_num in range( 0, 52 ):
-        avg_x = numpy.average( array_x[ week_num ] )
+        night_array_x = numpy.empty(0);
+        for day_num in range( 0, 7 ):
+            hrd = day_num * 24
+            hr0 = 0 + hrd       # early morning
+            hr1 = 6 + hrd
+            hr2 = 18 + hrd      # late night
+            hr3 = 24 + hrd
+            night_array_x = numpy.append( night_array_x, array_x[week_num][hr0:hr1] )
+            night_array_x = numpy.append( night_array_x, array_x[week_num][hr2:hr3] )
+            
+        avg_x = numpy.average( night_array_x )
+        weekly_results[ week_num ] = avg_x
+
+    return weekly_results
+
+# calculate weekly-DAYTIME average of a variable
+# pass: netcdf dataset, short var name present in the dataset
+# returns: list
+def do_hwxpo_avg_day( ds:netCDF4.Dataset, short_vn:str ):
+    array_x = reshape_nds( ds, short_vn )
+    
+    # todo: adjust for local time
+    # a simplistic definition of 'day'? 06:00 to 18:00
+    weekly_results = [0.0] * 52
+    for week_num in range( 0, 52 ):
+        day_array_x = numpy.empty(0);
+        for day_num in range( 0, 7 ):
+            hrd = day_num * 24
+            hr0 = 6 + hrd
+            hr1 = 18 + hrd
+            day_array_x = numpy.append( day_array_x, array_x[week_num][hr0:hr1] )
+            
+        avg_x = numpy.average( day_array_x )
         weekly_results[ week_num ] = avg_x
 
     return weekly_results
@@ -162,14 +186,15 @@ def load_netcdfs( hpo:hwxpo.HWXPO(), dir_name, start_year, end_year, area_lat_lo
             if short_var_name == CDSVAR_T2M[1]:
                 temp_avg = do_hwxpo_avg( ds, short_var_name )
                 temp_avg = kelvin_to_F( temp_avg )
-                hpo.add_temp_avg( year, temp_avg )
-                #yearly_results[yidx] = temp_avg
+                hpo.add_temp_avg( year, temp_avg )                
                 
-                # temp_avg_n = do_pot_avg_night( ds, short_var_name )
-                # yearly_results[yidx].temp.avg_night = temp_avg_n
+                temp_avg_n = do_hwxpo_avg_night( ds, short_var_name )
+                temp_avg_n = kelvin_to_F( temp_avg_n )
+                hpo.add_temp_avg_n( year, temp_avg_n )
 
-                # temp_avg_d = do_pot_avg_day( ds, short_var_name )
-                # yearly_results[yidx].temp.avg_day = temp_avg_d
+                temp_avg_d = do_hwxpo_avg_day( ds, short_var_name )
+                temp_avg_d = kelvin_to_F( temp_avg_d )
+                hpo.add_temp_avg_d( year, temp_avg_d )
 
             if short_var_name == CDSVAR_CBH[1]:
                 ceiling_avg = do_hwxpo_avg( ds, short_var_name )

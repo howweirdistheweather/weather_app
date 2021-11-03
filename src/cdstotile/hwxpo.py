@@ -27,12 +27,20 @@ class HWXPO:
 
     def __init__( self ):
         self.TempAvg:dict = {}
+        self.TempAvgNight:dict = {}
+        self.TempAvgDay:dict = {}
         self.CeilingAvg:dict = {}
         pass    
 
 
     def add_temp_avg( self, year:int, weekly_ta:list ):
         self.TempAvg[year] = weekly_ta
+        
+    def add_temp_avg_n( self, year:int, weekly_tan:list ):
+        self.TempAvgNight[year] = weekly_tan
+        
+    def add_temp_avg_d( self, year:int, weekly_tad:list ):
+        self.TempAvgDay[year] = weekly_tad
 
     def add_ceiling_avg( self, year:int, weekly_ca:list ):
         self.CeilingAvg[year] = weekly_ca
@@ -43,6 +51,8 @@ class HWXPO:
 
         # convert weather variable data to 2D array. er... 'python list of lists'
         temp_avg = dict_to_slist( self.TempAvg )
+        temp_avg_n = dict_to_slist( self.TempAvgNight )
+        temp_avg_d = dict_to_slist( self.TempAvgDay )
         ceiling_avg = dict_to_slist( self.CeilingAvg )
         
         # put it together like this for the purpose of doing some json output
@@ -52,7 +62,9 @@ class HWXPO:
             },
             'data':{
                 'temperature':{
-                    'avg':temp_avg,                    
+                    'avg':temp_avg,
+                    'avg_n':temp_avg_n,
+                    'avg_d':temp_avg_d,
                 },
                 'ceiling':{
                     'avg':ceiling_avg,
