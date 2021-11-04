@@ -58,7 +58,7 @@ def meter_to_ft( dist_ma:list ):
 
 # flatten, reshape, rearrange out netcdf dataset variable data into a 2D array
 # pass: netcdf dataset, short var name present in the dataset
-def reshape_nds( ds:netCDF4.Dataset, short_vn:str ):
+def reshape_nds( ds:netCDF4.Dataset, short_vn:str, lat_ds:int, long_ds:int ):
     # the netcdf array is a 3 dim array [time][lat][long]
     # lat and long are always index 0 (assuming our cdf files have only one grid cell present)
     # 
@@ -72,40 +72,18 @@ def reshape_nds( ds:netCDF4.Dataset, short_vn:str ):
 # calculate weekly average of a variable
 # pass: netcdf dataset, short var name present in the dataset
 # returns: list
-def do_hwxpo_avg( ds:netCDF4.Dataset, short_vn:str ):
-    array_x = reshape_nds( ds, short_vn )    
+def do_hwxpo_avg( array_x):
     weekly_results = [0.0] * 52
     for week_num in range( 0, 52 ):
         avg_x = numpy.average( array_x[ week_num ] )
         weekly_results[ week_num ] = avg_x.tolist() # convert to list
-
-    # old code, manual calc. of average. We are now using numpy stuff!
-    #
-    # array_x = ds[short_vn]    
-    # weekly_results = [0.0] * 52
-    
-    # for week_num in range(0,52):
-    #     # calc start and end hour for week_num        
-    #     start_hour = week_num * hours_per_week
-    #     end_hour = (week_num+1) * hours_per_week 
-
-    #     # calc. average for the week
-    #     total_x = 0.0;
-    #     for hour_num in range(start_hour, end_hour):
-    #         total_x += array_x[hour_num, 0, 0]
-
-    #     avg_x = total_x / hours_per_week
-    #     weekly_results[ week_num ] = avg_x
-    #     #print( f"{week_num} avg: {avg_x}" )
 
     return weekly_results
 
 # calculate weekly-NIGHTLY average of a variable
 # pass: netcdf dataset, short var name present in the dataset
 # returns: list
-def do_hwxpo_avg_night( ds:netCDF4.Dataset, short_vn:str ):
-    array_x = reshape_nds( ds, short_vn )
-    
+def do_hwxpo_avg_night( array_x ):
     # todo: adjust for local time
     # a simplistic definition of 'night'? 18:00 to 06:00
     weekly_results = [0.0] * 52
@@ -128,9 +106,7 @@ def do_hwxpo_avg_night( ds:netCDF4.Dataset, short_vn:str ):
 # calculate weekly-DAYTIME average of a variable
 # pass: netcdf dataset, short var name present in the dataset
 # returns: list
-def do_hwxpo_avg_day( ds:netCDF4.Dataset, short_vn:str ):
-    array_x = reshape_nds( ds, short_vn )
-    
+def do_hwxpo_avg_day( array_x ):    
     # todo: adjust for local time
     # a simplistic definition of 'day'? 06:00 to 18:00
     weekly_results = [0.0] * 52
@@ -147,8 +123,33 @@ def do_hwxpo_avg_day( ds:netCDF4.Dataset, short_vn:str ):
 
     return weekly_results
 
+def do_hwxpo( year:int, short_var_name:str, array_x:numpy.array, hpo:hwxpo.HWXPO ):
+    # process the netcdf data
+    if short_var_name == CDSVAR_T2M[1]:
+        temp_avg = do_hwxpo_avg( array_x )
+        temp_avg = kelvin_to_F( temp_avg )
+        hpo.add_temp_avg( year, temp_avg )                
+        
+        temp_avg_n = do_hwxpo_avg_night( array_x )
+        temp_avg_n = kelvin_to_F( temp_avg_n )
+        hpo.add_temp_avg_n( year, temp_avg_n )
 
-def load_netcdfs( hpo:hwxpo.HWXPO(), dir_name, start_year, end_year, area_lat_long ):
+        temp_avg_d = do_hwxpo_avg_day( array_x )
+        temp_avg_d = kelvin_to_F( temp_avg_d )
+        hpo.add_temp_avg_d( year, temp_avg_d )
+
+    elif short_var_name == CDSVAR_CBH[1]:
+        ceiling_avg = do_hwxpo_avg( array_x )
+        ceiling_avg = meter_to_ft( ceiling_avg )
+        hpo.add_ceiling_avg( year, ceiling_avg )
+
+    else:
+        return
+        print( bcolors.WARNING + f'Unhandled variable type! {short_var_name}' + bcolors.ENDC )
+
+    pass
+
+def load_netcdfs( hpo:hwxpo.HWXPO, dir_name, start_year, end_year, area_lat_long ):
     # calculate a unique number for each quarter degree on the planet.
     # makes having a unique filename for the coordinates simpler.
     grid_num = CalcQtrDegGridNum( area_lat_long )
@@ -165,7 +166,8 @@ def load_netcdfs( hpo:hwxpo.HWXPO(), dir_name, start_year, end_year, area_lat_lo
 
             # file naming scheme
             pathname = f'./{dir_name}/{year}/'
-            filename = f'gn{grid_num}-{year}-{var_name}.nc'
+            #filename = f'gn{grid_num}-{year}-{var_name}.nc'
+            filename = f'global-{year}-{var_name}.nc'
             fullname = pathname + filename
 
             # make sure file already exists and load it
@@ -182,28 +184,20 @@ def load_netcdfs( hpo:hwxpo.HWXPO(), dir_name, start_year, end_year, area_lat_lo
                 print( bcolors.FAIL + f'{filename} could not be opened!' + bcolors.ENDC )
                 exit(-1)
   
-            # process it
-            if short_var_name == CDSVAR_T2M[1]:
-                temp_avg = do_hwxpo_avg( ds, short_var_name )
-                temp_avg = kelvin_to_F( temp_avg )
-                hpo.add_temp_avg( year, temp_avg )                
-                
-                temp_avg_n = do_hwxpo_avg_night( ds, short_var_name )
-                temp_avg_n = kelvin_to_F( temp_avg_n )
-                hpo.add_temp_avg_n( year, temp_avg_n )
-
-                temp_avg_d = do_hwxpo_avg_day( ds, short_var_name )
-                temp_avg_d = kelvin_to_F( temp_avg_d )
-                hpo.add_temp_avg_d( year, temp_avg_d )
-
-            if short_var_name == CDSVAR_CBH[1]:
-                ceiling_avg = do_hwxpo_avg( ds, short_var_name )
-                ceiling_avg = meter_to_ft( ceiling_avg )
-                hpo.add_ceiling_avg( year, ceiling_avg )
-
-            else:
-                print( bcolors.WARNING + f'Unhandled variable type! {var_name} {short_var_name}' + bcolors.ENDC )
-
+            total_num_hours = ds.dimensions['time'].size
+            num_lat = ds.dimensions['latitude'].size
+            num_long = ds.dimensions['longitude'].size
+            assert total_num_hours >= 8753  #HOURS_PER_YEAR  ...whats up with this 8753 hours?
+            assert num_long == 1440
+            assert num_lat == 721
+            
+            # for each location in ds
+            for lat_ds in range( num_lat ):
+                print( lat_ds )
+                for long_ds in range( num_long ):
+                    array_x = reshape_nds( ds, short_var_name, lat_ds, long_ds )                    
+                    do_hwxpo( year, short_var_name, array_x, hpo )
+  
 def CalcQtrDegGridNum( area_lat_long ):
     grid_num = int( ((area_lat_long[0] + 90) * 4) * 360 * 4 + ((area_lat_long[1] + 180) * 4) )
     return grid_num
@@ -216,7 +210,6 @@ print( f'** HWITW tile tool v{APP_VERSION} **\n')
 inp_lat = 59.64 # homer ak
 inp_long = -151.54
 
-# todo Zoom level 11 tile number
 # get the containing cell 
 lat0 = math.ceil( inp_lat * 4 ) / 4
 lat1 = (math.floor( inp_lat * 4 ) / 4) #+ 0.01 # edge is not inclusive

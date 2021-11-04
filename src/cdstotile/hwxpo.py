@@ -45,11 +45,12 @@ class HWXPO:
     def add_ceiling_avg( self, year:int, weekly_ca:list ):
         self.CeilingAvg[year] = weekly_ca
     
+    # put everything in a JSON-able dictionary and return it
     def get_jodict( self ):
-        # get start year from tempavg. assume its the same for all!
+        # get start year from tempavg. assume its the same for all!!?
         start_year = sorted(self.TempAvg.keys())[0]
 
-        # convert weather variable data to 2D array. er... 'python list of lists'
+        # convert weather variable data to 'python list of lists'
         temp_avg = dict_to_slist( self.TempAvg )
         temp_avg_n = dict_to_slist( self.TempAvgNight )
         temp_avg_d = dict_to_slist( self.TempAvgDay )
@@ -69,7 +70,6 @@ class HWXPO:
                 'ceiling':{
                     'avg':ceiling_avg,
                 }
-                
             }
         }
         
