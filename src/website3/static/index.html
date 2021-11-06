@@ -24,70 +24,43 @@
       padding-top: 10px;
       margin-left: 10px;
       color:cornflowerblue;
-    } 
-    #weight_slider{
-      margin: 0 auto;
-      width: 200px;
-      height: 20px;      
-    }
-    #weight_stext{
-      display: inline-block;
-      padding-top: 10px;
-      margin-left: 10px;
-      color:cornflowerblue;
-    }
-    #weight_slider2{
-      margin: 0 auto;
-      width: 200px;
-      height: 20px;      
-    } 
-    #weight_stext2{
-      display: inline-block;
-      padding-top: 10px;
-      margin-left: 10px;
-      color:cornflowerblue;
-	}  
+	} 
+    #gr_choices{
+      float: left;
+	} 
+	.center_horisontal {
+		position: absolute;
+	    left: 50%;
+		top: -11%;
+	    transform: translate(-50%);
+	}
+	.center_verticle {
+		position: fixed;
+	    top: 50%;
+	    -webkit-transform: translate(-50%, -50%);
+	    transform: translate(-50%, -50%);
+	}
+ 
   </style>
 </head>
 <body>
   <div>HWITW project Copyright (C) 2020 2021</div>
-  <div id=station_chooser>
-    <select id=station-co_dropdown></select>
-    <select id=station-state_dropdown></select>
-    <select id=station-st_dropdown></select>
-  </div>
   <hr>
-  <div id=gr_plot>
-	<div style="text-align: center;">
-	  <label id=gr_title>Loading...</label>
-    </div>
-	<div id=measurements>
-      <div style="text-align: center;">
-  		<select id=gr-reading_dropdown><option>Reading Type</option></select>
-		<select id=gr-direction_dropdown><option>Direction Type</option></select>
-        <div style="padding-top: 10px;"><div id=weight_slider></div></div>
-        <div style="padding-bottom: 20px;" class="row">
-          <div id=weight_stext class="column"></div>
-        </div>
-      </div>
-      <div style="text-align: center;">
-        <select id=gr-reading_dropdown2><option>Reading Type2</option></select>
-    	<select id=gr-direction_dropdown2><option>Direction Type2</option></select>
-        <div style="padding-top: 10px;"><div id=weight_slider2></div></div>
-        <div style="padding-bottom: 20px;" class="row">
-          <div id=weight_stext2 class="column"></div>
-        </div>
-      </div>
-    </div>
-    <div id=gr_mainctr style="text-align: center;">
-      <div><div id=gr_slider></div></div>
-      <div class="row">
-        <div id=gr_stext0 class="column"></div>
-        <div id=gr_stext1 class="column"></div>
-      </div>
-      <div id=outer0 style="margin:0 auto; display:table;">
-        <div id=gr_grid></div>
-      </div>
+  <div id=gr_plot class="center_horisontal" style="width: 1000px; padding-top: 120px;">
+	<div id=gr_choices class="center_verticle">
+		<div id=measurements></div>
+		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="measurement_button">add new measurement</button></div>
+		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="delete_measurement_button">delete measurement</button></div>
+		<div id=gr_mainctr style="text-align: center;">
+		  <div><div id=gr_slider></div></div>
+		  <div class="row">
+		    <div id=gr_stext0 class="column"></div>
+		    <div id=gr_stext1 class="column"></div>
+		  </div>
+	    </div>
+	</div>
+    <div id=outer0 style="margin:0 auto; display:table;">
+      <div id=gr_grid></div>
     </div>
   </div>
   <link href="nouislider/nouislider.css" rel="stylesheet">
@@ -95,4 +68,3 @@
   <script src="wxgrid.js"></script>
 </body>
 </html>
-
