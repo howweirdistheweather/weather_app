@@ -9,7 +9,9 @@ var weight_val = 0.01
 var weight_val2 = 0.01
 var reading_dropdowns = []
 var direction_dropdowns = []
+var method_dropdowns = []
 var weight_sliders = []
+var histograms = []
 var weight_setexes = []
 var measurement_index = 0
 let cred_str = 'weird:weather'  // TODO: remove. handy for devel
@@ -19,7 +21,7 @@ var method_types = []
 var has_reading = false
 var all_data = []
 var start_year = 0
-var method_dropdowns = []
+const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25]};
 var wxgrid_url = `http://localhost:5000/wxapp/getwxvar`;
 fetch( wxgrid_url, {   method:'GET',
                         headers: {'Authorization': 'Basic ' + btoa(cred_str)}
@@ -38,7 +40,6 @@ fetch( wxgrid_url, {   method:'GET',
                 all_data = data;//JSON.parse( data.response );
 				start_year = all_data["data_specs"]["start_year"];
 				all_data = all_data["data"];
-				input_dict = {"temperature":[-60,67.5,0.5],"ceiling":[0,6375,25]};
 				for (mesurment of Object.keys(all_data)){
 					for (func of Object.keys(all_data[mesurment])){
 						for ( var i = 0; i < all_data[mesurment][func].length; i++ ){
@@ -59,6 +60,9 @@ fetch( wxgrid_url, {   method:'GET',
 });
 
 function compress(num,inputs){
+	if (num < -150 || num == null){
+		return null
+	}
 	if (num > inputs[1]){
 		num = inputs[1]
 	}
@@ -82,13 +86,16 @@ function makeNewMeasurmeant(curent_id_num) {
 //	console.log(curent_id_num)
 	makeNewElement("measurements","div",{"style":"text-align: center;","id":"measurement"+curent_id_num});
 	
+	makeNewElement("measurement"+curent_id_num,"div",{"id":"histogram"+curent_id_num});
+	histograms.push(document.getElementById('histogram'+curent_id_num));
+	
 	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-reading_dropdown"+curent_id_num});
 	reading_dropdowns.push(document.getElementById('gr-reading_dropdown'+curent_id_num));
 	
 	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-method_dropdown"+curent_id_num});
 	method_dropdowns.push(document.getElementById('gr-method_dropdown'+curent_id_num));
 	
-	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-direction_dropdown"+curent_id_num});
+	makeNewElement("measurement"+curent_id_num,"select",{"style":"","id":"gr-direction_dropdown"+curent_id_num});
 	direction_dropdowns.push(document.getElementById('gr-direction_dropdown'+curent_id_num));
 	
 	LoadDirectionDropdown(curent_id_num);
@@ -97,9 +104,9 @@ function makeNewMeasurmeant(curent_id_num) {
 
 	
 	makeNewElement("measurement"+curent_id_num,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+curent_id_num});
-	makeNewElement("weight_slider_holder"+curent_id_num,"div",{"style":"margin: 0 auto; width: 200px; height: 20px;","id":"weight_slider"+curent_id_num});
-	makeNewElement("measurement"+curent_id_num,"div",{"style":"padding-bottom: 10px;","class":"column","id":"weight_stext_div"+curent_id_num});
-	makeNewElement("weight_stext_div"+curent_id_num,"div",{"style":"display: inline-block; margin-left: 10px; color: cornflowerblue; padding-top: 10px;","id":"weight_stext"+curent_id_num});
+	makeNewElement("weight_slider_holder"+curent_id_num,"div",{"class":"weight_slider","id":"weight_slider"+curent_id_num});
+	makeNewElement("measurement"+curent_id_num,"div",{"style":"padding-bottom: 10px;","id":"weight_stext_div"+curent_id_num});
+	makeNewElement("weight_stext_div"+curent_id_num,"div",{"class":"weight_setex","id":"weight_stext"+curent_id_num});
 	
 	weight_setexes.push(document.getElementById( 'weight_stext'+curent_id_num ));
 
@@ -161,6 +168,7 @@ function deleteMeasurementHandeler() {
 		var measurement = document.getElementById("measurement"+measurement_index)
 		reading_dropdowns.splice(-1)
 		direction_dropdowns.splice(-1)
+		method_dropdowns.splice(-1)
 		weight_sliders.splice(-1)
 		weight_setexes.splice(-1)
 		measurement.remove()
@@ -177,7 +185,7 @@ function LoadReadingDropdown(num) {
     let option;
     for (let i = 0; i < reading_options.length; i++) {
         option = document.createElement('option');
-        option.text = reading_options[i];
+        option.text = reading_options[i].split('_').join(' ');
         option.value = reading_options[i];
         reading_dropdowns[num].add(option);
     }
@@ -202,7 +210,7 @@ function LoadMethodDropdown(num) {
     let option;
     for (let i = 0; i < method_options.length; i++) {
         option = document.createElement('option');
-        option.text = method_options[i];
+        option.text = method_options[i].split('_').join(' ');
         option.value = method_options[i];
         method_dropdowns[num].add(option);
     }
@@ -285,6 +293,171 @@ function LoadWXGrid() {
     
 }
 
+function DrawHistogram(compresed_data,data_min,data_range){
+	for (num = 0; num < measurement_index+1; num ++){
+		var histo_plot_st = new Array(128).fill(0);
+		console.log('l')
+		var color_plot_st = [new Array(128).fill(0),new Array(128).fill(0),new Array(128).fill(0)]
+		color_plot_str = JSON.stringify(color_plot_st)
+		var relev_data = all_data[reading_types[num]][method_types[num]]
+		for (var year = 0; year < relev_data.length; year ++){
+			for (var week = 0; week < 52; week ++){
+				if (relev_data[year][week] != null){
+					histo_plot_st[parseInt(relev_data[year][week]/2)] += 0.5
+					if (compresed_data[year][week] < wx_range_val0*data_range+data_min){
+						color_plot_st[0][parseInt(relev_data[year][week]/2)] += 0.5
+					}
+					else if (compresed_data[year][week] < wx_range_val1*data_range+data_min){
+						color_plot_st[1][parseInt(relev_data[year][week]/2)] += 0.5
+					}
+					else {
+						color_plot_st[2][parseInt(relev_data[year][week]/2)] += 0.5
+					}
+				}
+			}
+		}
+		var min_num = null
+		var min_collor_nums = [null,null,null]
+		for (var j = 0; j < histo_plot_st.length; j++){
+			for (var i = 0; i < 3; i++){
+				if (color_plot_st[i][j] != 0 && min_collor_nums[i] == null){
+					min_collor_nums[i] = j
+				}
+			}
+			if (histo_plot_st[j] != 0){
+				min_num = j
+			}
+		}
+		var max_num = null
+		var max_collor_nums = [null,null,null]
+		for (var j = histo_plot_st.length-1; j >= 0; j--){
+			for (var i = 0; i < 3; i++){
+				if (color_plot_st[i][j] != 0 && max_collor_nums[i] == null){
+					max_collor_nums[i] = j
+				}
+			}
+			if (histo_plot_st[j] != 0){
+				max_num = j
+			}
+		}
+		var histo_plot = new Array(128).fill(0)
+		var color_plot = [new Array(128).fill(0),new Array(128).fill(0),new Array(128).fill(0)]
+		for (var j = 1; j < histo_plot_st.length-1; j++){
+			if (j != max_num && j != min_num){
+				histo_plot[j] = (histo_plot_st[j-1] + histo_plot_st[j] + histo_plot_st[j+1])/3
+				for (var i = 0; i < 3; i++){
+					if (j >= max_collor_nums[i]){
+						color_plot[i][j] = (color_plot_st[i][j-1] + color_plot_st[i][j])/2
+					}
+					else if (j <= min_collor_nums[i]){
+						color_plot[i][j] = (color_plot_st[i][j] + color_plot_st[i][j+1])/2
+					}
+					else {
+						color_plot[i][j] = (color_plot_st[i][j-1] + color_plot_st[i][j] + color_plot_st[i][j+1])/3
+					}
+				}
+			}
+		}
+		console.log(histo_plot)
+		document.getElementById( 'histogram'+num ).innerHTML = ""; // clear existing
+		var draw = SVG().addTo('#histogram'+num).size( 270, Math.min(Math.max(...histo_plot),125)*0.5+9 );
+		draw.attr({
+		    'shape-rendering':'crispEdges'
+		});
+		for (var j = 0; j < histo_plot.length; j++){
+			if (histo_plot[j] != 0){
+				is_mode = true
+				for (var i = 1; i < Math.min(10,j); i++){
+					if (histo_plot[j-i] > histo_plot[j]){
+						is_mode = false
+					}
+				}
+				for (var i = 1; i < histo_plot.length-Math.max(histo_plot.length-10,j); i++){
+					if (histo_plot[j+i] > histo_plot[j]){
+						is_mode = false
+					}
+				}
+				if (is_mode){
+			        let mode = draw.text( `${parseInt(j*2*input_dict[reading_types[num]][2]+input_dict[reading_types[num]][0])}` ).font('size',8).font('family','Arial');
+					let mode_length = mode.length();
+			        mode.move( j*2 - mode_length/2,Math.min(Math.max(...histo_plot),125)*0.5+1 ); // center vertically
+				}
+			}
+		}
+        let min_extrem = draw.text( `${parseInt(min_num*2*input_dict[reading_types[num]][2]+input_dict[reading_types[num]][0])}` ).font('size',8).font('family','Arial');
+		let min_extrem_length = min_extrem.length();
+        min_extrem.move( min_num*2 - min_extrem_length/2,Math.min(Math.max(...histo_plot),125)*0.5+1 ); // center vertically
+		
+        let max_extrem = draw.text( `${parseInt(max_num*2*input_dict[reading_types[num]][2]+input_dict[reading_types[num]][0])}` ).font('size',8).font('family','Arial');
+		let max_extrem_length = max_extrem.length();
+        max_extrem.move( max_num*2 - max_extrem_length/2,Math.min(Math.max(...histo_plot),125)*0.5+1 ); // center vertically
+		for (var i = 0; i < 128; i++) {
+			for (var j = 0; j < histo_plot[i]; j++) {
+				var fillcol = '#ffffff'
+				if (j < color_plot[2][i]){
+				fillcol = '#54278f'
+				}
+				else if (j < color_plot[1][i]+color_plot[2][i]){
+					fillcol = '#9e9ac8'
+				}
+				else {
+					fillcol = '#bcbddc'
+				}
+		        draw.rect( 2, 0.5 ).move( i*2, (Math.min(Math.max(...histo_plot),125)-j)*0.5+0.5 ).attr({
+		            'fill':fillcol,
+		            'shape-rendering':'crispEdges',
+		            'stroke-width': 0 
+		        });
+			}
+		}
+	}
+}
+
+function DrawSesonalitys(compresed_data,data_min,data_range){
+	console.log('l')
+	var color_plot = [new Array(52).fill(0),new Array(52).fill(0),new Array(52).fill(0)]
+	color_plot_str = JSON.stringify(color_plot)
+	for (var year = 0; year < compresed_data.length; year ++){
+		for (var week = 0; week < 52; week ++){
+			if (compresed_data[year][week] != null){
+				if (compresed_data[year][week] < wx_range_val0*data_range+data_min){
+					color_plot[0][week] += 1
+				}
+				else if (compresed_data[year][week] < wx_range_val1*data_range+data_min){
+					color_plot[1][week] += 1
+				}
+				else {
+					color_plot[2][week] += 1
+				}
+			}
+		}
+	}
+	document.getElementById( 'gr_sesonalitys').innerHTML = ""; // clear existing
+	var draw = SVG().addTo('#gr_sesonalitys').size( 523, compresed_data.length*0.5 );
+	draw.attr({
+	    'shape-rendering':'crispEdges'
+	});
+	for (var i = 0; i < 128; i++) {
+		for (var j = 0; j < compresed_data.length; j++) {
+			var fillcol = '#ffffff'
+			if (j < color_plot[2][i]){
+				fillcol = '#54278f'
+			}
+			else if (j < color_plot[1][i]+color_plot[2][i]){
+				fillcol = '#9e9ac8'
+			}
+			else {
+				fillcol = '#bcbddc'
+			}
+	        draw.rect( 9, 0.5 ).move( i*9+55, (compresed_data.length-j)*0.5+0.5).attr({
+	            'fill':fillcol,
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
+	}
+}
+
 // Renders SVG weather grid/heatmap thing
 function RenderGrid(){
     if ( wx_grdata == null )
@@ -340,9 +513,18 @@ function RenderGrid(){
 		for ( var m = 0; m < num_weeks; m++ ) {
 			var num = 0;
 			for ( var i = 0; i < grids.length; i++ ){ 
+				if (grids[i][n][m] == null){
+					num = null
+					break
+				}
 				num += (grids[i][n][m]*modifiers[i][0]+modifiers[i][1])*weight_vals[i];
 			}
-			wx_data[n].push(num/total_weight);
+			if (num == null){
+				wx_data[n].push(null)
+			}
+			else {
+				wx_data[n].push(num/total_weight);
+			}
 		}
 	}
     // determine min/max
@@ -361,7 +543,8 @@ function RenderGrid(){
         }
     }
     var data_range = wx_data_max - wx_data_min;
-
+	DrawHistogram(wx_data,wx_data_min,data_range)
+	DrawSesonalitys(wx_data,wx_data_min,data_range)
     // var color0 = '#edf8b1';
     // var color1 = '#7fcdbb';
     // var color2 = '#2c7fb8';

@@ -31,14 +31,23 @@
 	.center_horisontal {
 		position: absolute;
 	    left: 50%;
-		top: -11%;
 	    transform: translate(-50%);
 	}
 	.center_verticle {
 		position: fixed;
-	    top: 50%;
-	    -webkit-transform: translate(-50%, -50%);
-	    transform: translate(-50%, -50%);
+	    transform: translate(-50%);
+	}
+	.weight_slider {
+		margin: 0 auto;
+		width: 256px;
+		height: 20px;
+	}
+	.weight_setex {
+		display: inline-block;
+		margin-left: 10px;
+		padding-top: 10px;
+		color: cornflowerblue;
+		
 	}
  
   </style>
@@ -46,7 +55,7 @@
 <body>
   <div>HWITW project Copyright (C) 2020 2021</div>
   <hr>
-  <div id=gr_plot class="center_horisontal" style="width: 1000px; padding-top: 120px;">
+  <div id=gr_plot class="center_horisontal" style="width: 1000px;">
 	<div id=gr_choices class="center_verticle">
 		<div id=measurements></div>
 		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="measurement_button">add new measurement</button></div>
@@ -60,6 +69,7 @@
 	    </div>
 	</div>
     <div id=outer0 style="margin:0 auto; display:table;">
+	  <div id=gr_sesonalitys></div>
       <div id=gr_grid></div>
     </div>
   </div>
