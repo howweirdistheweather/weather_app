@@ -347,10 +347,10 @@ function DrawHistogram(compresed_data,data_min,data_range){
 				histo_plot[j] = (histo_plot_st[j-1] + histo_plot_st[j] + histo_plot_st[j+1])/3
 				for (var i = 0; i < 3; i++){
 					if (j >= max_collor_nums[i]){
-						color_plot[i][j] = (color_plot_st[i][j-1] + color_plot_st[i][j])/2
+						color_plot[i][j] = (color_plot_st[i][j-1] + color_plot_st[i][j] + color_plot_st[i][j+1])/3
 					}
 					else if (j <= min_collor_nums[i]){
-						color_plot[i][j] = (color_plot_st[i][j] + color_plot_st[i][j+1])/2
+						color_plot[i][j] = (color_plot_st[i][j-1] + color_plot_st[i][j] + color_plot_st[i][j+1])/3
 					}
 					else {
 						color_plot[i][j] = (color_plot_st[i][j-1] + color_plot_st[i][j] + color_plot_st[i][j+1])/3
@@ -392,23 +392,23 @@ function DrawHistogram(compresed_data,data_min,data_range){
 		let max_extrem_length = max_extrem.length();
         max_extrem.move( max_num*2 - max_extrem_length/2,Math.min(Math.max(...histo_plot),125)*0.5+1 ); // center vertically
 		for (var i = 0; i < 128; i++) {
-			for (var j = 0; j < histo_plot[i]; j++) {
-				var fillcol = '#ffffff'
-				if (j < color_plot[2][i]){
-				fillcol = '#54278f'
-				}
-				else if (j < color_plot[1][i]+color_plot[2][i]){
-					fillcol = '#9e9ac8'
-				}
-				else {
-					fillcol = '#bcbddc'
-				}
-		        draw.rect( 2, 0.5 ).move( i*2, (Math.min(Math.max(...histo_plot),125)-j)*0.5+0.5 ).attr({
-		            'fill':fillcol,
-		            'shape-rendering':'crispEdges',
-		            'stroke-width': 0 
-		        });
-			}
+			
+			var fillcol = '#ffffff'
+	        draw.rect( 2, color_plot[2][i]*0.5 ).move( i*2, (Math.min(Math.max(...histo_plot),125)-color_plot[2][i])*0.5 ).attr({
+	            'fill':'#54278f',
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+	        draw.rect( 2, color_plot[1][i]*0.5 ).move( i*2, (Math.min(Math.max(...histo_plot),125)-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
+	            'fill':'#9e9ac8',
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+	        draw.rect( 2, color_plot[0][i]*0.5 ).move( i*2, (Math.min(Math.max(...histo_plot),125)-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
+	            'fill':'#bcbddc',
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
 		}
 	}
 }
@@ -437,24 +437,68 @@ function DrawSesonalitys(compresed_data,data_min,data_range){
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
-	for (var i = 0; i < 128; i++) {
-		for (var j = 0; j < compresed_data.length; j++) {
-			var fillcol = '#ffffff'
-			if (j < color_plot[2][i]){
-				fillcol = '#54278f'
+	for (var i = 0; i < 52; i++) {
+		
+		var fillcol = '#ffffff'
+        draw.rect( 9, color_plot[2][i]*0.5 ).move( i*9+55, (compresed_data.length-color_plot[2][i])*0.5 ).attr({
+            'fill':'#54278f',
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+        draw.rect( 9, color_plot[1][i]*0.5 ).move( i*9+55, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
+            'fill':'#9e9ac8',
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+        draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+55, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
+            'fill':'#bcbddc',
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+	}
+}
+function DrawYears(compresed_data,data_min,data_range){
+	console.log('l')
+	var color_plot = [new Array(compresed_data.length).fill(0),new Array(compresed_data.length).fill(0),new Array(compresed_data.length).fill(0)]
+	color_plot_str = JSON.stringify(color_plot)
+	for (var year = 0; year < compresed_data.length; year ++){
+		for (var week = 0; week < 52; week ++){
+			if (compresed_data[year][week] != null){
+				if (compresed_data[year][week] < wx_range_val0*data_range+data_min){
+					color_plot[0][year] += 1
+				}
+				else if (compresed_data[year][week] < wx_range_val1*data_range+data_min){
+					color_plot[1][year] += 1
+				}
+				else {
+					color_plot[2][year] += 1
+				}
 			}
-			else if (j < color_plot[1][i]+color_plot[2][i]){
-				fillcol = '#9e9ac8'
-			}
-			else {
-				fillcol = '#bcbddc'
-			}
-	        draw.rect( 9, 0.5 ).move( i*9+55, (compresed_data.length-j)*0.5+0.5).attr({
-	            'fill':fillcol,
-	            'shape-rendering':'crispEdges',
-	            'stroke-width': 0 
-	        });
 		}
+	}
+	document.getElementById( 'gr_years').innerHTML = ""; // clear existing
+	var draw = SVG().addTo('#gr_years').size( 52*0.75, compresed_data.length*9 );
+	draw.attr({
+	    'shape-rendering':'crispEdges'
+	});
+	for (var i = 0; i < compresed_data.length; i++) {
+		
+		var fillcol = '#ffffff'
+        draw.rect( color_plot[2][i]*0.75, 9 ).move( 0, (compresed_data.length-i)*9 ).attr({
+            'fill':'#54278f',
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+        draw.rect( color_plot[1][i]*0.75, 9 ).move( color_plot[2][i]*0.75, (compresed_data.length-i)*9 ).attr({
+            'fill':'#9e9ac8',
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+        draw.rect( color_plot[0][i]*0.75, 9 ).move( (color_plot[2][i]+color_plot[1][i])*0.75, (compresed_data.length-i)*9  ).attr({
+            'fill':'#bcbddc',
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
 	}
 }
 
@@ -465,11 +509,6 @@ function RenderGrid(){
 
 	if (!has_reading)
 		return;
-    var range_bar_off_x = 10;
-    var range_bar_label_off_x = 5;
-    var range_bar_w = 15;
-    var range_bar_label_w = 20;
-    var range_bar_total_w = range_bar_off_x + range_bar_w + range_bar_label_off_x + range_bar_label_w;
     var year_label_width = 55;
     var month_label_height = 55;
     var off_x = year_label_width;         // grid offset
@@ -545,6 +584,7 @@ function RenderGrid(){
     var data_range = wx_data_max - wx_data_min;
 	DrawHistogram(wx_data,wx_data_min,data_range)
 	DrawSesonalitys(wx_data,wx_data_min,data_range)
+	DrawYears(wx_data,wx_data_min,data_range)
     // var color0 = '#edf8b1';
     // var color1 = '#7fcdbb';
     // var color2 = '#2c7fb8';
@@ -553,7 +593,7 @@ function RenderGrid(){
     var color2 = '#54278f';
 
     // create the svg drawing object and draw the grid elements    
-    var total_width = boxspace * num_weeks + off_x + year_label_width + range_bar_total_w;
+    var total_width = boxspace * num_weeks + year_label_width;
     var total_height = boxspace * num_years + off_y * 2 + month_label_height;
 
     document.getElementById( 'gr_grid' ).innerHTML = ""; // clear existing
@@ -638,47 +678,4 @@ function RenderGrid(){
         btext.center(bx,by+bw/2).rotate(90);
     }
 
-    // draw the range bar, 3 sections, top to bottom
-    let off_rbx = off_x + num_weeks * boxspace + range_bar_off_x;
-    let off_rby = off_y;
-    let rb_w = range_bar_w;
-    let rb_totalh = num_years * boxspace;
-
-    let rb2_h = (1.0 - wx_range_val1) * rb_totalh;
-    let rb2_y = off_rby;
-    draw.rect( rb_w, rb2_h ).move( off_rbx, rb2_y ).attr({
-        'fill':color2
-    });
-
-    let rb1_h = (1.0 - wx_range_val0) * rb_totalh - rb2_h;
-    let rb1_y = off_rby + rb2_h;
-    draw.rect( rb_w, rb1_h ).move( off_rbx, rb1_y ).attr({
-        'fill':color1
-    });
-
-    let rb0_h = wx_range_val0 * rb_totalh;
-    let rb0_y = off_rby + rb1_h + rb2_h;
-    draw.rect( rb_w, rb0_h ).move( off_rbx, rb0_y ).attr({
-        'fill':color0
-    });
-
-    // draw the 4 range bar labels
-    function draw_rblabel( lstr, lx, ly ){
-        let rtext = draw.text( lstr ).font('size',12).font('family','Arial');
-        rtext_h = rtext.bbox().height/2; // bbox is double for some reason.
-        rtext.move( lx, ly - (rtext_h/2) ); // center vertically
-    }
-    let off_rlabx = off_rbx + rb_w + range_bar_label_off_x;
-    let rlab3 = `${wx_data_max}`;
-    draw_rblabel( rlab3, off_rlabx, rb2_y );
-
-    let rlab2 = (wx_data_min + (wx_range_val1 * data_range));
-    draw_rblabel( rlab2.toFixed(3), off_rlabx, rb1_y );
-
-    let rlab1 = wx_data_min + (wx_range_val0 * data_range);
-    draw_rblabel( rlab1.toFixed(3), off_rlabx, rb0_y );
-
-    let rlab0 = `${wx_data_min}`;
-    draw_rblabel( rlab0, off_rlabx, rb2_y + rb_totalh );
-	return wx_data;
 };
