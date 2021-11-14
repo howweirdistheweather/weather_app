@@ -477,7 +477,7 @@ function DrawYears(compresed_data,data_min,data_range){
 		}
 	}
 	document.getElementById( 'gr_years').innerHTML = ""; // clear existing
-	var draw = SVG().addTo('#gr_years').size( 52*0.75, compresed_data.length*9 );
+	var draw = SVG().addTo('#gr_years').size( 52*0.75, (compresed_data.length+1)*9 );
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
