@@ -32,7 +32,7 @@ def get_wxvar_list():
     return HPO_VARIABLES
 
 def get_wxvar( var_lat:float, var_long:float ):
-    with open( 'gn862673-hwxpo.json', 'r') as infile:        
+    with open( 'gn865595-hwxpo.json', 'r') as infile:
         wxvar_json = infile.read()
         infile.close()
     return wxvar_json

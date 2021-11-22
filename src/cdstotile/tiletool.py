@@ -100,50 +100,84 @@ def do_hwxpo_avg( ds:netCDF4.Dataset, short_vn:str ):
 
     return weekly_results
 
+# Latitude-correct solar half-day
+# Pass latitude
+# returns tuple with day_start, day_end, and a boolean day_split that is true if daytime is split into two segments
+def lat_correct_solar_half_day(lat):
+    day_start = (6  - math.floor(lat/15))%24
+    day_end   = (18 - math.floor(lat/15))%24
+    return day_start, day_end, day_end < day_start #should this be strict inequality or non-strict?
+
 # calculate weekly-NIGHTLY average of a variable
 # pass: netcdf dataset, short var name present in the dataset
 # returns: list
-def do_hwxpo_avg_night( ds:netCDF4.Dataset, short_vn:str ):
+def do_hwxpo_avg_night( ds:netCDF4.Dataset, short_vn:str, lat ):
     array_x = reshape_nds( ds, short_vn )
     
-    # todo: adjust for local time
-    # a simplistic definition of 'night'? 18:00 to 06:00
+    day_start, day_end, day_split = lat_correct_solar_half_day(lat)
     weekly_results = [0.0] * 52
-    for week_num in range( 0, 52 ):
-        night_array_x = numpy.empty(0);
-        for day_num in range( 0, 7 ):
-            hrd = day_num * 24
-            hr0 = 0 + hrd       # early morning
-            hr1 = 6 + hrd
-            hr2 = 18 + hrd      # late night
-            hr3 = 24 + hrd
-            night_array_x = numpy.append( night_array_x, array_x[week_num][hr0:hr1] )
-            night_array_x = numpy.append( night_array_x, array_x[week_num][hr2:hr3] )
-            
-        avg_x = numpy.average( night_array_x )
-        weekly_results[ week_num ] = avg_x
+    if(day_split): #Just checking this conditional once... more lines of code but maybe faster.
+        for week_num in range( 0, 52 ):
+            night_array_x = numpy.empty(0);
+            for day_num in range( 0, 7 ):
+                hrd = day_num * 24
+                hr0 = day_end + hrd
+                hr1 = day_start + hrd
+                night_array_x = numpy.append( night_array_x, array_x[week_num][hr0:hr1] )
+
+            avg_x = numpy.average( night_array_x )
+            weekly_results[ week_num ] = avg_x
+    else:
+        for week_num in range( 0, 52 ):
+            night_array_x = numpy.empty(0);
+            for day_num in range( 0, 7 ):
+                hrd = day_num * 24
+                hr0 = 0 + hrd       # early morning
+                hr1 = day_start + hrd
+                hr2 = day_end + hrd      # late night
+                hr3 = 24 + hrd
+                night_array_x = numpy.append( night_array_x, array_x[week_num][hr0:hr1] )
+                night_array_x = numpy.append( night_array_x, array_x[week_num][hr2:hr3] )
+
+            avg_x = numpy.average( night_array_x )
+            weekly_results[ week_num ] = avg_x
 
     return weekly_results
 
 # calculate weekly-DAYTIME average of a variable
 # pass: netcdf dataset, short var name present in the dataset
 # returns: list
-def do_hwxpo_avg_day( ds:netCDF4.Dataset, short_vn:str ):
+def do_hwxpo_avg_day( ds:netCDF4.Dataset, short_vn:str, lat ):
     array_x = reshape_nds( ds, short_vn )
-    
-    # todo: adjust for local time
+
     # a simplistic definition of 'day'? 06:00 to 18:00
+    day_start, day_end, day_split = lat_correct_solar_half_day(lat)
     weekly_results = [0.0] * 52
-    for week_num in range( 0, 52 ):
-        day_array_x = numpy.empty(0);
-        for day_num in range( 0, 7 ):
-            hrd = day_num * 24
-            hr0 = 6 + hrd
-            hr1 = 18 + hrd
-            day_array_x = numpy.append( day_array_x, array_x[week_num][hr0:hr1] )
-            
-        avg_x = numpy.average( day_array_x )
-        weekly_results[ week_num ] = avg_x
+    if(day_split):
+        for week_num in range( 0, 52 ):
+            day_array_x = numpy.empty(0);
+            for day_num in range( 0, 7 ):
+                hrd = day_num * 24
+                hr0 = 0 + hrd
+                hr1 = day_end + hrd
+                hr2 = day_start + hrd
+                hr3 = 24 + hrd
+                day_array_x = numpy.append( day_array_x, array_x[week_num][hr0:hr1] )
+                day_array_x = numpy.append( day_array_x, array_x[week_num][hr2:hr3] )
+
+            avg_x = numpy.average( day_array_x )
+            weekly_results[ week_num ] = avg_x
+    else:
+        for week_num in range( 0, 52 ):
+            day_array_x = numpy.empty(0);
+            for day_num in range( 0, 7 ):
+                hrd = day_num * 24
+                hr0 = day_start + hrd
+                hr1 = day_end + hrd
+                day_array_x = numpy.append( day_array_x, array_x[week_num][hr0:hr1] )
+
+            avg_x = numpy.average( day_array_x )
+            weekly_results[ week_num ] = avg_x
 
     return weekly_results
 
@@ -188,18 +222,26 @@ def load_netcdfs( hpo:hwxpo.HWXPO(), dir_name, start_year, end_year, area_lat_lo
                 temp_avg = kelvin_to_F( temp_avg )
                 hpo.add_temp_avg( year, temp_avg )                
                 
-                temp_avg_n = do_hwxpo_avg_night( ds, short_var_name )
+                temp_avg_n = do_hwxpo_avg_night( ds, short_var_name, area_lat_long[0] ) #area_lat_long[0] is one of the latitudes
                 temp_avg_n = kelvin_to_F( temp_avg_n )
                 hpo.add_temp_avg_n( year, temp_avg_n )
 
-                temp_avg_d = do_hwxpo_avg_day( ds, short_var_name )
+                temp_avg_d = do_hwxpo_avg_day( ds, short_var_name, area_lat_long[0] ) #area_lat_long[0] is one of the latitudes
                 temp_avg_d = kelvin_to_F( temp_avg_d )
                 hpo.add_temp_avg_d( year, temp_avg_d )
 
-            if short_var_name == CDSVAR_CBH[1]:
+            elif short_var_name == CDSVAR_CBH[1]:
                 ceiling_avg = do_hwxpo_avg( ds, short_var_name )
                 ceiling_avg = meter_to_ft( ceiling_avg )
                 hpo.add_ceiling_avg( year, ceiling_avg )
+
+            elif short_var_name == CDSVAR_TP[1]: #total precip
+                precip_avg = do_hwxpo_avg( ds, short_var_name )
+                hpo.add_precip_avg( year, precip_avg)
+
+            elif short_var_name == CDSVAR_TCC[1]: #Total cloud cover
+                cloud_cover_avg = do_hwxpo_avg( ds, short_var_name )
+                hpo.add_cloud_cover_avg( year, cloud_cover_avg)
 
             else:
                 print( bcolors.WARNING + f'Unhandled variable type! {var_name} {short_var_name}' + bcolors.ENDC )
@@ -213,8 +255,11 @@ def CalcQtrDegGridNum( area_lat_long ):
 
 print( f'** HWITW tile tool v{APP_VERSION} **\n')
 
-inp_lat = 59.64 # homer ak
-inp_long = -151.54
+# inp_lat = 59.64 # homer ak
+# inp_long = -151.54
+# -141.0838,60.178 - Taan Fiord
+inp_lat = 60.178
+inp_long = -141.0838
 
 # todo Zoom level 11 tile number
 # get the containing cell 
