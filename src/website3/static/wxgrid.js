@@ -13,6 +13,7 @@ var method_dropdowns = []
 var weight_sliders = []
 var histograms = []
 var weight_setexes = []
+var weight_vals = []
 var measurement_index = 0
 let cred_str = 'weird:weather'  // TODO: remove. handy for devel
 var wxapp_folder = '/wxapp/'    // base folder/url of python app stuff
@@ -20,7 +21,9 @@ var reading_types = []
 var method_types = []
 var has_reading = false
 var all_data = []
+var prevs = []
 var start_year = 0
+var is_setting = false
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25]};
 var wxgrid_url = `http://localhost:5000/wxapp/getwxvar`;
 fetch( wxgrid_url, {   method:'GET',
@@ -50,7 +53,6 @@ fetch( wxgrid_url, {   method:'GET',
 					}
 				}
 				makeNewMeasurmeant(0)
-				LoadReadingDropdown(0)
             }
         );
     }
@@ -71,7 +73,6 @@ function compress(num,inputs){
 	}
 	return parseInt((num-inputs[0])/inputs[2])
 }
-
 
 function makeNewElement(id, type, atributes) {
 	var theDiv = document.getElementById(id);
@@ -109,14 +110,15 @@ function makeNewMeasurmeant(curent_id_num) {
 	makeNewElement("weight_stext_div"+curent_id_num,"div",{"class":"weight_setex","id":"weight_stext"+curent_id_num});
 	
 	weight_setexes.push(document.getElementById( 'weight_stext'+curent_id_num ));
-
+	prevs.push(0.5)
 	// create the range slider
 	weight_sliders.push(document.getElementById('weight_slider'+curent_id_num));
+	weight_vals.push(0)
 	noUiSlider.create( weight_sliders[curent_id_num], {
 	    start: [50],
 	    connect: false,
 	    range: {
-	        'min': 1,
+	        'min': 0,
 	        'max': 100
 	    },     
 	});
@@ -127,8 +129,9 @@ function makeNewMeasurmeant(curent_id_num) {
 	weight_sliders[curent_id_num].noUiSlider.on('update', function (values, handle) {
 	    var weight_val = values[0] / 100;
 	    // update text and redraw wx grid
+		weight_vals[curent_id_num] = parseFloat(weight_val)
 	    weight_setexes[curent_id_num].textContent = weight_val.toFixed(2);
-		RenderGrid()
+		handleSlider(curent_id_num)
 		});
 	method_dropdowns[curent_id_num].onchange =
 		function () {
@@ -138,6 +141,7 @@ function makeNewMeasurmeant(curent_id_num) {
 		function () {
 			LoadMethodDropdown(curent_id_num);
 		};
+	reset_sliders(curent_id_num)
 }
 // make wx_grdata an array of zeros
 function ClearWXGridData() {
@@ -171,11 +175,107 @@ function deleteMeasurementHandeler() {
 		method_dropdowns.splice(-1)
 		weight_sliders.splice(-1)
 		weight_setexes.splice(-1)
+		weight_vals.splice(-1)
+		prevs.splice(-1)
 		measurement.remove()
 		measurement_index --
+		LoadWXGrid()
+		reset_sliders(measurement_index)
 	}
-	LoadWXGrid()
 	
+}
+
+function reset_sliders(num){
+	is_setting = true
+	for (var i = 0; i < num+1; i++){
+		reset_slider(i,num)
+	}
+	is_setting = false
+	RenderGrid()
+}
+
+function reset_slider(i,num){
+	prevs[i] = 100/(num+1)
+	document.getElementById("weight_slider_holder"+i).remove()
+	document.getElementById("weight_stext_div"+i).remove()
+	makeNewElement("measurement"+i,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+i});
+	makeNewElement("weight_slider_holder"+i,"div",{"class":"weight_slider","id":"weight_slider"+i});
+	makeNewElement("measurement"+i,"div",{"style":"padding-bottom: 10px;","id":"weight_stext_div"+i});
+	makeNewElement("weight_stext_div"+i,"div",{"class":"weight_setex","id":"weight_stext"+i});
+	
+	weight_setexes[i] = document.getElementById( 'weight_stext'+i);
+	weight_sliders[i] = document.getElementById('weight_slider'+i);
+	noUiSlider.create( weight_sliders[i], {
+	    start: [100/(num+1)],
+	    connect: false,
+	    range: {
+	        'min': 0,
+	        'max': 100
+	    },     
+	});
+	weight_sliders[i].noUiSlider.on('update', function (values, handle) {
+	    var weight_val = values[0] / 100;
+	    // update text and redraw wx grid
+		weight_vals[i] = weight_val
+	    weight_setexes[i].textContent = weight_val.toFixed(2);
+		handleSlider(i,weight_val)
+		});
+}
+
+function handleSlider(num,weight_val) {
+	if (!is_setting && weight_sliders.length > 1) {
+		is_setting = true
+		var total_weght = 0
+		for (var i = 0; i < weight_sliders.length; i++) {
+			if (i != num){
+				total_weght += weight_vals[i]
+			}
+		}
+		for (var i = 0; i < weight_sliders.length; i++) {
+			redoSlider(i,num,total_weght)
+		}
+		RenderGrid()
+		is_setting = false
+	}
+	prevs[num] = weight_val
+}
+function redoSlider(i,num,total_weght) {
+	if (i != num) {
+		console.log(total_weght)
+		if (total_weght != 0){
+			wegth_i = weight_vals[i]/total_weght
+		}
+		else {
+			wegth_i = 1/(weight_sliders.length)
+		}
+		i_setex = weight_vals[i]
+		document.getElementById("weight_slider_holder"+i).remove()
+		document.getElementById("weight_stext_div"+i).remove()
+		makeNewElement("measurement"+i,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+i});
+		makeNewElement("weight_slider_holder"+i,"div",{"class":"weight_slider","id":"weight_slider"+i});
+		makeNewElement("measurement"+i,"div",{"style":"padding-bottom: 10px;","id":"weight_stext_div"+i});
+		makeNewElement("weight_stext_div"+i,"div",{"class":"weight_setex","id":"weight_stext"+i});
+
+		weight_setexes[i] = document.getElementById( 'weight_stext'+i);
+		weight_sliders[i] = document.getElementById('weight_slider'+i);
+		console.log('r')
+		console.log(weight_vals[num])
+		noUiSlider.create( weight_sliders[i], {
+		    start: [(i_setex+wegth_i*(prevs[num]-weight_vals[num]))*100],
+		    connect: false,
+		    range: {
+		        'min': 0,
+		        'max': 100
+		    },     
+		});
+		weight_sliders[i].noUiSlider.on('update', function (values, handle) {
+		    var weight_val = values[0] / 100;
+		    // update text and redraw wx grid
+			weight_vals[i] = weight_val
+		    weight_setexes[i].textContent = weight_val.toFixed(2);
+			handleSlider(i,weight_val)
+			});
+	}
 }
 
 function LoadReadingDropdown(num) {
@@ -477,25 +577,31 @@ function DrawYears(compresed_data,data_min,data_range){
 		}
 	}
 	document.getElementById( 'gr_years').innerHTML = ""; // clear existing
-	var draw = SVG().addTo('#gr_years').size( 52*0.75, (compresed_data.length+1)*9 );
+	var draw = SVG().addTo('#gr_years').size( 52*3, (compresed_data.length+1)*9 );
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
 	for (var i = 0; i < compresed_data.length; i++) {
 		
-		var fillcol = '#ffffff'
-        draw.rect( color_plot[2][i]*0.75, 9 ).move( 0, (compresed_data.length-i)*9 ).attr({
+        draw.rect( color_plot[2][i]*3, 9 ).move( 0, (compresed_data.length-i)*9 ).attr({
             'fill':'#54278f',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( color_plot[1][i]*0.75, 9 ).move( color_plot[2][i]*0.75, (compresed_data.length-i)*9 ).attr({
+        draw.rect( color_plot[1][i]*3, 9 ).move( color_plot[2][i]*3, (compresed_data.length-i)*9 ).attr({
             'fill':'#9e9ac8',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( color_plot[0][i]*0.75, 9 ).move( (color_plot[2][i]+color_plot[1][i])*0.75, (compresed_data.length-i)*9  ).attr({
+        draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3, (compresed_data.length-i)*9  ).attr({
             'fill':'#bcbddc',
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+	}
+	for (var i = 0; i < 4; i++) {
+        draw.rect( 2, (compresed_data.length+1)*9 ).move( i*31+31, 0  ).attr({
+            'fill':'#ffffff66',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
@@ -597,7 +703,7 @@ function RenderGrid(){
     var total_height = boxspace * num_years + off_y * 2 + month_label_height;
 
     document.getElementById( 'gr_grid' ).innerHTML = ""; // clear existing
-    var draw = SVG().addTo('#gr_grid').size( total_width, total_height );
+    var draw = SVG().addTo('#gr_grid').size( total_width, total_height+num_years );
     draw.attr({
         'shape-rendering':'crispEdges'
     });
@@ -648,7 +754,7 @@ function RenderGrid(){
 
             // draw rect
             sx = i * boxspace + off_x;
-            draw.rect( bsize, bsize ).move( sx, sy ).attr({
+            draw.rect( bsize, bsize-1 ).move( sx, sy ).attr({
                 'fill':fillcol,
                 'shape-rendering':shape_rend,
                 'stroke-width': 0 
@@ -668,7 +774,7 @@ function RenderGrid(){
     }
 
     let months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec' ];
-    let by = num_years * boxspace + off_y - (boxspace-boxsize);
+    let by = num_years * (boxspace) + off_y - (boxspace-boxsize);
     for ( i=0; i < months.length; i++ )
     {
         let btext = draw.text( `-${months[i]}` ).font('size',12).font('family','Arial');
