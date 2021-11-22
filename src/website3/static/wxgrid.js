@@ -21,7 +21,7 @@ var method_types = []
 var has_reading = false
 var all_data = []
 var start_year = 0
-const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25]};
+const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.005]};
 var wxgrid_url = `http://localhost:5000/wxapp/getwxvar`;
 fetch( wxgrid_url, {   method:'GET',
                         headers: {'Authorization': 'Basic ' + btoa(cred_str)}
