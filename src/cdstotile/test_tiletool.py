@@ -8,6 +8,7 @@ import json
 import numpy
 import netCDF4
 import random
+import copy
 
 import hwxpo
 from generate_HWITW_statistics import *
@@ -52,7 +53,7 @@ def export_cds_to_csv(ds,name):
     out_array = ds[0:,0,0]
     numpy.savetxt(f"{name}.csv",out_array,delimiter=',')
 
-def load_netcdfs( dir_name, start_year, end_year, area_lat_long ):
+def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
     # calculate a unique number for each quarter degree on the planet.
     # makes having a unique filename for the coordinates simpler.
     grid_num = CalcQtrDegGridNum( area_lat_long )
@@ -69,14 +70,14 @@ def load_netcdfs( dir_name, start_year, end_year, area_lat_long ):
     CDSVAR_TP = ['total_precipitation', 'tp']
 
     process_settings = [
-        {'data_group': 'temperature and humidity', 'pre_2021_flattener':flatten_cds,'flattener_2021':flatten_cds_2021, 'files': [CDSVAR_T2M, CDSVAR_D2M], 'analyze': do_temp_dp, 'analysis_kwargs': {'lon': area_lat_long[1]}},
-        {'data_group': 'wind', 'pre_2021_flattener':flatten_cds,'flattener_2021':flatten_cds_2021, 'files': [CDSVAR_U10, CDSVAR_V10], 'analyze': do_wind, 'analysis_kwargs': {}},
-        {'data_group': 'precipitation', 'pre_2021_flattener':flatten_cds,'flattener_2021':flatten_cds_2021, 'files': [CDSVAR_TP, CDSVAR_PTYPE], 'analyze': do_precip, 'analysis_kwargs': {}},
-        {'data_group': 'cloud cover', 'pre_2021_flattener':flatten_cds,'flattener_2021':flatten_cds_2021, 'files': [CDSVAR_TCC], 'analyze': do_cloud_cover, 'analysis_kwargs': {}},
+        {'data_group': 'temperature and humidity', 'files': [CDSVAR_T2M, CDSVAR_D2M], 'analyze': do_temp_dp, 'analysis_kwargs': {'lon': area_lat_long[1]}},
+        {'data_group': 'wind', 'files': [CDSVAR_U10, CDSVAR_V10], 'analyze': do_wind, 'analysis_kwargs': {}},
+        {'data_group': 'precipitation', 'files': [CDSVAR_TP, CDSVAR_PTYPE], 'analyze': do_precip, 'analysis_kwargs': {}},
+        {'data_group': 'cloud cover', 'files': [CDSVAR_TCC], 'analyze': do_cloud_cover, 'analysis_kwargs': {}},
 
     ]
 
-    def process_data(year, data_group, pre_2021_flattener, flattener_2021, files, analyze, analysis_kwargs):
+    def process_data(out_data, year, data_group, files, analyze, analysis_kwargs):
         print(f"Analyzing {data_group}")
         raw_data = []
         for i, filename in enumerate([f'{path}gn{grid_num}-{year}-{var[0]}.nc' for var in files]):
@@ -90,19 +91,19 @@ def load_netcdfs( dir_name, start_year, end_year, area_lat_long ):
             except OSError:
                 print( bcolors.FAIL + f'{filename} could not be opened!' + bcolors.ENDC )
                 exit(-1)
-            if year == 2021: raw_data.append(flattener_2021(ds[files[i][1]]))
-            else: raw_data.append(pre_2021_flattener(ds[files[i][1]]))
+            if year == 2021: raw_data.append(flatten_cds_2021(ds[files[i][1]]))
+            else: raw_data.append(flatten_cds(ds[files[i][1]]))
         results = analyze(raw_data, **analysis_kwargs)
         for variable,variable_info in results.items():
             for stat,value_array in variable_info.items():
-                data_settings['variables'][variable][stat]['data'].append(value_array.tolist()) #Currently no protection against mis-ordered years
+                out_data['variables'][variable][stat]['data'].append(value_array.tolist()) #Currently no protection against mis-ordered years
 
     years = list( range( start_year, end_year + 1 ) )
 
     for year in years:
         path = f'./{dir_name}/{year}/'
         for kwargs in process_settings:
-            process_data(year, **kwargs)
+            process_data(out_data, year, **kwargs)
 
 def CalcQtrDegGridNum( area_lat_long ):
     grid_num = int( ((area_lat_long[0] + 90) * 4) * 360 * 4 + ((area_lat_long[1] + 180) * 4) )
@@ -166,7 +167,7 @@ site_settings = [
 #inp_lat = 59.45 # Seldovia
 #inp_long = -151.72
 
-def process_site(filename, inp_lat, inp_long):
+def process_site(out_data, filename, inp_lat, inp_long):
     print("Processing site {filename}.")
     # todo Zoom level 11 tile number
     # get the containing cell
@@ -181,12 +182,14 @@ def process_site(filename, inp_lat, inp_long):
     export_2021_to_csv(area0)
 
     # era5 back extension goes from 1950 to 1978
-    load_netcdfs(   'cds_era5_backext',
+    load_netcdfs(   out_data,
+                    'cds_era5_backext',
                     1950, 1978,
                     area0 )
 
     # era5 goes from 1979 to present
-    load_netcdfs(   'cds_era5',
+    load_netcdfs(   out_data,
+                    'cds_era5',
                     1979, current_time.year,
                     area0 )
 
@@ -196,6 +199,6 @@ def process_site(filename, inp_lat, inp_long):
     outname = filename
     print( f'Output {outname} (gnum={gnum})' )
     with open( outname, 'w') as outfile:
-        json.dump( data_settings, outfile )
+        json.dump( out_data, outfile )
 
-for site in site_settings: process_site(**site)
+for site in site_settings: process_site(copy.deepcopy(data_settings), **site)
