@@ -39,7 +39,7 @@ def lat_correct_solar_half_day(lon):
     return day_start, day_end, day_end < day_start #should this be strict inequality or non-strict?
 
 def K_to_C(K):
-    return K - 273
+    return K - 273.15
 
 def RH(T, D): #T = temperature, D = dewpoint
     #Source: https: // bmcnoldy.rsmas.miami.edu / Humidity.html
@@ -297,19 +297,21 @@ def do_week_precip(data, discard):
     sorted_nonzero_precip = []
     no_data = True
     for i in range(HOURS_PER_WEEK):
-        amount = amounts[i]
         type = types[i]
-        if type and amount > 0: #Cut out garbage amounts
+        if type > -1: #No data is -32767, and there shouldn't be other negative values except maybe precision issues at zero.
             no_data = False
-            if type == 1: total_rain_raw += amount
-            elif type == 5: total_snow_raw += amount
-            elif type in [6,7]: total_wet_snow_raw += amount
-            elif type == 8: total_ice_pellets_raw += amount
-            elif type == 3: total_freezing_rain_raw += amount
-            sorted_nonzero_precip.append(amount)
-            total_raw += amount
-        elif type == 0: no_data = False #This indicates no rain, rather than no data. No data should be -32767
-    if no_data:
+            type = int(type + 0.001) #There is a tiny discrepancy between the values and the integers - in testing this seemed to be faster than rounding.
+            if type: #no need to do anything if it's type zero, since that indicates no precip.
+                amount = amounts[i]
+                if amount > 0: #Toss garbage negative numbers.
+                    if type == 1: total_rain_raw += amount
+                    elif type == 5: total_snow_raw += amount
+                    elif type in [6,7]: total_wet_snow_raw += amount
+                    elif type == 8: total_ice_pellets_raw += amount
+                    elif type == 3: total_freezing_rain_raw += amount
+                    sorted_nonzero_precip.append(amount)
+                    total_raw += amount
+    if no_data: #All hours have no data
         total = 255
         total_rain = 255
         total_snow = 255

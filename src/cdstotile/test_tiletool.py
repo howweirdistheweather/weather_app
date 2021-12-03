@@ -110,7 +110,7 @@ def CalcQtrDegGridNum( area_lat_long ):
     return grid_num
 
 ##########################################################
-def export_2021_to_csv(area_lat_long):
+def export_2021_to_csv(area_lat_long, filename):
     print("Writing csv of 2021 data.")
     CDSVAR_U10 = ['10m_u_component_of_wind', 'u10']
     CDSVAR_V10 = ['10m_v_component_of_wind', 'v10']
@@ -126,22 +126,22 @@ def export_2021_to_csv(area_lat_long):
     path = './cds_era5/2021/'
     grid_num = CalcQtrDegGridNum(area_lat_long)
     stored_data = numpy.zeros((n_variables, HOURS_PER_YEAR), dtype=numpy.float32)
-    for i, filename in enumerate([f'{path}gn{grid_num}-2021-{var[0]}.nc' for var in all_variables]):
-        already_exists = os.path.isfile( filename ) #and os.path.getsize( fullname ) > 500
+    for i, filepath in enumerate([f'{path}gn{grid_num}-2021-{var[0]}.nc' for var in all_variables]):
+        already_exists = os.path.isfile( filepath ) #and os.path.getsize( fullname ) > 500
         if not already_exists:
-            print( bcolors.WARNING + f'{filename} is missing!' + bcolors.ENDC )
+            print( bcolors.WARNING + f'{filepath} is missing!' + bcolors.ENDC )
             continue
-        print( f'processing {filename}' )
+        print( f'processing {filepath}' )
         try:
-            ds = netCDF4.Dataset( filename )
+            ds = netCDF4.Dataset( filepath )
         except OSError:
-            print( bcolors.FAIL + f'{filename} could not be opened!' + bcolors.ENDC )
+            print( bcolors.FAIL + f'{filepath} could not be opened!' + bcolors.ENDC )
             exit(-1)
         export_cds_to_csv(ds[all_variables[i][1]],all_variables[i][0])
-        this_array = flatten_cds(ds[all_variables[i][1]])
+        this_array = flatten_cds_2021(ds[all_variables[i][1]])
         print(this_array.shape)
         stored_data[i][0:this_array.size] = this_array
-    numpy.savetxt("2021_data.csv", numpy.swapaxes(stored_data,0,1), delimiter=",")
+    numpy.savetxt(f"2021_data_{filename}.csv", numpy.swapaxes(stored_data,0,1), delimiter=",")
 
 
 
@@ -179,7 +179,7 @@ def process_site(out_data, filename, inp_lat, inp_long):
     area0 = [ lat0, long0, lat1, long1 ]
 
     # Since 2021 data is weird, let's take a closer look.
-    export_2021_to_csv(area0)
+    export_2021_to_csv(area0, filename)
 
     # era5 back extension goes from 1950 to 1978
     load_netcdfs(   out_data,
