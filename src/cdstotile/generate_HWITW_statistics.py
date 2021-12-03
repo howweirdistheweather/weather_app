@@ -201,19 +201,21 @@ def do_temp_dp(raw_temp_dp_data:numpy.array((2,HOURS_PER_YEAR),dtype=numpy.float
 #################################################
 
 def plane_bearing_trig(dX,dY): #Always positive radians between 0 and 2*pi, using trig directions not compass directions.
-    if dX >= 0 and dY >= 0: return math.atan(dY/dX)
+    if dX > 0 and dY >= 0: return math.atan(dY/dX)
     elif dX < 0: return math.atan(dY/dX) + math.pi
     elif dX != 0: return math.atan(dY/dX) + 2*math.pi
     else: return math.pi/2
 
-def bearing_from_radians(angle):
-    angle = angle % (2*math.pi)
-    if angle > math.pi/2: return 450.0 - math.degrees(angle)
-    else: return 90.0 - math.degrees(angle)
+def bearing_from_radians_wind_dir(angle):#The direction the wind comes FROM, so it's going 180 degrees different than this.
+    #angle = angle % (2*math.pi) #Only needed if directions outside [0,2pi] are possible. Shouldn't be the case here - remove for optimization.
+    #if angle > math.pi/2: return 450.0 - math.degrees(angle) #direction toward, rather than from
+    #else: return 90.0 - math.degrees(angle) #direction toward, rather than from
+    if angle < 3*math.pi/2: return 270.0 - math.degrees(angle)
+    else: return 630.0 - math.degrees(angle)
 
 def wind_speed_and_dir(u, v): #Report direction in compass degrees
     speed = math.sqrt(u*u + v*v)
-    return speed, bearing_from_radians(plane_bearing_trig(u,v))
+    return speed, bearing_from_radians_wind_dir(plane_bearing_trig(u,v))
 
 def do_week_wind(data, discard):
     #Takes one week of data and generates specific results
