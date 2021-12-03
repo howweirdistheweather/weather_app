@@ -16,6 +16,13 @@ document.onkeydown = function() {
     if ( key == 8 || key == 46 ) {
         HandleDelete()
 	}
+	if (key == 38) {
+		console.log("booooo")
+		arrowHandler(10)
+	}
+	if (key == 40) {
+		arrowHandler(-10)
+	}
 	if (document.getElementById("myModal").style.display == "block"){
 //		update_txt()
 	}
@@ -637,6 +644,14 @@ function DrawHistogram(compresed_data,data_min,data_range){
 		maxes[num] = max_num
 		histo_hights[num] = 125*0.5
 		DrawLines(num)
+		if (select != null) {
+			val = select[0]
+		    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+		        'fill':'#d55',
+		        'shape-rendering':'crispEdges',
+		        'stroke-width': 0 
+		    });
+		}
 	}
 }
 
@@ -650,7 +665,7 @@ function AddClickHandler(num) {
 function RegisterClick(num,event) {
 	click_x = event.offsetX
 	click_y = event.offsetY*(-1) + histo_hights[num]
-	if (click_y < 0 || click_x < 15 || click_x > 270 ){
+	if (click_y < 0 || click_x < 15 || click_x > 270 ||  click_y > 71){
 		return
 	}
 	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
@@ -701,11 +716,44 @@ function HandleDelete() {
 	click_dict = click_coords[num]
 	select_draw.remove()
 	select_draw = null
-	if (select[0] == x_vals[0] || select[0] == x_vals[x_vals.length-1]){
+	if (select[0] == x_vals[0]){
+		click_coords[num][x_vals[0]] = click_coords[num][x_vals[1]]
+		DrawLines(num)
+		return
+	}
+	else if (select[0] == x_vals[x_vals.length-1]){
+		click_coords[num][x_vals[x_vals.length-1]] = click_coords[num][x_vals[x_vals.length-2]]
+		DrawLines(num)
 		return
 	}
 	delete click_dict[select[0]]
 	select = null
+	DrawLines(num)
+	RenderGrid()
+}
+
+function arrowHandler(y_dif) {
+	if (select == null){
+		return
+	}
+	num = select[1]
+	val = select[0]
+	click_dict = click_coords[num]
+	click_dict[select[0]] += y_dif
+	if (click_dict[select[0]] > histo_hights[num]){
+		click_dict[select[0]] = histo_hights[num]
+	}
+	if (click_dict[select[0]] < 0){
+		click_dict[select[0]] = 0
+	}
+	select_draw.remove()
+	select_draw = null
+	var draw = draws[num];
+    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+        'fill':'#d55',
+        'shape-rendering':'crispEdges',
+        'stroke-width': 0 
+    });
 	DrawLines(num)
 	RenderGrid()
 }
