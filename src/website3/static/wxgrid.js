@@ -27,6 +27,11 @@ document.onkeydown = function() {
 //		update_txt()
 	}
 };
+window.addEventListener("keydown", function(e) {
+    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+        e.preventDefault();
+    }
+}, false);
 function download(filename, text) {
   var element = document.createElement('a');
   element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -203,10 +208,15 @@ function makeNewMeasurmeant(curent_id_num) {
 		function () {
     		LoadWXGrid();
 			click_coords[curent_id_num] = {}
-			click_coords[curent_id_num][mins[curent_id_num]*2+15] = 0
-			click_coords[curent_id_num][maxes[curent_id_num]*2+15] = histo_hights[curent_id_num]
-			click_coords[curent_id_num][15] = 0
-			click_coords[curent_id_num][270] = histo_hights[curent_id_num]
+			click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
+			click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
+			if (select != null && select[1] == measurement_index){
+				select = null
+				if (select_draw != null){
+					select_draw.remove()
+				}
+				select_draw = null
+			}
 			DrawLines(curent_id_num)
 			RenderGrid()
 		};
@@ -216,10 +226,8 @@ function makeNewMeasurmeant(curent_id_num) {
 		};
 	reset_sliders(curent_id_num)
 	click_coords[curent_id_num] = {}
-	click_coords[curent_id_num][mins[curent_id_num]*2+15] = 0
-	click_coords[curent_id_num][maxes[curent_id_num]*2+15] = histo_hights[curent_id_num]
-	click_coords[curent_id_num][15] = 0
-	click_coords[curent_id_num][270] = histo_hights[curent_id_num]
+	click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
+	click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
 	DrawLines(curent_id_num)
 	for (i = 0; i <= curent_id_num; i++){
 		DrawLines(i)
@@ -297,6 +305,13 @@ function newMeasurementHandeler() {
 }
 function deleteMeasurementHandeler() {
 	if (measurement_index > 0) {
+		if (select != null && select[1] == measurement_index){
+			select = null
+			if (select_draw != null){
+				select_draw.remove()
+			}
+			select_draw = null
+		}
 		var measurement = document.getElementById("measurement"+measurement_index)
 		reading_dropdowns.splice(-1)
 		method_dropdowns.splice(-1)
@@ -455,10 +470,15 @@ function LoadMethodDropdown(num) {
 	}
 	LoadWXGrid();
 	click_coords[num] = {}
-	click_coords[num][mins[num]*2+15] = 0
-	click_coords[num][maxes[num]*2+15] = histo_hights[num]
-	click_coords[num][15] = 0
-	click_coords[num][270] = histo_hights[num]
+	click_coords[num][mins[num]*2+13] = 0
+	click_coords[num][maxes[num]*2+17] = histo_hights[num]
+	if (select != null && select[1] == num){
+		select = null
+		if (select_draw != null){
+			select_draw.remove()
+		}
+		select_draw = null
+	}
 	DrawLines(num)
 	RenderGrid()
 	
@@ -644,7 +664,7 @@ function DrawHistogram(compresed_data,data_min,data_range){
 		maxes[num] = max_num
 		histo_hights[num] = 125*0.5
 		DrawLines(num)
-		if (select != null) {
+		if (select != null && select[1] == num) {
 			val = select[0]
 		    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
 		        'fill':'#d55',
@@ -665,7 +685,7 @@ function AddClickHandler(num) {
 function RegisterClick(num,event) {
 	click_x = event.offsetX
 	click_y = event.offsetY*(-1) + histo_hights[num]
-	if (click_y < 0 || click_x < 15 || click_x > 270 ||  click_y > 71){
+	if (click_y < 0 || click_x < mins[num]*2+13 || click_x > maxes[num]*2+17 ||  click_y > 71){
 		return
 	}
 	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
@@ -719,11 +739,15 @@ function HandleDelete() {
 	if (select[0] == x_vals[0]){
 		click_coords[num][x_vals[0]] = click_coords[num][x_vals[1]]
 		DrawLines(num)
+		select = null
+		RenderGrid()
 		return
 	}
 	else if (select[0] == x_vals[x_vals.length-1]){
 		click_coords[num][x_vals[x_vals.length-1]] = click_coords[num][x_vals[x_vals.length-2]]
 		DrawLines(num)
+		select = null
+		RenderGrid()
 		return
 	}
 	delete click_dict[select[0]]
