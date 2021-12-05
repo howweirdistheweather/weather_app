@@ -3,6 +3,7 @@
 #
 import math
 import datetime
+import time
 import os.path
 import json
 import numpy
@@ -13,6 +14,8 @@ import copy
 import hwxpo
 from generate_HWITW_statistics import *
 from data_settings import data_settings
+from hig_utils import pretty_duration
+from hig_csv import write_csv_from_dict_of_lists
 
 # a helper class for printing color text
 class bcolors:
@@ -93,17 +96,23 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
                 exit(-1)
             if year == 2021: raw_data.append(flatten_cds_2021(ds[files[i][1]]))
             else: raw_data.append(flatten_cds(ds[files[i][1]]))
+        start_time = time.time()
         results = analyze(raw_data, **analysis_kwargs)
+        run_time = time.time()-start_time
+        print(f'time to process 1 year (not including loading or storing): {pretty_duration(run_time)}')
         for variable,variable_info in results.items():
             for stat,value_array in variable_info.items():
                 out_data['variables'][variable][stat]['data'].append(value_array.tolist()) #Currently no protection against mis-ordered years
+        return run_time
 
     years = list( range( start_year, end_year + 1 ) )
 
+    benchmark_log = dict([(data_group['data_group'],[]) for data_group in process_settings])
     for year in years:
         path = f'./{dir_name}/{year}/'
-        for kwargs in process_settings:
-            process_data(out_data, year, **kwargs)
+        for data_group in process_settings:
+            benchmark_log[data_group['data_group']].append(process_data(out_data, year, **data_group))
+    return benchmark_log
 
 def CalcQtrDegGridNum( area_lat_long ):
     grid_num = int( ((area_lat_long[0] + 90) * 4) * 360 * 4 + ((area_lat_long[1] + 180) * 4) )
@@ -182,17 +191,21 @@ def process_site(out_data, filename, inp_lat, inp_long):
     export_2021_to_csv(area0, filename)
 
     # era5 back extension goes from 1950 to 1978
-    load_netcdfs(   out_data,
-                    'cds_era5_backext',
-                    1950, 1978,
-                    area0 )
+    log = load_netcdfs( out_data,
+                        'cds_era5_backext',
+                        1950, 1978,
+                        area0 )
 
     # era5 goes from 1979 to present
-    load_netcdfs(   out_data,
-                    'cds_era5',
-                    1979, current_time.year,
-                    area0 )
+    log2 = load_netcdfs(out_data,
+                        'cds_era5',
+                        1979, current_time.year,
+                        area0 )
 
+    #write log of processing time
+    for key,time_list in log2.items():
+        log[key] += time_list
+    write_csv_from_dict_of_lists('log_of_processing_times.csv',log)
     # dump json
     gnum = CalcQtrDegGridNum( area0 )
     #outname = f'gn{gnum}-hwxpo.json'

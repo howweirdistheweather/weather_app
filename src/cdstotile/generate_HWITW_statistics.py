@@ -221,7 +221,9 @@ def do_week_wind(data, discard):
     #Takes one week of data and generates specific results
     U = data[0]
     V = data[1]
-    speed_array = numpy.zeros((HOURS_PER_WEEK), dtype=numpy.float32)
+    speed_array = []# faster as numpy array, but harder to deal with a week that's partly null. numpy.zeros((HOURS_PER_WEEK), dtype=numpy.float32)
+    good_Us = []
+    good_Vs = []
     dir_precision = data_settings_internal['compression']['direction']['scale']
     dir_histogram = numpy.zeros((int(360/dir_precision)), dtype=int)
     max_speed_raw = 0.0
@@ -230,7 +232,9 @@ def do_week_wind(data, discard):
         if U[i] > -32767:
             no_data = False
             speed, direction = wind_speed_and_dir(U[i], V[i])
-            speed_array[i] = speed
+            speed_array.append(speed)
+            good_Us.append(U[i])
+            good_Vs.append(V[i])
             if speed > max_speed_raw: max_speed_raw = speed
             direction_2_deg_increments = int(direction/dir_precision)
             dir_histogram[direction_2_deg_increments] += 1
@@ -241,14 +245,15 @@ def do_week_wind(data, discard):
         speed_max = 255
         dir_modal = 255
     else:
-        speed_avg_raw = numpy.average(speed_array)
+        speed_avg_raw = sum(speed_array)/len(speed_array)
         speed_avg = data_settings_internal['variables']['wind']['speed_avg']['compression_function'](speed_avg_raw)
         dir_modal, count = 0,0
         for i in range(int(360/dir_precision)):
             if dir_histogram[i] > count:
                 count = dir_histogram[i]
                 dir_modal = i #Already effectively compressed
-        net_speed_raw, net_dir_raw = wind_speed_and_dir(numpy.average(U), numpy.average(V))
+        len_good = len(good_Us)
+        net_speed_raw, net_dir_raw = wind_speed_and_dir(sum(good_Us)/len_good, sum(good_Vs)/len_good)
         speed_net = data_settings_internal['variables']['wind']['speed_net']['compression_function'](net_speed_raw)
         dir_net = data_settings_internal['variables']['wind']['dir_net']['compression_function'](net_dir_raw)
         speed_max = data_settings_internal['variables']['wind']['speed_max']['compression_function'](max_speed_raw)
