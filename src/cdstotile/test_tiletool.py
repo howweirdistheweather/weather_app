@@ -12,7 +12,19 @@ import random
 import copy
 
 import hwxpo
-from generate_HWITW_statistics import *
+from generate_HWITW_statistics import (
+    do_temp_dp,
+    do_wind,
+    do_precip,
+    do_cloud_cover,
+    HOURS_PER_YEAR
+)
+from generate_HWITW_statistics_2021 import (
+    do_temp_dp_2021,
+    do_wind_2021,
+    do_precip_2021,
+    do_cloud_cover_2021
+)
 from data_settings import data_settings
 from hig_utils import pretty_duration
 from hig_csv import write_csv_from_dict_of_lists
@@ -37,18 +49,22 @@ def flatten_cds(ds):
     flattened_array = ds[0:HOURS_PER_YEAR,0,0] #Truncate, pulling out the first dimension, since lat & lon are constant
     return flattened_array.flatten() #May be too short - current year doesn't have enough hours. Without .flatten() it's an array of 1-element arrays
 
-def flatten_cds_2021_test(ds):
-    flattened_array = ds[0:HOURS_PER_YEAR,1,0] #Truncate, pulling out the first dimension, since lat & lon are constant
-    return flattened_array.flatten() #May be too short - current year doesn't have enough hours. Without .flatten() it's an array of 1-element arrays
-
-def flatten_cds_2021(ds):
+def flatten_cds_2021(ds): #This is very slow. Is there any more efficient way to detect the break between the two expver columns?
     flattened_array = numpy.full((HOURS_PER_YEAR),-32767 , dtype = numpy.float32)#Start out with an array of Nulls (-32767)
-    HOURS_BEFORE_SEPT_1 = 5832
-    flattened_array[0:HOURS_BEFORE_SEPT_1] = ds[0:HOURS_BEFORE_SEPT_1,0,0,0]
+
+    value = ds[0,0,0,0]
+    i = 0
+    while value > -32767:
+        flattened_array[i] = value
+        i+= 1
+        value = ds[i,0,0,0]
+    value = ds[i,1,0,0]
     try:
-        for hour in range(HOURS_BEFORE_SEPT_1,HOURS_PER_YEAR):
-            flattened_array[hour] = ds[hour,1,0,0]
-    except IndexError: pass #When we run into the end of the array it will throw an IndexError
+        while value > -32767:
+            flattened_array[i] = value
+            i += 1
+            value = ds[i,1,0,0]
+    except IndexError: pass #We ran out of input arrays, so we're done.
     return flattened_array
 
 
@@ -73,14 +89,14 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
     CDSVAR_TP = ['total_precipitation', 'tp']
 
     process_settings = [
-        {'data_group': 'temperature and humidity', 'files': [CDSVAR_T2M, CDSVAR_D2M], 'analyze': do_temp_dp, 'analysis_kwargs': {'lon': area_lat_long[1]}},
-        {'data_group': 'wind', 'files': [CDSVAR_U10, CDSVAR_V10], 'analyze': do_wind, 'analysis_kwargs': {}},
-        {'data_group': 'precipitation', 'files': [CDSVAR_TP, CDSVAR_PTYPE], 'analyze': do_precip, 'analysis_kwargs': {}},
-        {'data_group': 'cloud cover', 'files': [CDSVAR_TCC], 'analyze': do_cloud_cover, 'analysis_kwargs': {}},
+        {'data_group': 'temperature and humidity', 'files': [CDSVAR_T2M, CDSVAR_D2M], 'analyze': do_temp_dp, 'analyze_2021':do_temp_dp_2021, 'analysis_kwargs': {'lon': area_lat_long[1]}},
+        {'data_group': 'wind', 'files': [CDSVAR_U10, CDSVAR_V10], 'analyze': do_wind, 'analyze_2021':do_wind_2021, 'analysis_kwargs': {}},
+        {'data_group': 'precipitation', 'files': [CDSVAR_TP, CDSVAR_PTYPE], 'analyze': do_precip, 'analyze_2021':do_precip_2021, 'analysis_kwargs': {}},
+        {'data_group': 'cloud cover', 'files': [CDSVAR_TCC], 'analyze': do_cloud_cover, 'analyze_2021':do_cloud_cover_2021, 'analysis_kwargs': {}},
 
     ]
 
-    def process_data(out_data, year, data_group, files, analyze, analysis_kwargs):
+    def process_data(out_data, year, data_group, files, analyze, analyze_2021, analysis_kwargs):
         print(f"Analyzing {data_group}")
         raw_data = []
         for i, filename in enumerate([f'{path}gn{grid_num}-{year}-{var[0]}.nc' for var in files]):
@@ -97,7 +113,8 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
             if year == 2021: raw_data.append(flatten_cds_2021(ds[files[i][1]]))
             else: raw_data.append(flatten_cds(ds[files[i][1]]))
         start_time = time.time()
-        results = analyze(raw_data, **analysis_kwargs)
+        if year == 2021: results = analyze_2021(raw_data, **analysis_kwargs)
+        else: results = analyze(raw_data, **analysis_kwargs)
         run_time = time.time()-start_time
         print(f'time to process 1 year (not including loading or storing): {pretty_duration(run_time)}')
         for variable,variable_info in results.items():
@@ -160,9 +177,10 @@ def export_2021_to_csv(area_lat_long, filename):
 print( f'** HWITW tile tool v{APP_VERSION} **\n')
 
 site_settings = [
-    {"filename":"Seldovia.json", "inp_lat": 59.45, "inp_long":-151.72},
-    {"filename":"Taan_Fiord.json", "inp_lat": 60.178, "inp_long":-141.0838},
-    {"filename":"Puerto_Maldonado.json", "inp_lat": -12.583, "inp_long":-69.195}
+    {"name":"Seldovia", "inp_lat": 59.45, "inp_long":-151.72},
+    {"name":"Taan_Fiord", "inp_lat": 60.178, "inp_long":-141.0838},
+    {"name":"Puerto_Maldonado", "inp_lat": -12.583, "inp_long":-69.195},
+    {"name":"Phoenix", "inp_lat":33.4, "inp_long":-112.1}
 ]
 
 # inp_lat = 59.64 # homer ak
@@ -176,8 +194,10 @@ site_settings = [
 #inp_lat = 59.45 # Seldovia
 #inp_long = -151.72
 
-def process_site(out_data, filename, inp_lat, inp_long):
-    print("Processing site {filename}.")
+def process_site(out_data, name, inp_lat, inp_long):
+    print(f"Processing site {name}.")
+    filename = f'{name}.json'
+    out_data['data_specs'].update([('Name',name)])
     # todo Zoom level 11 tile number
     # get the containing cell
     lat0 = math.ceil( inp_lat * 4 ) / 4
@@ -205,7 +225,7 @@ def process_site(out_data, filename, inp_lat, inp_long):
     #write log of processing time
     for key,time_list in log2.items():
         log[key] += time_list
-    write_csv_from_dict_of_lists('log_of_processing_times.csv',log)
+    write_csv_from_dict_of_lists(f'log_of_processing_times_{name}.csv',log)
     # dump json
     gnum = CalcQtrDegGridNum( area0 )
     #outname = f'gn{gnum}-hwxpo.json'

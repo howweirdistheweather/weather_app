@@ -62,85 +62,49 @@ def do_week_temp_dp(data_arrays, data_consts):
     day_index = 0
     day_temp_index = 0
     night_temp_index = 0
-    null_count = 0
     for i in range(HOURS_PER_WEEK):
         temperature = temperatures[i]
-        if temperature == -32767: #Null temperature - presumably null dewpoint too
-            null_count += 1
-        else:
-            dewpoint = dewpoints[i]
-            relative_humidities[i] = RH(temperature,dewpoint)
-            hour_of_day = i%24
-            if day_split:
-                if day_end < hour_of_day <= day_start:
-                    night_temps[night_temp_index] = temperature
-                    night_temp_index += 1
-                else:
-                    day_temps[day_temp_index] = temperature
-                    day_temp_index += 1
-            elif day_start <= hour_of_day < day_end:
-                day_temps[day_temp_index] = temperature
-                day_temp_index += 1
-            else:
+        dewpoint = dewpoints[i]
+        relative_humidities[i] = RH(temperature,dewpoint)
+        hour_of_day = i%24
+        if day_split:
+            if day_end < hour_of_day <= day_start:
                 night_temps[night_temp_index] = temperature
                 night_temp_index += 1
-            if hour_of_day == 0:
-                day_min = temperature
-                day_max = -temperature
             else:
-                if day_min > temperature: day_min = temperature
-                elif day_max < temperature: day_max = temperature #I think we can use elif here safely
-                if hour_of_day == 23:
-                    temp_ranges[day_index] = day_max-day_min
-                    day_index += 1
-    if not null_count:
-        relative_humidities = numpy.sort(relative_humidities)
-        p10_RH = data_settings_internal['variables']['relative_humidity']['p10']['compression_function'](relative_humidities[17])
-        p50_RH = data_settings_internal['variables']['relative_humidity']['p50']['compression_function'](relative_humidities[84])
-        p90_RH = data_settings_internal['variables']['relative_humidity']['p90']['compression_function'](relative_humidities[151])
-        ave_day_temp_raw = numpy.average(day_temps)
-        ave_night_temp_raw = numpy.average(night_temps)
-        ave_temp_raw = (ave_day_temp_raw+ave_night_temp_raw)/2
-        ave_day_temp = data_settings_internal['variables']['temperature']['day_avg']['compression_function'](K_to_C(ave_day_temp_raw))
-        ave_night_temp = data_settings_internal['variables']['temperature']['night_avg']['compression_function'](K_to_C(ave_night_temp_raw))
-        ave_temp = data_settings_internal['variables']['temperature']['avg']['compression_function'](K_to_C(ave_temp_raw))
-        ave_temp_range = data_settings_internal['variables']['temperature']['range_avg']['compression_function'](numpy.average(temp_ranges))
-        temperatures = numpy.sort(temperatures)
-        min_temp = data_settings_internal['variables']['temperature']['min']['compression_function'](K_to_C(temperatures[0]))
-        p10_temp = data_settings_internal['variables']['temperature']['p10']['compression_function'](K_to_C(temperatures[17]))
-        p90_temp = data_settings_internal['variables']['temperature']['p90']['compression_function'](K_to_C(temperatures[151]))
-        max_temp = data_settings_internal['variables']['temperature']['max']['compression_function'](K_to_C(temperatures[-1]))
-    elif null_count < 168:
-        relative_humidities = numpy.sort(relative_humidities)
-        n = 168-null_count
-        p10_RH = data_settings_internal['variables']['relative_humidity']['p10']['compression_function'](relative_humidities[int(-1*n*0.9)]) #zero is lowest possible humidity, so all the null data will be sitting at the low end - look from the top down based on the amount of real data.
-        p50_RH = data_settings_internal['variables']['relative_humidity']['p50']['compression_function'](relative_humidities[int(-1*n*0.5)])
-        p90_RH = data_settings_internal['variables']['relative_humidity']['p90']['compression_function'](relative_humidities[int(-1*n*0.1)])
-        day_temps_n = 84 - null_count/2
-        ave_day_temp_raw = numpy.sum(day_temps) / day_temps_n
-        ave_night_temp_raw = numpy.sum(night_temps) / day_temps_n
-        ave_temp_raw = (ave_day_temp_raw+ave_night_temp_raw)/2
-        ave_day_temp = data_settings_internal['variables']['temperature']['day_avg']['compression_function'](K_to_C(ave_day_temp_raw))
-        ave_night_temp = data_settings_internal['variables']['temperature']['night_avg']['compression_function'](K_to_C(ave_night_temp_raw))
-        ave_temp = data_settings_internal['variables']['temperature']['avg']['compression_function'](K_to_C(ave_temp_raw))
-        ave_temp_range = data_settings_internal['variables']['temperature']['range_avg']['compression_function'](numpy.average(temp_ranges))
-        temperatures = numpy.sort(temperatures)
-        min_temp = data_settings_internal['variables']['temperature']['min']['compression_function'](K_to_C(temperatures[-1*n])) #Since this should be raw data, nulls are -32767, so will sort to the bottom.
-        p10_temp = data_settings_internal['variables']['temperature']['p10']['compression_function'](K_to_C(temperatures[int(-1*n*0.9)]))
-        p90_temp = data_settings_internal['variables']['temperature']['p90']['compression_function'](K_to_C(temperatures[int(-1*n*0.1)]))
-        max_temp = data_settings_internal['variables']['temperature']['max']['compression_function'](K_to_C(temperatures[-1]))
-    else:
-        min_temp = 255
-        p10_temp = 255
-        ave_temp = 255
-        p90_temp = 255
-        max_temp = 255
-        ave_day_temp = 255
-        ave_night_temp = 255
-        ave_temp_range = 255
-        p10_RH = 255
-        p50_RH = 255
-        p90_RH = 255
+                day_temps[day_temp_index] = temperature
+                day_temp_index += 1
+        elif day_start <= hour_of_day < day_end:
+            day_temps[day_temp_index] = temperature
+            day_temp_index += 1
+        else:
+            night_temps[night_temp_index] = temperature
+            night_temp_index += 1
+        if hour_of_day == 0:
+            day_min = temperature
+            day_max = -temperature
+        else:
+            if day_min > temperature: day_min = temperature
+            elif day_max < temperature: day_max = temperature #I think we can use elif here safely
+            if hour_of_day == 23:
+                temp_ranges[day_index] = day_max-day_min
+                day_index += 1
+    relative_humidities = numpy.sort(relative_humidities)
+    p10_RH = data_settings_internal['variables']['relative_humidity']['p10']['compression_function'](relative_humidities[17])
+    p50_RH = data_settings_internal['variables']['relative_humidity']['p50']['compression_function'](relative_humidities[84])
+    p90_RH = data_settings_internal['variables']['relative_humidity']['p90']['compression_function'](relative_humidities[151])
+    ave_day_temp_raw = numpy.average(day_temps)
+    ave_night_temp_raw = numpy.average(night_temps)
+    ave_temp_raw = (ave_day_temp_raw+ave_night_temp_raw)/2
+    ave_day_temp = data_settings_internal['variables']['temperature']['day_avg']['compression_function'](K_to_C(ave_day_temp_raw))
+    ave_night_temp = data_settings_internal['variables']['temperature']['night_avg']['compression_function'](K_to_C(ave_night_temp_raw))
+    ave_temp = data_settings_internal['variables']['temperature']['avg']['compression_function'](K_to_C(ave_temp_raw))
+    ave_temp_range = data_settings_internal['variables']['temperature']['range_avg']['compression_function'](numpy.average(temp_ranges))
+    temperatures = numpy.sort(temperatures)
+    min_temp = data_settings_internal['variables']['temperature']['min']['compression_function'](K_to_C(temperatures[0]))
+    p10_temp = data_settings_internal['variables']['temperature']['p10']['compression_function'](K_to_C(temperatures[17]))
+    p90_temp = data_settings_internal['variables']['temperature']['p90']['compression_function'](K_to_C(temperatures[151]))
+    max_temp = data_settings_internal['variables']['temperature']['max']['compression_function'](K_to_C(temperatures[-1]))
     return {
                "temperature":{
                    "min":min_temp, 
@@ -202,15 +166,15 @@ def do_temp_dp(raw_temp_dp_data:numpy.array((2,HOURS_PER_YEAR),dtype=numpy.float
 
 def plane_bearing_trig(dX,dY): #Always positive radians between 0 and 2*pi, using trig directions not compass directions.
     if dX > 0 and dY >= 0: return math.atan(dY/dX)
-    elif dX < 0: return math.atan(dY/dX) + math.pi
-    elif dX != 0: return math.atan(dY/dX) + 2*math.pi
-    else: return math.pi/2
+    elif dX < 0: return math.atan(dY/dX) + 3.14159265
+    elif dX != 0: return math.atan(dY/dX) + 6.2831853 #6.2831853 = math.pi*2
+    else: return 1.5707963 #1.5707963 = math.pi/2
 
 def bearing_from_radians_wind_dir(angle):#The direction the wind comes FROM, so it's going 180 degrees different than this.
     #angle = angle % (2*math.pi) #Only needed if directions outside [0,2pi] are possible. Shouldn't be the case here - remove for optimization.
     #if angle > math.pi/2: return 450.0 - math.degrees(angle) #direction toward, rather than from
     #else: return 90.0 - math.degrees(angle) #direction toward, rather than from
-    if angle < 3*math.pi/2: return 270.0 - math.degrees(angle)
+    if angle < 4.71238898: return 270.0 - math.degrees(angle) #4.71238898 = 3*math.pi/2
     else: return 630.0 - math.degrees(angle)
 
 def wind_speed_and_dir(u, v): #Report direction in compass degrees
@@ -221,42 +185,39 @@ def do_week_wind(data, discard):
     #Takes one week of data and generates specific results
     U = data[0]
     V = data[1]
-    speed_array = []# faster as numpy array, but harder to deal with a week that's partly null. numpy.zeros((HOURS_PER_WEEK), dtype=numpy.float32)
-    good_Us = []
-    good_Vs = []
+    speed_array = numpy.zeros((HOURS_PER_WEEK), dtype=float)
     dir_precision = data_settings_internal['compression']['direction']['scale']
-    dir_histogram = numpy.zeros((int(360/dir_precision)), dtype=int)
+    dir_bins = int(360/dir_precision)
+    dir_histogram = numpy.zeros((dir_bins), dtype=int)
     max_speed_raw = 0.0
-    no_data = True
     for i in range(HOURS_PER_WEEK):
-        if U[i] > -32767:
-            no_data = False
-            speed, direction = wind_speed_and_dir(U[i], V[i])
-            speed_array.append(speed)
-            good_Us.append(U[i])
-            good_Vs.append(V[i])
-            if speed > max_speed_raw: max_speed_raw = speed
-            direction_2_deg_increments = int(direction/dir_precision)
-            dir_histogram[direction_2_deg_increments] += 1
-    if no_data:
-        speed_avg = 255
-        speed_net = 255
-        dir_net = 255
-        speed_max = 255
-        dir_modal = 255
-    else:
-        speed_avg_raw = sum(speed_array)/len(speed_array)
-        speed_avg = data_settings_internal['variables']['wind']['speed_avg']['compression_function'](speed_avg_raw)
-        dir_modal, count = 0,0
-        for i in range(int(360/dir_precision)):
-            if dir_histogram[i] > count:
-                count = dir_histogram[i]
-                dir_modal = i #Already effectively compressed
-        len_good = len(good_Us)
-        net_speed_raw, net_dir_raw = wind_speed_and_dir(sum(good_Us)/len_good, sum(good_Vs)/len_good)
-        speed_net = data_settings_internal['variables']['wind']['speed_net']['compression_function'](net_speed_raw)
-        dir_net = data_settings_internal['variables']['wind']['dir_net']['compression_function'](net_dir_raw)
-        speed_max = data_settings_internal['variables']['wind']['speed_max']['compression_function'](max_speed_raw)
+        speed, direction = wind_speed_and_dir(U[i], V[i])
+        speed_array[i]= speed
+        if speed > max_speed_raw: max_speed_raw = speed
+        direction_2_deg_increments = int(direction/dir_precision)
+        dir_histogram[direction_2_deg_increments] += 1
+    speed_avg_raw = numpy.average(speed_array)
+    speed_avg = data_settings_internal['variables']['wind']['speed_avg']['compression_function'](speed_avg_raw)
+    dir_modal, count = 0,0
+    #Option 1:
+    for i in range(dir_bins):
+        if dir_histogram[i] > count:
+            count = dir_histogram[i]
+            dir_modal = i #Already effectively compressed
+    #Option 2: #Too vulnerable to random mistakes. Could add more complexity...
+#    for i in range(0,dir_bins,3):
+#        if dir_histogram[i] > count:
+#            count = dir_histogram[i]
+#            dir_modal = i #Already effectively compressed
+#    check_list = [i,(i+1)%dir_bins,(i+2)%dir_bins,(i-1)%dir_bins,(i-2)%dir_bins]
+#    for i in check_list:
+#        if dir_histogram[i] > count:
+#            count = dir_histogram[i]
+#            dir_modal = i #Already effectively compressed
+    net_speed_raw, net_dir_raw = wind_speed_and_dir(numpy.average(U), numpy.average(V))
+    speed_net = data_settings_internal['variables']['wind']['speed_net']['compression_function'](net_speed_raw)
+    dir_net = data_settings_internal['variables']['wind']['dir_net']['compression_function'](net_dir_raw)
+    speed_max = data_settings_internal['variables']['wind']['speed_max']['compression_function'](max_speed_raw)
     return {
         "wind":{
             "speed_avg":speed_avg,
@@ -301,46 +262,32 @@ def do_week_precip(data, discard):
     total_wet_snow_raw = 0.0
     total_freezing_rain_raw = 0.0
     total_ice_pellets_raw = 0.0
-    sorted_nonzero_precip = []
-    no_data = True
+    sorted_nonzero_precip = [] #Presumably globally there's relatively few hours with nonzero precip, so sorting a short py list will be faster than a 168 cell numpy array
     for i in range(HOURS_PER_WEEK):
-        type = types[i]
-        if type > -1: #No data is -32767, and there shouldn't be other negative values except maybe precision issues at zero.
-            no_data = False
-            type = int(type + 0.001) #There is a tiny discrepancy between the values and the integers - in testing this seemed to be faster than rounding.
-            if type: #no need to do anything if it's type zero, since that indicates no precip.
-                amount = amounts[i]
-                if amount > 0: #Toss garbage negative numbers.
-                    if type == 1: total_rain_raw += amount
-                    elif type == 5: total_snow_raw += amount
-                    elif type in [6,7]: total_wet_snow_raw += amount
-                    elif type == 8: total_ice_pellets_raw += amount
-                    elif type == 3: total_freezing_rain_raw += amount
-                    sorted_nonzero_precip.append(amount)
-                    total_raw += amount
-    if no_data: #All hours have no data
-        total = 255
-        total_rain = 255
-        total_snow = 255
-        total_ice_pellets = 255
-        total_freezing_rain = 255
-        total_wet_snow = 255
-        p90 = 255
-        max = 255
-    else:
-        sorted_nonzero_precip = numpy.sort(sorted_nonzero_precip)
-        try: max_raw = sorted_nonzero_precip[-1]
-        except IndexError: max_raw = 0
-        try: p90_raw = sorted_nonzero_precip[-17]
-        except IndexError: p90_raw = 0
-        total = data_settings_internal['variables']['precipitation']['total']['compression_function'](total_raw)
-        total_rain = data_settings_internal['variables']['precipitation']['total_rain']['compression_function'](total_rain_raw)
-        total_snow = data_settings_internal['variables']['precipitation']['total_snow']['compression_function'](total_snow_raw)
-        total_wet_snow = data_settings_internal['variables']['precipitation']['total_wet_snow']['compression_function'](total_wet_snow_raw)
-        total_ice_pellets = data_settings_internal['variables']['precipitation']['total_ice_pellets']['compression_function'](total_ice_pellets_raw)
-        total_freezing_rain = data_settings_internal['variables']['precipitation']['total_freezing_rain']['compression_function'](total_freezing_rain_raw)
-        p90 = data_settings_internal['variables']['precipitation']['p90']['compression_function'](p90_raw)
-        max = data_settings_internal['variables']['precipitation']['max']['compression_function'](max_raw)
+        type = int(types[i] + 0.001)
+        if type: #no need to do anything if it's type zero, since that indicates no precip.
+            amount = amounts[i]
+            if amount > 0: #Toss garbage negative numbers.
+                if type == 1: total_rain_raw += amount
+                elif type == 5: total_snow_raw += amount
+                elif type in [6,7]: total_wet_snow_raw += amount
+                elif type == 8: total_ice_pellets_raw += amount
+                elif type == 3: total_freezing_rain_raw += amount
+                sorted_nonzero_precip.append(amount)
+                total_raw += amount
+    sorted_nonzero_precip = numpy.sort(sorted_nonzero_precip)
+    try: max_raw = sorted_nonzero_precip[-1]
+    except IndexError: max_raw = 0
+    try: p90_raw = sorted_nonzero_precip[-17]
+    except IndexError: p90_raw = 0
+    total = data_settings_internal['variables']['precipitation']['total']['compression_function'](total_raw)
+    total_rain = data_settings_internal['variables']['precipitation']['total_rain']['compression_function'](total_rain_raw)
+    total_snow = data_settings_internal['variables']['precipitation']['total_snow']['compression_function'](total_snow_raw)
+    total_wet_snow = data_settings_internal['variables']['precipitation']['total_wet_snow']['compression_function'](total_wet_snow_raw)
+    total_ice_pellets = data_settings_internal['variables']['precipitation']['total_ice_pellets']['compression_function'](total_ice_pellets_raw)
+    total_freezing_rain = data_settings_internal['variables']['precipitation']['total_freezing_rain']['compression_function'](total_freezing_rain_raw)
+    p90 = data_settings_internal['variables']['precipitation']['p90']['compression_function'](p90_raw)
+    max = data_settings_internal['variables']['precipitation']['max']['compression_function'](max_raw)
     return {
         "precipitation":{
             "total":total,
@@ -392,32 +339,20 @@ def do_week_cloud_cover(data, discard):
     p50_raw = sorted_data[84]
     p75_raw = sorted_data[126]
     i = 0
-    null_count = 0
     try:
-        while sorted_data[i] < 0.1:
-            if sorted_data[i] < 0:
-                null_count+=1
-            i+=1
+        while sorted_data[i] < 0.1: i+=1
     except IndexError: i = 168
-    if null_count < 168:
-        p_sunny_raw = float(i-null_count)/(168-null_count)
-        i = 167
-        try:
-            while sorted_data[i] > 0.9:
-                i-=1
-        except IndexError: i = 0
-        p_cloudy_raw = float(167-i-null_count)/(168-null_count)
-        p25 = data_settings_internal['variables']['cloud_cover']['p25']['compression_function'](p25_raw)
-        p50 = data_settings_internal['variables']['cloud_cover']['p50']['compression_function'](p50_raw)
-        p75 = data_settings_internal['variables']['cloud_cover']['p75']['compression_function'](p75_raw)
-        p_sunny = data_settings_internal['variables']['cloud_cover']['p_sunny']['compression_function'](p_sunny_raw)
-        p_cloudy = data_settings_internal['variables']['cloud_cover']['p_cloudy']['compression_function'](p_cloudy_raw)
-    else:
-        p25 = 255
-        p50 = 255
-        p75 = 255
-        p_sunny = 255
-        p_cloudy = 255
+    p_sunny_raw = float(i)/168
+    i = 167
+    try:
+        while sorted_data[i] > 0.9: i-=1
+    except IndexError: i = -1 #Is this right? Seems like it should be 100%, so it would have to be -1.
+    p_cloudy_raw = float(167-i)/168
+    p25 = data_settings_internal['variables']['cloud_cover']['p25']['compression_function'](p25_raw)
+    p50 = data_settings_internal['variables']['cloud_cover']['p50']['compression_function'](p50_raw)
+    p75 = data_settings_internal['variables']['cloud_cover']['p75']['compression_function'](p75_raw)
+    p_sunny = data_settings_internal['variables']['cloud_cover']['p_sunny']['compression_function'](p_sunny_raw)
+    p_cloudy = data_settings_internal['variables']['cloud_cover']['p_cloudy']['compression_function'](p_cloudy_raw)
     return {
         "cloud_cover":{
             "p25":p25,
