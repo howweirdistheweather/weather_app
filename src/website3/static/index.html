@@ -58,7 +58,7 @@
 	.modal {
 	  display: none; /* Hidden by default */
 	  position: fixed; /* Stay in place */
-	  z-index: 1; /* Sit on top */
+	  z-index: 2; /* Sit on top */
 	  padding-top: 100px; /* Location of the box */
 	  left: 0;
 	  top: 0;
@@ -99,7 +99,6 @@
 <body>
   <div id="myModal" class="modal">
 
-    <!-- Modal content -->
     <div class="modal-content">
       <p>enter name of file:</p>
 <!--	  <input type="text" name="enter" value="" id=filename> -->
@@ -111,8 +110,8 @@
   </div>
   <div id=data_storage></div>
   <div style="padding-bottom: 5px;">HWITW project Copyright (C) 2020 2021</div>
-  <button type="button" id=save_measurement_button style="display: inline-block;">save</button></div>
-  <button type="button" id=load_measurement_button style="display: inline-block;">load</button></div>
+  <!--button type="button" id=save_measurement_button style="display: inline-block;">save</button></div>
+  <button type="button" id=load_measurement_button style="display: inline-block;">load</button></div-->
   <hr>
   <div id=gr_plot class="center_horisontal" style="width: 1000px;">
 	<div id=gr_choices class="center_verticle">
@@ -129,8 +128,13 @@
 	</div>
     <div id=outer0 style="margin:0 auto; display:table;">
 	  <div id=gr_sesonalitys></div>
-      <div id=gr_grid style="display: inline-block;"></div>
-	  <div id=gr_years style="float: right; display: inline-block; padding-top: 1px; margin-left: 15px;"></div>
+	  <div>
+	    <div id=gr_years style="float: right; display: inline-block; padding-top: 10px; margin-left: 15px;"></div>
+	    <!--div id=mouseover_box style="z-index: 1; width: 46.82%; height: 100%; background-color: rgba(0,0,0,0); left: 19.78%; padding-top: 9px; position: fixed;">
+		  <div style="width: 9; height: 9; background-color: rgba(0,0,0,0);"></div>
+	    </div-->
+        <div id=gr_grid style="display: inline-block; padding-top: 9px;" title=""></div>
+	  </div>
     </div>
   </div>
   <link href="nouislider/nouislider.css" rel="stylesheet">

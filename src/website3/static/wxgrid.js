@@ -7,9 +7,7 @@ delete o['lastName']
 console.log(o['lastName'])
 
 var histo_hights = []
-var test = [1,5,3,600,4,8,0,3]
-test.sort((a,b) => a - b)
-console.log(test)
+var is_shift = 1
 document.onkeydown = function() {
     var key = event.keyCode || event.charCode;
 
@@ -17,16 +15,26 @@ document.onkeydown = function() {
         HandleDelete()
 	}
 	if (key == 38) {
-		console.log("booooo")
-		arrowHandler(10)
+		arrowHandler(2*is_shift)
 	}
 	if (key == 40) {
-		arrowHandler(-10)
+		arrowHandler(-2*is_shift)
+	}
+	if (key == 37) {
+		horizontalArrowHandler(-2*is_shift)
+	}
+	if (key == 39) {
+		horizontalArrowHandler(2*is_shift)
+	}
+	if (event.shiftKey){
+		is_shift = 1
 	}
 	if (document.getElementById("myModal").style.display == "block"){
 //		update_txt()
 	}
 };
+
+
 window.addEventListener("keydown", function(e) {
     if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
         e.preventDefault();
@@ -52,6 +60,7 @@ var maxes = []
 var select = null
 var select_draw = null
 var draws = []
+var compresed_data = []
 var is_valid = 1
 var wx_grdata_min = 0.0;
 var wx_grdata_max = 1.0;
@@ -235,6 +244,7 @@ function makeNewMeasurmeant(curent_id_num) {
 }
 // make wx_grdata an array of zeros
 function ClearWXGridData() {
+	compresed_data = []
     wx_grdata = {}; //Array.from(Array(50), () => new Array(52));   // init empty/zero grid
 	for (dropdown of reading_dropdowns ){
 		wx_grdata[dropdown.value] = Array(60).fill().map(() => Array(52).fill(0))
@@ -284,16 +294,39 @@ function SaveCompleet(num) {
 function save() {
 	document.getElementById("myModal").style.display = "block";
 }
-var save_button = document.getElementById('save_measurement_button')
-save_button.addEventListener("click", save);
 
-var save_button_complet = document.getElementById('save')
-save_button_complet.addEventListener("click", save_handler);
+function detectMove() {
+	if (compresed_data == []) {
+		return;
+	}
+	if (event.offsetY < 55) {
+		return
+	}
+	moveX = event.offsetX
+	moveY = event.offsetY*(-1)+compresed_data.length*9+10
+	if (moveY < 10 || moveX < 55 || moveY > compresed_data.length*9+10){
+		return;
+	}
+	y_num = (moveY - 2)/9
+	x_num = (moveX - 55)/9
+	txt = `${parseInt(y_num+start_year)}`
+	var wx_grid = document.getElementById('gr_grid')
+	wx_grid.title = txt
+}
+
+//var save_button = document.getElementById('save_measurement_button')
+//save_button.addEventListener("click", save);
+
+//var save_button_complet = document.getElementById('save')
+//save_button_complet.addEventListener("click", save_handler);
 
 var close_button = document.getElementById('cancle')
 close_button.addEventListener("click", function(){
 	document.getElementById("myModal").style.display = "none";
 });
+
+//var wx_grid = document.getElementById('gr_grid')
+//wx_grid.addEventListener('mousemove', detectMove);
 
 
 function newMeasurementHandeler() {
@@ -689,6 +722,16 @@ function RegisterClick(num,event) {
 		return
 	}
 	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
+	if (select != null)	{
+		if (Math.abs(click_x-select[0]) < 5 && Math.abs(click_y-click_coords[num][select[0]]) < 5) {
+			select = null
+			if (select_draw != null){
+				select_draw.remove()
+			}
+			select_draw = null
+			return
+		}
+	}
 	for (val of x_vals) {
 		if (Math.abs(click_x-val) < 5 && Math.abs(click_y-click_coords[num][val]) < 5) {
 			if (select != null)	{
@@ -697,9 +740,7 @@ function RegisterClick(num,event) {
 					select_draw.remove()
 				}
 				select_draw = null
-				return
 			}
-			
 			select = [val,num]
 			var draw = draws[num];
 	        select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
@@ -712,14 +753,16 @@ function RegisterClick(num,event) {
 		}
 	}
 	if (select != null){
-		click_coords[num][select[0]] = click_y
 		select = null
 		if (select_draw != null){
 			select_draw.remove()
 		}
-		select_draw = null
-		DrawLines(num)
-		RenderGrid()
+		if (select[1] == num){
+			click_coords[num][select[0]] = click_y
+			select_draw = null
+			DrawLines(num)
+			RenderGrid()
+		}
 		return
 	}
 	click_coords[num][click_x] = click_y
@@ -760,16 +803,64 @@ function arrowHandler(y_dif) {
 	if (select == null){
 		return
 	}
+	var shift_mul = 1
+	if (event.shiftKey){
+		shift_mul = 5
+	}
 	num = select[1]
 	val = select[0]
 	click_dict = click_coords[num]
-	click_dict[select[0]] += y_dif
+	click_dict[select[0]] += y_dif*shift_mul
 	if (click_dict[select[0]] > histo_hights[num]){
 		click_dict[select[0]] = histo_hights[num]
 	}
 	if (click_dict[select[0]] < 0){
 		click_dict[select[0]] = 0
 	}
+	select_draw.remove()
+	select_draw = null
+	var draw = draws[num];
+    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+        'fill':'#d55',
+        'shape-rendering':'crispEdges',
+        'stroke-width': 0 
+    });
+	DrawLines(num)
+	RenderGrid()
+}
+
+function horizontalArrowHandler(x_dif) {
+	if (select == null){
+		return
+	}
+	var shift_mul = 1
+	if (event.shiftKey){
+		shift_mul = 5
+	}
+	var num = select[1]
+	var val = select[0]
+	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
+	var x_index = x_vals.indexOf(val)
+	console.log("x_index: " + x_index)
+	var new_x = parseInt(val)+x_dif*shift_mul
+	console.log(new_x)
+	console.log(x_vals[x_index-1])
+	console.log(x_vals[x_index+1])
+	if (new_x <= x_vals[x_index-1]){
+		new_x = parseInt(x_vals[x_index-1]) + 1
+	}
+	if (new_x >= x_vals[x_index+1]){
+		new_x = parseInt(x_vals[x_index+1]) - 1
+	}
+	click_dict = click_coords[num]
+	y_val = click_dict[select[0]]
+	if (parseInt(select[0]) != parseInt(x_vals[0]) && parseInt(select[0]) != parseInt(x_vals[x_vals.length-1])){
+		delete click_dict[select[0]]
+	}
+	click_dict[new_x] = y_val
+	console.log(select)
+	select = [new_x.toString(),num]
+	console.log(select)
 	select_draw.remove()
 	select_draw = null
 	var draw = draws[num];
@@ -815,24 +906,24 @@ function DrawSesonalitys(compresed_data,data_min,data_range){
 		}
 	}
 	document.getElementById( 'gr_sesonalitys').innerHTML = ""; // clear existing
-	var draw = SVG().addTo('#gr_sesonalitys').size( 523, compresed_data.length*0.5 );
+	var draw = SVG().addTo('#gr_sesonalitys').size( 52*9+35, compresed_data.length*0.5 );
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
 	for (var i = 0; i < 52; i++) {
 		
 		var fillcol = '#ffffff'
-        draw.rect( 9, color_plot[2][i]*0.5 ).move( i*9+55, (compresed_data.length-color_plot[2][i])*0.5 ).attr({
+        draw.rect( 9, color_plot[2][i]*0.5 ).move( i*9+35, (compresed_data.length-color_plot[2][i])*0.5 ).attr({
             'fill':'#54278f',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 9, color_plot[1][i]*0.5 ).move( i*9+55, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
+        draw.rect( 9, color_plot[1][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
             'fill':'#9e9ac8',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+55, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
+        draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
             'fill':'#bcbddc',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
@@ -896,10 +987,10 @@ function RenderGrid(){
 
 	if (!has_reading)
 		return;
-    var year_label_width = 55;
-    var month_label_height = 55;
+    var year_label_width = 35;
+    var month_label_height = 25;
     var off_x = year_label_width;         // grid offset
-    var off_y = 10;
+    var off_y = 1;
     var boxsize = 8;        // size of a grid unit
     var boxspace = 9;      // total space from unit to unit
 
@@ -948,6 +1039,7 @@ function RenderGrid(){
 			}
 		}
 	}
+	compresed_data = wx_data
 	console.log(wx_data)
 	console.log(wx_range_val0)
 	console.log(wx_range_val1)
@@ -979,10 +1071,10 @@ function RenderGrid(){
 
     // create the svg drawing object and draw the grid elements    
     var total_width = boxspace * num_weeks + year_label_width;
-    var total_height = boxspace * num_years + off_y * 2 + month_label_height;
+    var total_height = boxspace * num_years + off_y + month_label_height;
 
     document.getElementById( 'gr_grid' ).innerHTML = ""; // clear existing
-    var draw = SVG().addTo('#gr_grid').size( total_width, total_height+num_years );
+    var draw = SVG().addTo('#gr_grid').size( total_width, total_height);
     draw.attr({
         'shape-rendering':'crispEdges'
     });
@@ -1033,11 +1125,17 @@ function RenderGrid(){
 
             // draw rect
             sx = p * boxspace + off_x;
-            draw.rect( bsize, bsize-1 ).move( sx, sy ).attr({
+            var rect = draw.rect( bsize, bsize-1 ).move( sx, sy ).attr({
                 'fill':fillcol,
                 'shape-rendering':shape_rend,
                 'stroke-width': 0 
             });
+			rect.addEventListener('click', function () {
+				console.log("txt")
+				var gr_sesonalitys = document.getElementById('gr_sesonalitys')
+				gr_sesonalitys.title = "txt"
+				
+			});
         }
     }
 
