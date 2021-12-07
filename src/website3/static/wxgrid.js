@@ -7,7 +7,6 @@ delete o['lastName']
 console.log(o['lastName'])
 
 var histo_hights = []
-var is_shift = 1
 document.onkeydown = function() {
     var key = event.keyCode || event.charCode;
 
@@ -15,25 +14,28 @@ document.onkeydown = function() {
         HandleDelete()
 	}
 	if (key == 38) {
-		arrowHandler(2*is_shift)
+		arrowHandler(2)
 	}
 	if (key == 40) {
-		arrowHandler(-2*is_shift)
+		arrowHandler(-2)
 	}
 	if (key == 37) {
-		horizontalArrowHandler(-2*is_shift)
+		horizontalArrowHandler(-2)
 	}
 	if (key == 39) {
-		horizontalArrowHandler(2*is_shift)
+		horizontalArrowHandler(2)
 	}
-	if (event.shiftKey){
-		is_shift = 1
+	if (key == 13) {
+		select = null
+		if (select_draw != null){
+			select_draw.remove()
+		}
+		select_draw = null
 	}
 	if (document.getElementById("myModal").style.display == "block"){
 //		update_txt()
 	}
 };
-
 
 window.addEventListener("keydown", function(e) {
     if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
@@ -54,6 +56,7 @@ function download(filename, text) {
 }
 //download('test.json', "Hello world!");
 var lines = []
+var invert_btns = []
 var file_names = []
 var mins = []
 var maxes = []
@@ -136,11 +139,6 @@ fetch( wxgrid_url, {   method:'GET',
 .catch(function(err) {
     console.error('Fetch Error -', err);
 });
-function printMousePos(event) {
-	console.log("clientX: " + event.offsetX + " - clientY: " + event.offsetY);
-}
-//document.addEventListener("click", printMousePos);
-
 
 function compress(num,inputs){
 	if (num < -150 || num == null){
@@ -155,7 +153,7 @@ function compress(num,inputs){
 	return parseInt((num-inputs[0])/inputs[2])
 }
 
-function makeNewElement(id, type, atributes) {
+function makeNewElement(id, type, atributes, txt) {
 	var theDiv = document.getElementById(id);
 	var content = document.createElement(type);
 	var atibutes_to_set = Object.keys(atributes);
@@ -163,6 +161,9 @@ function makeNewElement(id, type, atributes) {
 		content.setAttribute(atibute_to_set, atributes[atibute_to_set]);
 	}
 	theDiv.appendChild(content);
+	if (txt != null) {
+		content.innerHTML = txt
+	}
 }
 function makeNewMeasurmeant(curent_id_num) {
 //	console.log(curent_id_num)
@@ -172,26 +173,31 @@ function makeNewMeasurmeant(curent_id_num) {
 	draws.push(null)
 	maxes.push[0]
 	mins.push[0]
-	makeNewElement("measurements","div",{"style":"text-align: center;","id":"measurement"+curent_id_num});
+	makeNewElement("measurements","div",{"style":"text-align: center;","id":"measurement"+curent_id_num},null);
 	
-	makeNewElement("measurement"+curent_id_num,"div",{"id":"histogram"+curent_id_num});
+	makeNewElement("measurement"+curent_id_num,"div",{"id":"histogram"+curent_id_num},"");
 	histograms.push(document.getElementById('histogram'+curent_id_num));
 	
 	AddClickHandler(curent_id_num)
 	
-	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-reading_dropdown"+curent_id_num});
+	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-reading_dropdown"+curent_id_num},null);
 	reading_dropdowns.push(document.getElementById('gr-reading_dropdown'+curent_id_num));
 	
-	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-method_dropdown"+curent_id_num});
+	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-method_dropdown"+curent_id_num},null);
 	method_dropdowns.push(document.getElementById('gr-method_dropdown'+curent_id_num));
 	
 	LoadReadingDropdown(curent_id_num);
-
 	
-	makeNewElement("measurement"+curent_id_num,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+curent_id_num});
-	makeNewElement("weight_slider_holder"+curent_id_num,"div",{"class":"weight_slider","id":"weight_slider"+curent_id_num});
-	makeNewElement("measurement"+curent_id_num,"div",{"style":"padding-bottom: 10px;","id":"weight_stext_div"+curent_id_num});
-	makeNewElement("weight_stext_div"+curent_id_num,"div",{"class":"weight_setex","id":"weight_stext"+curent_id_num});
+	makeNewElement("measurement"+curent_id_num,"button",{"id":"invert_buttion"+curent_id_num,"style":"font-size: 12px; height: 19px; background-color: #fff; border-width: thin; border-radius: 2px;"},"invert");
+	invert_btns.push(document.getElementById('invert_buttion'+curent_id_num));
+	invert_btns[curent_id_num].addEventListener("click", function() {
+		invertHandeler(curent_id_num)
+	});
+
+	makeNewElement("measurement"+curent_id_num,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+curent_id_num},null);
+	makeNewElement("weight_slider_holder"+curent_id_num,"div",{"class":"weight_slider","id":"weight_slider"+curent_id_num},null);
+	makeNewElement("measurement"+curent_id_num,"div",{"style":"padding-bottom: 10px;","id":"weight_stext_div"+curent_id_num},null);
+	makeNewElement("weight_stext_div"+curent_id_num,"div",{"class":"weight_setex","id":"weight_stext"+curent_id_num},null);
 	
 	weight_setexes.push(document.getElementById( 'weight_stext'+curent_id_num ));
 	prevs.push(0.5)
@@ -202,7 +208,7 @@ function makeNewMeasurmeant(curent_id_num) {
 	    start: [50],
 	    connect: false,
 	    range: {
-	        'min': 0,
+	        'min': 1,
 	        'max': 100
 	    },     
 	});
@@ -320,10 +326,10 @@ function detectMove() {
 //var save_button_complet = document.getElementById('save')
 //save_button_complet.addEventListener("click", save_handler);
 
-var close_button = document.getElementById('cancle')
-close_button.addEventListener("click", function(){
-	document.getElementById("myModal").style.display = "none";
-});
+//var close_button = document.getElementById('cancle')
+//close_button.addEventListener("click", function(){
+//	document.getElementById("myModal").style.display = "none";
+//});
 
 //var wx_grid = document.getElementById('gr_grid')
 //wx_grid.addEventListener('mousemove', detectMove);
@@ -358,6 +364,7 @@ function deleteMeasurementHandeler() {
 		draws.splice(-1)
 		maxes.splice(-1)
 		mins.splice(-1)
+		invert_btns.splice(-1)
 		measurement.remove()
 		measurement_index --
 		DrawLines(measurement_index)
@@ -885,6 +892,16 @@ function DrawLines(num) {
 		lines[num].push(draw.line(0, histo_hights[num], x_vals[b+1]-x_vals[b], (click_coords[num][x_vals[b+1]]-click_coords[num][x_vals[b]]-histo_hights[num])*(-1))
 		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)).stroke({ color: '#000', width: 1, linecap: 'round' }))
 	}
+}
+
+function invertHandeler(num) {
+	click_dict = click_coords[num]
+	var x_vals = Object.keys(click_dict).sort((a,b) => a - b); //sort the keys
+	for (val of x_vals) {
+		click_dict[val] = click_dict[val]*(-1)+histo_hights[num]
+	}
+	DrawLines(num)
+	RenderGrid()
 }
 
 function DrawSesonalitys(compresed_data,data_min,data_range){
