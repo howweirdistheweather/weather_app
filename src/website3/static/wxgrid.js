@@ -713,7 +713,7 @@ function DrawHistogram(compresed_data,data_min,data_range){
 	            'stroke-width': 0 
 	        });
 	        draw.rect( 2, color_plot[0][i]*0.5 ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
-	            'fill':'#bcbddc',
+	            'fill':'#dadaeb',
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
@@ -918,13 +918,13 @@ function DrawLines(num) {
 	var draw = draws[num];
 	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
 	console.log(x_vals)
-	for (b = 0; b < x_vals.length-1; b ++) {
+	for (var b = 0; b < x_vals.length-1; b ++) {
 		lines[num].push(draw.line(0, histo_hights[num], x_vals[b+1]-x_vals[b], (click_coords[num][x_vals[b+1]]-click_coords[num][x_vals[b]]-histo_hights[num])*(-1))
 		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)).stroke({ color: '#000', width: 1, linecap: 'round' }))
-		if (b > 0) {
-			lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).fill('#000')) //.stroke({ color: '#000', width: 1, linecap: 'round' }))
-		}
+		lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).fill('#000'))
 	}
+	b = x_vals.length-1
+	lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).fill('#000'))
 }
 
 function invertHandeler(num, will_render) {
@@ -976,7 +976,7 @@ function DrawSesonalitys(compresed_data,data_min,data_range){
             'stroke-width': 0 
         });
         draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
-            'fill':'#bcbddc',
+            'fill':'#dadaeb',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
@@ -1018,7 +1018,7 @@ function DrawYears(compresed_data,data_min,data_range){
             'stroke-width': 0 
         });
         draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3, (compresed_data.length-i)*9  ).attr({
-            'fill':'#bcbddc',
+            'fill':'#dadaeb',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
@@ -1043,7 +1043,7 @@ function RenderGrid(){
     var month_label_height = 25;
     var off_x = year_label_width;         // grid offset
     var off_y = 1;
-    var boxsize = 8;        // size of a grid unit
+    var boxsize = 9;        // size of a grid unit
     var boxspace = 9;      // total space from unit to unit
 
     var num_weeks = 52;	
@@ -1117,7 +1117,7 @@ function RenderGrid(){
     // var color0 = '#edf8b1';
     // var color1 = '#7fcdbb';
     // var color2 = '#2c7fb8';
-    var color0 = '#bcbddc';
+    var color0 = '#dadaeb';
     var color1 = '#9e9ac8';
     var color2 = '#54278f';
 
