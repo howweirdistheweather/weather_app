@@ -2,122 +2,216 @@
 # HWITW (C) 2021
 #
 import math
+import copy
 import datetime
 import os.path
+import gc
 import json
 import numpy
 import netCDF4
-import timeit
 
-import parsl
-from parsl import python_app
-from parsl.config import Config
-#from parsl.executors.threads import ThreadPoolExecutor
-from parsl.providers import LocalProvider
-from parsl.channels import LocalChannel
-from parsl.executors import HighThroughputExecutor
+from generate_HWITW_statistics import *
+from data_settings import data_settings
+#from hig_utils import pretty_duration
+#from hig_csv import write_csv_from_dict_of_lists
 
-import hwxpo
-from wxstat import *
-
-# a helper class for printing color text
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
 
 # ignoring leap years (i.e. week 53)!
 # Calculations will be off by one day after Feb 28.!
 HOURS_PER_WEEK = 24 * 7
-HOURS_PER_YEAR = 365 * 24
+HOURS_PER_YEAR = 364 * 24
 WEEKS_PER_YEAR = 52
 
-APP_VERSION = "0.50"
+# this is how CDS global netcdf files are indexed - by qtr degree
+NUM_LONGIDX_GLOBAL = 1440
+NUM_LATIDX_GLOBAL  = 721
+
+APP_VERSION = "0.66"
 current_time = datetime.datetime.now()
 
+# the variables we are interested, long name and short name.
+# short name is used inside the netcdf files
+CDSVAR_U10  = ['10m_u_component_of_wind', 'u10']
+CDSVAR_V10  = ['10m_v_component_of_wind', 'v10']
+CDSVAR_D2M  = ['2m_dewpoint_temperature', 'd2m']
+CDSVAR_T2M  = ['2m_temperature', 't2m']
+CDSVAR_CBH  = ['cloud_base_height', 'cbh']
+CDSVAR_PTYPE = ['precipitation_type', 'ptype']
+CDSVAR_TCC  = ['total_cloud_cover', 'tcc']
+CDSVAR_TP   = ['total_precipitation', 'tp']
 
-def process_netcdf( fullname:str, filename:str, year:int, short_var_name:str ) -> hwxpo.HWXGlobal:
-    # load file and process each location and time
-    print( f'processing {filename}', flush=True )
-    try:
-        ds = netCDF4.Dataset( fullname, 'r' )
-    except OSError:
-        print( bcolors.FAIL + f'{filename} could not be opened!' + bcolors.ENDC )
-        exit(-1)
+process_settings = [
+    {
+        'data_group': 'temperature and humidity',
+        'files': [CDSVAR_T2M, CDSVAR_D2M],
+        'analyze': do_temp_dp,
+        'analysis_kwargs': {
+            'lon': 0.0
+        }
+    },
+    {
+        'data_group': 'wind',
+        'files': [CDSVAR_U10, CDSVAR_V10],
+        'analyze': do_wind,
+        'analysis_kwargs': {}
+    },
+    {
+        'data_group': 'precipitation',
+        'files': [CDSVAR_TP, CDSVAR_PTYPE],
+        'analyze': do_precip,
+        'analysis_kwargs': {}
+    },
+    {
+        'data_group': 'cloud cover',
+        'files': [CDSVAR_TCC],
+        'analyze': do_cloud_cover,
+        'analysis_kwargs': {}
+    },
 
-    total_num_hours = ds.dimensions['time'].size
-    num_lat         = ds.dimensions['latitude'].size
-    num_long        = ds.dimensions['longitude'].size
-    assert total_num_hours >= 8753  #HOURS_PER_YEAR ...whats up with this 8753 hours?
-    assert num_long == 1440
-    assert num_lat == 721
+]
 
-    hwxout = []# hwxpo.HWXGlobal( year )
 
-    # for each week in ds..
-    num_weeks = int(total_num_hours / HOURS_PER_WEEK)
+# make full pathname string for Global var nc input file
+def var_filename( dir_name:str, year:int, var_name:str ) -> (str, str):
+    # file naming scheme
+    pathname = f'./{dir_name}/{year}/'
+    # filename = f'gn{grid_num}-{year}-{var_name}.nc'
+    filename = f'global-{year}-{var_name}.nc'
+    fullname = pathname + filename
+    return fullname, filename
+
+
+# make full pathname string for Global output json file
+def out_filename( dgroup_name:str, year:int, week:int ) -> (str, str, str):
+    # file naming scheme
+    pathname = f'./tt_output/{year}/'
+    # filename = f'gn{grid_num}-{year}-{var_name}.nc'
+    filename = f'global-{dgroup_name}-{year}-{week}.json'
+    fullname = pathname + filename
+    return pathname, fullname, filename
+
+
+def save_output( outp:dict, dgroup_name:str, year:int, week_idx:int ):
+    o_pathname, o_fullname, o_filename = out_filename( dgroup_name, year, week_idx + 1 )
+    os.makedirs( o_pathname, exist_ok=True )    # create the path if necessary
+    print( f'Output {o_filename}' )
+    with open( o_fullname, 'w') as outfile:
+        json.dump( outp, outfile )
+
+
+# process one full year for one data_group
+def process_data_group( dir_name:str, year:int, data_group:dict ):    
+    print( f"Analyzing {data_group['data_group']}..." )
+    
+    # open all the netcdf files needed to process this data_group
+    ncds_group = []
+    for var in data_group['files']:        
+        var_name = var[0]
+        short_var_name = var[1]
+            
+        # make sure file exists
+        fullname, filename = var_filename( dir_name, year, var_name )        
+        already_exists = os.path.isfile( fullname )
+        if not already_exists:
+            print( f'{filename} is missing!', flush=True )
+            return
+
+        # load file and process each location and time
+        print( f'loading {filename}', flush=True )
+        try:
+            ds = netCDF4.Dataset( fullname, 'r' )
+        except OSError:
+            print( f'{filename} could not be opened!' )
+            exit(-1)
+
+        # these should all be true for a global var nc
+        total_num_hours = ds.dimensions['time'].size
+        num_lat         = ds.dimensions['latitude'].size
+        num_long        = ds.dimensions['longitude'].size
+        assert total_num_hours >= 8753  #HOURS_PER_YEAR ...whats up with this 8753 hours?
+        assert num_long == NUM_LONGIDX_GLOBAL
+        assert num_lat == NUM_LATIDX_GLOBAL
+
+        # store the ds
+        ncds_group.append( {
+            'dataset':          ds, 
+            'var_name':         var_name,
+            'short_var_name':   short_var_name }
+        )
+
+    # for each week of the year...
+    num_weeks = WEEKS_PER_YEAR
     for week_i in range( num_weeks ):
-        # print progress
-        print( f'\rweek {week_i}/{num_weeks}', end='\n', flush=True )
 
-        # load the weeks worth of hours for all locations. transpose to long,lat,hour
-        hr_0 = week_i * HOURS_PER_WEEK
-        hr_1 = hr_0 + HOURS_PER_WEEK
-        var_week = numpy.transpose( ds[short_var_name][hr_0:hr_1][:][:] )
-        assert( var_week.dtype == numpy.float64 )
+        # store output in this guy
+        out_data = copy.deepcopy( data_settings )
 
-        # for each location in var_week
+        # for each ds needed by the data_group
+        week_data = []
+        for ncds in ncds_group:
+            ds =                ncds['dataset']
+            short_var_name =    ncds['short_var_name']
+            
+            # load the weeks worth of hours (for all locations in file). transpose to long,lat,hour
+            hr_0 = week_i * HOURS_PER_WEEK
+            hr_1 = hr_0 + HOURS_PER_WEEK
+            var_week = numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:] )
+            assert( var_week.dtype == numpy.float64 )
+            week_data.append( var_week )
+
+        # for each latitude in the file
         for lat_i in range( num_lat ):
             
-            print( f'\r{lat_i}/{num_lat}', end='', flush=True )
+            # for each longitude in the file
+            print( f'\rweek {week_i+1}/{num_weeks} latitude {lat_i+1}/{num_lat}', end='', flush=True )
             for long_i in range( num_long ):
-                # get hourly as ndarray for this location
-                var_loc = numpy.ma.getdata( var_week[long_i][lat_i] )
-                #print( f'{type(var_loc)} {var_loc.dtype} {var_loc.shape} {var_loc.size}' )
-                #print( timeit.timeit( lambda: numpy.average( var_loc ), number=4 )/4 )                
-                # process a specific variable and week and location
-                hs = calc_week_stat( var_loc, short_var_name )
-                #hwxout.merge_stat( hs, lat_i, long_i, week_i )
+                
+                # get hourly datas' as ndarrays for this location
+                loc_data = []
+                for var_week in week_data:          
+                    var_loc = numpy.ma.getdata( var_week[long_i][lat_i] )
+                    loc_data.append( var_loc )
+                
+                # process 1 location 1 week
+                #if ( data_group['analysis_kwargs'].contains( 'lon' ) ):
+                longitude = long_i * 360.0 / NUM_LONGIDX_GLOBAL - 180.0 # TODO: verify this math! assumes index 0 is -180.0 degrees
+                data_group['analysis_kwargs']['lon'] = longitude
+                
+                analyze_func = data_group['analyze']
+                results = analyze_func( week_i, loc_data, **data_group['analysis_kwargs'] )
 
-    print( f'\r', end='', flush=True )    # newline
-    return hwxout
+                # store the results
+                for variable,variable_info in results.items():
+                    for stat,value_array in variable_info.items():
+                        out_data['variables'][variable][stat]['data'].append(value_array.tolist()) #Currently no protection against mis-ordered years
+        
+            # experimenting with this. force garbage collection
+            gc.collect()
+            
+        # clear the progress output line from screen
+        print( f'\r***', end='', flush=True )
 
-def load_netcdfs( dir_name, start_year, end_year ):
+        # save the week's output to disk
+        save_output( out_data, data_group['data_group'], year, week_i )
+        out_data.clear()
+
+    # free the ds objects
+    for ncds in ncds_group:
+        ncds['dataset'].close()
+
+
+# for all years process data_groups'
+def load_netcdfs( dir_name:str, start_year:int, end_year:int ):
     # calculate a unique number for each quarter degree on the planet.
     # makes having a unique filename for the coordinates simpler.
     #grid_num = CalcQtrDegGridNum( area_lat_long )
-
     years = list( range( start_year, end_year + 1 ) )
-    #yearly_results = [None] * len(years)
-
     for year in years:
         yidx = year - start_year
+        
+        for data_group in process_settings:
+            process_data_group( dir_name, year, data_group );
 
-        for vnames in cds_variables:
-            var_name = vnames[0]
-            short_var_name = vnames[1]
-
-            # file naming scheme
-            pathname = f'./{dir_name}/{year}/'
-            # filename = f'gn{grid_num}-{year}-{var_name}.nc'
-            filename = f'global-{year}-{var_name}.nc'
-            fullname = pathname + filename
-
-            # make sure file exists
-            already_exists = os.path.isfile( fullname )
-            if not already_exists:
-                print(bcolors.WARNING + f'{filename} is missing!' + bcolors.ENDC, flush=True)
-                continue
-
-            # process the file
-            hwx_f = process_netcdf( fullname, filename, year, short_var_name );
-            #write to disk
 
 def CalcQtrDegGridNum( area_lat_long ):
     grid_num = int( ((area_lat_long[0] + 90) * 4) * 360 * 4 + ((area_lat_long[1] + 180) * 4) )
@@ -127,18 +221,6 @@ def CalcQtrDegGridNum( area_lat_long ):
 # main
 
 print( f'** HWITW tile tool v{APP_VERSION} **\n')
-
-inp_lat = 59.64 # homer ak
-inp_long = -151.54
-
-# get the containing cell 
-lat0 = math.ceil( inp_lat * 4 ) / 4
-lat1 = (math.floor( inp_lat * 4 ) / 4) #+ 0.01 # edge is not inclusive
-long0 = math.floor( inp_long * 4 ) / 4
-long1 = (math.ceil( inp_long * 4 ) / 4) #- 0.01
-
-area0 = [ lat0, long0, lat1, long1 ]
-area0 = None
 
 # era5 goes from 1979 to present
 load_netcdfs(   'cds_era5',

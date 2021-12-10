@@ -1,15 +1,15 @@
 # render a web page heatmap
 # Copyright (C) 2020 HWITW project
 #
-import sys
-import io
-import re
-import json
-import random
-import statistics
-import math
-import pandas as pd
-import numpy as np
+##import sys
+##import io
+##import re
+##import json
+##import random
+##import statistics
+##import math
+##import pandas as pd
+##import numpy as np
 
 
 ########################
@@ -31,8 +31,8 @@ HPO_VARIABLES = [
 def get_wxvar_list():
     return HPO_VARIABLES
 
-def get_wxvar( var_lat:float, var_long:float ):
-    with open( 'gn862673-hwxpo.json', 'r') as infile:        
+def get_wxvar( var_lat, var_long ):
+    with open( 'Seldovia.json', 'r') as infile:
         wxvar_json = infile.read()
         infile.close()
     return wxvar_json

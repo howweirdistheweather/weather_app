@@ -36,13 +36,13 @@ def download_dataset( ds_name, dir_name, start_year, end_year, area_lat_long, va
     years = list( range( start_year, end_year + 1 ) )
     # # calculate a unique number for each quarter degree on the planet.
     # # makes having a unique filename for the coordinates simpler.
-    # grid_num = int( ((area_lat_long[0] + 90) * 4) * 360 * 4 + ((area_lat_long[1] + 180) * 4) )
-    # print( f'Downloading {ds_name} {area_lat_long} (gn{grid_num}) from {start_year} to {end_year}')
+    grid_num = int( ((area_lat_long[0] + 90) * 4) * 360 * 4 + ((area_lat_long[1] + 180) * 4) )
+    print( f'Downloading {ds_name} {area_lat_long} (gn{grid_num}) from {start_year} to {end_year}')
 
     # download year, variable for entire globe
     for year in reversed( years ):
         for var_name in variables:
-            download_var_for_year( ds_name, dir_name, year, area_lat_long, var_name, force_download)
+            download_var_for_year( ds_name, dir_name, year, area_lat_long, var_name, grid_num, force_download)
             #print_var_for_year( ds_name, dir_name, year, area_lat_long, var_name, force_download)
             print(f'Submitted {var_name} for {year}: {ds_name}')
 
@@ -54,7 +54,7 @@ def print_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, force_d
     print(f'Processing {var_name} for {year}: {ds_name}')
 
 @python_app
-def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, force_download=False):
+def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, grid_num, force_download=False):
     '''
     Download a single year dataset for a single variable.
     :param ds_name: The dataset name to be downloaded from CDS
@@ -75,8 +75,8 @@ def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, forc
 
     # file naming scheme
     pathname = f'./{dir_name}/{year}/'
-    #filename = f'gn{grid_num}-{year}-{var_name}.nc'
-    filename = f'global-{year}-{var_name}.nc'
+    filename = f'gn{grid_num}-{year}-{var_name}.nc'
+    #filename = f'global-{year}-{var_name}.nc'
     fullname = pathname + filename
 
     # see if file already downloaded.. if it exists and is larger then some nonsense amount
@@ -105,8 +105,8 @@ def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, forc
                 'format': 'netcdf',
                 'year': year,
                 'time': 'all',
-                'variable': [var_name]
-                #'area': area_lat_long,
+                'variable': [var_name],
+                'area': area_lat_long,
             }, tempfullname)
         # rename completed download
         os.rename(tempfullname, fullname)
@@ -131,8 +131,14 @@ def main():
     print( f'** HWITW Copernicus data download tool v{app_version} **\n')
 
     # 0.25 degree resolution
-    inp_lat = 59.64 # homer ak
-    inp_long = -151.54
+    #inp_lat = 59.64 # homer ak
+    #inp_long = -151.54
+    #-141.0838,60.1780 - Taan Fiord
+    #inp_lat = 60.1780
+    #inp_long = -141.0838
+    #-69.195, -12.583 - Puerto Maldonado
+    inp_lat = -12.583
+    inp_long = -69.195
 
     # get the containing cell 
     lat0 = math.ceil( inp_lat * 4 ) / 4
@@ -141,7 +147,7 @@ def main():
     long1 = (math.ceil( inp_long * 4 ) / 4) - 0.01
 
     area0 = [ lat0, long0, lat1, long1 ]
-    area0 = None  # we are doing global downloads!
+    #area0 = None  # we are doing global downloads!
 
     # the variables we are interested in
     variables = [

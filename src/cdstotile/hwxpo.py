@@ -67,6 +67,8 @@ class HWXLocation:
         self.TempAvgNight:dict = {}
         self.TempAvgDay:dict = {}
         self.CeilingAvg:dict = {}
+        self.CloudCoverAvg:dict = {}
+        self.PrecipAvg:dict = {}
         pass
 
     def hide__merge( self, hpo_in ):
@@ -95,6 +97,18 @@ class HWXLocation:
         # get start year from tempavg. assuming it is the same for all statistics
         # ..and that years are contiguous.
         assert len(self.TempAvg) > 0
+
+    def add_ceiling_avg( self, year:int, weekly_ca:list ):
+        self.CeilingAvg[year] = weekly_ca
+
+    def add_cloud_cover_avg(self, year:int, weekly_cca:list):
+        self.CloudCoverAvg[year] = weekly_cca
+
+    def add_precip_avg(self, year:int, weekly_pa:list):
+        self.PrecipAvg[year] = weekly_pa
+    
+    def get_jodict( self ):
+        # get start year from tempavg. assume its the same for all!
         start_year = sorted(self.TempAvg.keys())[0]
 
         # convert weather variable data to 'python list of lists'
@@ -102,6 +116,8 @@ class HWXLocation:
         temp_avg_n = dict_to_slist( self.TempAvgNight )
         temp_avg_d = dict_to_slist( self.TempAvgDay )
         ceiling_avg = dict_to_slist( self.CeilingAvg )
+        cloud_cover_avg = dict_to_slist( self.CloudCoverAvg)
+        precip_avg = dict_to_slist( self.PrecipAvg )
         
         # put it together like this for the purpose of doing some json output
         jdict = {
@@ -116,6 +132,12 @@ class HWXLocation:
                 },
                 'ceiling':{
                     'avg':ceiling_avg,
+                },
+                'cloud cover':{
+                    'avg':cloud_cover_avg,
+                },
+                'precipitation':{
+                    'avg':precip_avg,
                 }
             }
         }
