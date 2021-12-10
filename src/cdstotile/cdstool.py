@@ -133,12 +133,18 @@ def main():
     # 0.25 degree resolution
     #inp_lat = 59.64 # homer ak
     #inp_long = -151.54
+    #inp_lat = 59.45 # Seldovia
+    #inp_long = -151.72
     #-141.0838,60.1780 - Taan Fiord
     #inp_lat = 60.1780
     #inp_long = -141.0838
     #-69.195, -12.583 - Puerto Maldonado
-    inp_lat = -12.583
-    inp_long = -69.195
+    #inp_lat = -12.583
+    #inp_long = -69.195
+    #inp_lat = 33.4 #Phoenix
+    #inp_long = -112.1
+    inp_lat = 65.76 #Little Diomede
+    inp_long = -168.93
 
     # get the containing cell 
     lat0 = math.ceil( inp_lat * 4 ) / 4
