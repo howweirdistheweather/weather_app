@@ -57,6 +57,7 @@ def RH(T, D): #T = temperature, D = dewpoint
 def do_week_temp_dp(week_idx, data_arrays, data_consts):
     #Take in a week worth of temperature and dewpoint data
     #Return all 11 temp and RH stats
+    DAYS_PER_WEEK = 7
     temperatures = data_arrays[0]
     dewpoints = data_arrays[1]
     day_start, day_end, day_split = data_consts[0]
@@ -94,7 +95,7 @@ def do_week_temp_dp(week_idx, data_arrays, data_consts):
     ave_day_temp = flat_functions['temperature_day_avg'](K_to_C(ave_day_temp_raw))
     ave_night_temp = flat_functions['temperature_night_avg'](K_to_C(ave_night_temp_raw))
     ave_temp = flat_functions['temperature_avg'](K_to_C(ave_temp_raw))
-    ave_temp_range = flat_functions['temperature_range_avg'](temp_range_sum / HOURS_PER_WEEK)
+    ave_temp_range = flat_functions['temperature_range_avg'](temp_range_sum / DAYS_PER_WEEK)
     temperatures = numpy.sort(temperatures)
     min_temp = flat_functions['temperature_min'](K_to_C(temperatures[0]))
     p10_temp = flat_functions['temperature_p10'](K_to_C(temperatures[17]))
