@@ -12,12 +12,13 @@ import random
 import copy
 
 import hwxpo
-from generate_HWITW_statistics import (
+from generate_HWITW_statistics_Hig import (
     do_temp_dp,
     do_wind,
     do_precip,
     do_cloud_cover,
-    HOURS_PER_YEAR
+    HOURS_PER_YEAR,
+    WEEKS_PER_YEAR
 )
 from generate_HWITW_statistics_2021 import (
     do_temp_dp_2021,
@@ -67,7 +68,6 @@ def flatten_cds_2021(ds): #This is very slow. Is there any more efficient way to
     except IndexError: pass #We ran out of input arrays, so we're done.
     return flattened_array
 
-
 def export_cds_to_csv(ds,name):
     out_array = ds[0:,0,0]
     numpy.savetxt(f"{name}.csv",out_array,delimiter=',')
@@ -113,8 +113,9 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
             if year == 2021: raw_data.append(flatten_cds_2021(ds[files[i][1]]))
             else: raw_data.append(flatten_cds(ds[files[i][1]]))
         start_time = time.time()
-        if year == 2021: results = analyze_2021(raw_data, **analysis_kwargs)
-        else: results = analyze(raw_data, **analysis_kwargs)
+        week_idx = 0 # DEBUG - this isn't yet implemented
+        if year == 2021: results = analyze_2021( raw_data, **analysis_kwargs)
+        else: results = analyze(week_idx, raw_data, **analysis_kwargs)
         run_time = time.time()-start_time
         print(f'time to process 1 year (not including loading or storing): {pretty_duration(run_time)}')
         for variable,variable_info in results.items():
@@ -180,7 +181,9 @@ site_settings = [
     {"name":"Seldovia", "inp_lat": 59.45, "inp_long":-151.72},
     {"name":"Taan_Fiord", "inp_lat": 60.178, "inp_long":-141.0838},
     {"name":"Puerto_Maldonado", "inp_lat": -12.583, "inp_long":-69.195},
-    {"name":"Phoenix", "inp_lat":33.4, "inp_long":-112.1}
+    {"name":"Phoenix", "inp_lat":33.4, "inp_long":-112.1},
+    #{"name":"Little_Diomede", "inp_lat":65.76, "inp_long":-168.93},
+    #{"name":"Plymouth", "inp_lat":41.96, "inp_long":-70.67}
 ]
 
 # inp_lat = 59.64 # homer ak
