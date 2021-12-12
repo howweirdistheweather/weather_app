@@ -77,7 +77,7 @@ def do_week_temp_dp(week_idx, data_arrays, data_consts):
         else: night_temp_sum += temperature
         if hour_of_day == 0:
             day_min = temperature
-            day_max = -temperature
+            day_max = temperature
         else:
             if day_min > temperature: day_min = temperature
             elif day_max < temperature: day_max = temperature #I think we can use elif here safely
@@ -91,7 +91,7 @@ def do_week_temp_dp(week_idx, data_arrays, data_consts):
     p90_RH = flat_functions['relative_humidity_p90'](relative_humidities[151])
     ave_day_temp_raw = day_temp_sum / HOURS_PER_WEEK * 2
     ave_night_temp_raw = night_temp_sum / HOURS_PER_WEEK * 2
-    ave_temp_raw = (ave_day_temp_raw+ave_night_temp_raw)/2
+    ave_temp_raw = (ave_day_temp_raw + ave_night_temp_raw) / 2
     ave_day_temp = flat_functions['temperature_day_avg'](K_to_C(ave_day_temp_raw))
     ave_night_temp = flat_functions['temperature_night_avg'](K_to_C(ave_night_temp_raw))
     ave_temp = flat_functions['temperature_avg'](K_to_C(ave_temp_raw))
