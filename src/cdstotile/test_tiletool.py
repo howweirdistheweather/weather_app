@@ -182,7 +182,7 @@ site_settings = [
     {"name":"Taan_Fiord", "inp_lat": 60.178, "inp_long":-141.0838},
     {"name":"Puerto_Maldonado", "inp_lat": -12.583, "inp_long":-69.195},
     {"name":"Phoenix", "inp_lat":33.4, "inp_long":-112.1},
-    #{"name":"Little_Diomede", "inp_lat":65.76, "inp_long":-168.93},
+    {"name":"Little_Diomede", "inp_lat":65.76, "inp_long":-168.93},
     #{"name":"Plymouth", "inp_lat":41.96, "inp_long":-70.67}
 ]
 

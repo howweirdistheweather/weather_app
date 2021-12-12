@@ -236,8 +236,8 @@ def do_week_wind(data, discard):
             good_Us.append(U[i])
             good_Vs.append(V[i])
             if speed > max_speed_raw: max_speed_raw = speed
-            direction_2_deg_increments = int(direction/dir_precision)
-            dir_histogram[direction_2_deg_increments] += 1
+            dir_bin = int(direction/dir_precision)
+            dir_histogram[dir_bin] += 1
     if no_data:
         speed_avg = 255
         speed_net = 255
