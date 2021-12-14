@@ -372,3 +372,53 @@ def do_cloud_cover(week_idx:int, raw_cloud_cover_data):
     }
     process_data_group(week_idx, data_arrays=raw_cloud_cover_data, func=do_week_cloud_cover, results=results)
     return results
+
+
+################################################################
+#  Cloud ceiling data processing
+################################################################
+
+def do_week_cloud_ceiling(week_idx, data, discard):
+    #For now, assume null ceiling means clear - however this is only true until the end of the dataset is reached, at which time it will appear that the weather is always clear.
+    raw_cloud_ceiling_data = data[0]
+    compressed_cloud_ceiling_data = numpy.full(HOURS_PER_WEEK, 254, dtype=int) #254 is max height, which is both extremely high ceilings and no ceiling at all.
+    for i in range(HOURS_PER_WEEK):
+        cloud_ceiling = raw_cloud_ceiling_data[i]
+        if cloud_ceiling > -32676:
+            #Assume we can use the same compression function for all cloud ceiling values as we used for p50
+            compressed_cloud_ceiling_data[i] = data_settings_internal['variables']['cloud_ceiling']['p50']['compression_function'](cloud_ceiling)
+        else: compressed_cloud_ceiling_data[i] = 254 #Null is assigned to maximum
+    sorted_data = numpy.sort(compressed_cloud_ceiling_data)
+    min = sorted_data[0]
+    p25 = sorted_data[42]
+    p50 = sorted_data[84]
+    p75 = sorted_data[126]
+    max = sorted_data[-1]
+    return {
+        "cloud_ceiling":{
+            "min":min,
+            "p25":p25,
+            "p50":p50,
+            "p75":p75,
+            "max":max
+        }
+    }
+
+def do_cloud_ceiling(week_idx:int, raw_cloud_ceiling_data):
+    #Takes the cloud ceiling data and produces:
+        #25th percentile cloud ceiling
+        #median cloud ceiling
+        #75th percentile cloud ceiling
+        #Proportion of time clear-ish (<10% cloud ceiling)
+        #Proportion of time cloudy (>90% cloud ceiling)
+    results = {
+        "cloud_ceiling":{
+            "min":numpy.zeros((WEEKS_PER_YEAR), dtype=int),
+            "p25":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
+            "p50":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
+            "p75":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
+            "max":numpy.zeros((WEEKS_PER_YEAR), dtype=int)
+        }
+    }
+    process_data_group(week_idx, data_arrays=raw_cloud_ceiling_data, func=do_week_cloud_ceiling, results=results)
+    return results

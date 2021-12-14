@@ -47,10 +47,21 @@ data_settings = {
             "scale":0.003,
             "type":"parabolic",
             "units":"m"
+        },
+        "cloud_ceiling":{
+            "min":0,
+            "scale":30,
+            "type":"linear",
+            "units":"m"
         }
     },
     "variables": {
         "temperature":{
+            "avg":{
+                "long_name":"Average hourly temperature",
+                "short_name":"Average",
+                "compression":"temperature"
+            },
             "min":{
                 "long_name":"Coldest single hour of the week",
                 "short_name":"Minimum",
@@ -59,11 +70,6 @@ data_settings = {
             "p10":{
                 "long_name":"10th percentile temperature (the 17th coldest single hour in the week)",
                 "short_name":"10th percentile",
-                "compression":"temperature"
-            },
-            "avg":{
-                "long_name":"Average hourly temperature",
-                "short_name":"Average",
                 "compression":"temperature"
             },
             "p90":{
@@ -93,14 +99,14 @@ data_settings = {
             }
         },
         "relative_humidity":{
-            "p10":{
-                "long_name":"10th percentile humidity (the 17th driest hour in the week)",
-                "short_name":"10th percentile",
-                "compression":"proportion"
-            },
             "p50":{
                 "long_name":"Median relative humidity",
                 "short_name":"Median",
+                "compression":"proportion"
+            },
+            "p10":{
+                "long_name":"10th percentile humidity (the 17th driest hour in the week)",
+                "short_name":"10th percentile",
                 "compression":"proportion"
             },
             "p90":{
@@ -179,14 +185,14 @@ data_settings = {
             }
         },
         "cloud_cover": {
-            "p25":{
-                "long_name":"25th percentile cloud cover",
-                "short_name":"25th percentile",
-                "compression":"proportion"
-            },
             "p50":{
                 "long_name":"Median cloud cover",
                 "short_name":"Median",
+                "compression":"proportion"
+            },
+            "p25":{
+                "long_name":"25th percentile cloud cover",
+                "short_name":"25th percentile",
                 "compression":"proportion"
             },
             "p75":{
@@ -203,6 +209,33 @@ data_settings = {
                 "long_name":"Proportion of time with more than 90% cloud cover",
                 "short_name":"Proportion cloudy",
                 "compression":"proportion"
+            }
+        },
+        "cloud_ceiling": {
+            "p50":{
+                "long_name":"Median ceiling elevation",
+                "short_name":"Median",
+                "compression":"cloud_ceiling"
+            },
+            "min":{
+                "long_name":"Lowest ceiling elevation in any hour of the week",
+                "short_name":"Lowest ceiling",
+                "compression":"cloud_ceiling"
+            },
+            "p25":{
+                "long_name":"25th percentile ceiling elevation",
+                "short_name":"25th percentile",
+                "compression":"cloud_ceiling"
+            },
+            "p75":{
+                "long_name":"75th percentile ceiling elevation",
+                "short_name":"75th percentile",
+                "compression":"cloud_ceiling"
+            },
+            "max":{
+                "long_name":"Highest ceiling elevation in any hour of the week (clear is considered max height)",
+                "short_name":"Highest ceiling",
+                "compression":"cloud_ceiling"
             }
         }
     }
