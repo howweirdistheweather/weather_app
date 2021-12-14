@@ -14,7 +14,7 @@ data_settings = {
         },
         "temperature_range":{
             "min":0,
-            "scale":0.2,
+            "scale":0.1,
             "type":"linear",
             "units":"C"
         },
@@ -32,7 +32,7 @@ data_settings = {
         },
         "direction":{
             "min":0, #Should be safe, but 0 as min direction is assumed elsewhere
-            "scale":2,
+            "scale":1.5, #2 works pretty good and is rounder
             "type":"linear",
             "units":"degrees"
         },
@@ -44,7 +44,7 @@ data_settings = {
         },
         "precipitation":{
             "min":0,
-            "scale":0.005,
+            "scale":0.003,
             "type":"parabolic",
             "units":"m"
         }
@@ -251,6 +251,7 @@ def create_parabolic_compression_function(scale):
 def make_compression_functions():
     settings = copy.deepcopy(data_settings)
     variables = settings['variables']
+    settings.update([('flat_functions',{})])
     for variable,variable_info in variables.items():
         for stat,details in variable_info.items():
             compression_info = data_settings['compression'][details['compression']]
@@ -261,9 +262,20 @@ def make_compression_functions():
                         compression_info['scale']
                     )
                 )])
+                settings['flat_functions'].update([(
+                    f'{variable}_{stat}',create_linear_compression_function(
+                        compression_info['min'],
+                        compression_info['scale']
+                    )
+                )])
             elif compression_info['type'] == 'parabolic':
                 details.update([(
                     "compression_function",create_parabolic_compression_function(
+                        compression_info['scale']
+                    )
+                )])
+                settings['flat_functions'].update([(
+                    f'{variable}_{stat}',create_parabolic_compression_function(
                         compression_info['scale']
                     )
                 )])
