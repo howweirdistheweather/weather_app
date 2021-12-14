@@ -12,18 +12,18 @@ HOURS_PER_YEAR = WEEKS_PER_YEAR * HOURS_PER_WEEK #this is actually 364 days, so 
 
 
 # PASS: data_arrays is list of variables's arrays containing 1 week of data
-def process_data( week_idx:int, data_arrays, func, results, data_consts=[] ):    
+def process_data( data_arrays, func, results, data_consts=[] ):
     try:
-        result = func( week_idx, data_arrays, data_consts )
+        result = func( data_arrays, data_consts )
         for variable, variable_info in result.items():
             for stat, value in variable_info.items():
-                results[ variable ][ stat ][ week_idx ] = value
+                results[ variable ][ stat ] = value
                 
     except( IndexError, ValueError ): #Assume this is because the array isn't long enough - ie it's the current year and ends short
         print( f'Filling with null value: {results.keys()}' )
         for variable, variable_info in results.items(): #Note results as opposed to result
             for stat in variable_info:
-                results[ variable ][ stat ][ week_idx ] = 255 #Null value
+                results[ variable ][ stat ] = 255 #Null value
 
 #################################################
 #    Temperature and RH data processing
@@ -48,7 +48,7 @@ def RH(T, D): #T = temperature, D = dewpoint
     #Proportional relative humidity: e ^ (A D / (B+D)) / e ^ (A T / (B+T))
     return math.exp(A*D / (B+D)) / math.exp(A*T / (B+T))
 
-def do_week_temp_dp( week_idx:int, data_arrays, data_consts ):
+def do_week_temp_dp( data_arrays, data_consts ):
     #Take in a week worth of temperature and dewpoint data
     #Return all 11 temp and RH stats
     temperatures = data_arrays[0]
@@ -122,7 +122,7 @@ def do_week_temp_dp( week_idx:int, data_arrays, data_consts ):
                }
     }
 
-def do_temp_dp( week_idx:int, raw_temp_dp_data:numpy.array((2,HOURS_PER_YEAR),dtype=numpy.float32), lon):
+def do_temp_dp( raw_temp_dp_data:numpy.array((2,HOURS_PER_WEEK),dtype=numpy.float32), lon):
     #Takes in 1 year of temperature and dewpoint data
     #Returns one compressed statistic per 52 weeks in the year
     #Statistics to return:
@@ -141,22 +141,22 @@ def do_temp_dp( week_idx:int, raw_temp_dp_data:numpy.array((2,HOURS_PER_YEAR),dt
     day_info = lat_correct_solar_half_day(lon)
     results = {
            "temperature":{
-               "min":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "p10":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "avg":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "p90":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "max":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "day_avg":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "night_avg":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "range_avg":numpy.zeros((WEEKS_PER_YEAR),dtype=int)
+               "min":0,
+               "p10":0,
+               "avg":0,
+               "p90":0,
+               "max":0,
+               "day_avg":0,
+               "night_avg":0,
+               "range_avg":0
            },
            "relative_humidity":{
-               "p10":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "p50":numpy.zeros((WEEKS_PER_YEAR),dtype=int), 
-               "p90":numpy.zeros((WEEKS_PER_YEAR),dtype=int)
+               "p10":0,
+               "p50":0,
+               "p90":0
            }
     }
-    process_data( week_idx, data_arrays=raw_temp_dp_data, func=do_week_temp_dp, results=results, data_consts=[day_info])
+    process_data( data_arrays=raw_temp_dp_data, func=do_week_temp_dp, results=results, data_consts=[day_info])
     return results
 
 #################################################
@@ -180,7 +180,7 @@ def wind_speed_and_dir(u, v): #Report direction in compass degrees
     speed = math.sqrt(u*u + v*v)
     return speed, bearing_from_radians_wind_dir(plane_bearing_trig(u,v))
 
-def do_week_wind( week_idx:int, data, discard):
+def do_week_wind( data, discard):
     #Takes one week of data and generates specific results
     U = data[0]
     V = data[1]
@@ -228,9 +228,8 @@ def do_week_wind( week_idx:int, data, discard):
     }
 
 
-def do_wind( week_idx:int, raw_wind_data:numpy.array((2,HOURS_PER_YEAR),dtype=numpy.float32)):
-    #Takes one year of wind data in two orthoganol vectors
-    #Returns the following stats, one per week in the year:
+def do_wind( raw_wind_data:numpy.array((2,HOURS_PER_WEEK),dtype=numpy.float32)):
+    #Returns the following stats:
         #modal wind direction
         #net transport direction
         #net transport distance or speed
@@ -238,21 +237,21 @@ def do_wind( week_idx:int, raw_wind_data:numpy.array((2,HOURS_PER_YEAR),dtype=nu
         #maximum wind speed
     results = {
         "wind":{
-            "speed_avg":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "dir_modal":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "speed_net":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "dir_net":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "speed_max":numpy.zeros((WEEKS_PER_YEAR),dtype=int)
+            "speed_avg":0,
+            "dir_modal":0,
+            "speed_net":0,
+            "dir_net":0,
+            "speed_max":0
         }
     }
-    process_data( week_idx, data_arrays=raw_wind_data, func=do_week_wind, results=results)
+    process_data( data_arrays=raw_wind_data, func=do_week_wind, results=results)
     return results
 
 #################################################
 # Precipitation data processing
 #################################################
 
-def do_week_precip( week_idx:int, data, discard ):
+def do_week_precip( data, discard ):
     amounts = data[0]
     types = data[1]
     total_raw = 0.0
@@ -300,7 +299,7 @@ def do_week_precip( week_idx:int, data, discard ):
         }
     }
 
-def do_precip( week_idx:int, raw_precip_data:numpy.array((2,HOURS_PER_YEAR),dtype=numpy.float32) ):
+def do_precip( raw_precip_data:numpy.array((2,HOURS_PER_WEEK),dtype=numpy.float32) ):
     #Takes precip amount and type data as 1-year 1D arrays
     #Returns the following compressed values:
         #Total precip
@@ -314,24 +313,24 @@ def do_precip( week_idx:int, raw_precip_data:numpy.array((2,HOURS_PER_YEAR),dtyp
         #I wonder about maximum for some of the other variables too?
     results = {
         "precipitation":{
-            "total":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "p90":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "max":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "total_rain":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "total_snow":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "total_wet_snow":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "total_freezing_rain":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "total_ice_pellets":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
+            "total":0,
+            "p90":0,
+            "max":0,
+            "total_rain":0,
+            "total_snow":0,
+            "total_wet_snow":0,
+            "total_freezing_rain":0,
+            "total_ice_pellets":0,
         }
     }
-    process_data( week_idx, data_arrays=raw_precip_data, func=do_week_precip, results=results )
+    process_data( data_arrays=raw_precip_data, func=do_week_precip, results=results )
     return results
 
 ################################################################
 #  Cloud cover data processing
 ################################################################
 
-def do_week_cloud_cover( week_idx:int, data, discard ):
+def do_week_cloud_cover( data, discard ):
     raw_cloud_cover_data = data[0]
     sorted_data = numpy.sort(raw_cloud_cover_data)
     p25_raw = sorted_data[42]
@@ -362,7 +361,7 @@ def do_week_cloud_cover( week_idx:int, data, discard ):
         }
     }
 
-def do_cloud_cover( week_idx:int, raw_cloud_cover_data ):
+def do_cloud_cover( raw_cloud_cover_data ):
     #Takes the cloud cover data and produces:
         #25th percentile cloud cover
         #median cloud cover
@@ -371,12 +370,12 @@ def do_cloud_cover( week_idx:int, raw_cloud_cover_data ):
         #Proportion of time cloudy (>90% cloud cover)
     results = {
         "cloud_cover":{
-            "p25":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "p50":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "p75":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "p_sunny":numpy.zeros((WEEKS_PER_YEAR),dtype=int),
-            "p_cloudy":numpy.zeros((WEEKS_PER_YEAR),dtype=int)
+            "p25":0,
+            "p50":0,
+            "p75":0,
+            "p_sunny":0,
+            "p_cloudy":0
         }
     }
-    process_data( week_idx, data_arrays=raw_cloud_cover_data, func=do_week_cloud_cover, results=results )
+    process_data( data_arrays=raw_cloud_cover_data, func=do_week_cloud_cover, results=results )
     return results

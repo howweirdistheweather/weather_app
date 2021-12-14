@@ -91,13 +91,23 @@ def out_filename( dgroup_name:str, year:int, week:int ) -> (str, str, str):
     return pathname, fullname, filename
 
 
-def save_output( outp:dict, dgroup_name:str, year:int, week_idx:int ):
+# save outdata to file
+def save_output( odat:dict, dgroup_name:str, year:int, week_idx:int ):
     o_pathname, o_fullname, o_filename = out_filename( dgroup_name, year, week_idx + 1 )
     os.makedirs( o_pathname, exist_ok=True )    # create the path if necessary
     print( f'Output {o_filename}' )
     with open( o_fullname, 'w') as outfile:
-        json.dump( outp, outfile )
+        json.dump( odat, outfile )
 
+# store output data in a dictionary
+def store_out_data( odat:dict, var_name:str, stat_name:str, lat_i:int, long_i:int, wk_value ):
+    if not var_name in odat.keys():
+        odat[ var_name ] = { stat_name: [[[] for i in range(NUM_LONGIDX_GLOBAL)] for j in range(NUM_LATIDX_GLOBAL)] }
+
+    if not stat_name in odat[ var_name ].keys():
+        odat[ var_name ][ stat_name ] = [[[] for i in range(NUM_LONGIDX_GLOBAL)] for j in range(NUM_LATIDX_GLOBAL)]
+
+    odat[ var_name][ stat_name ][lat_i][long_i].append( wk_value )
 
 # process one full year for one data_group
 def process_data_group( dir_name:str, year:int, data_group:dict ):    
@@ -139,12 +149,13 @@ def process_data_group( dir_name:str, year:int, data_group:dict ):
             'short_var_name':   short_var_name }
         )
 
+    # store output in this guy
+    #out_data = copy.deepcopy( data_settings )
+    out_data = {}
+
     # for each week of the year...
     num_weeks = WEEKS_PER_YEAR
     for week_i in range( num_weeks ):
-
-        # store output in this guy
-        out_data = copy.deepcopy( data_settings )
 
         # for each ds needed by the data_group
         week_data = []
@@ -171,29 +182,30 @@ def process_data_group( dir_name:str, year:int, data_group:dict ):
                 for var_week in week_data:          
                     var_loc = numpy.ma.getdata( var_week[long_i][lat_i] )
                     loc_data.append( var_loc )
-                
+
                 # process 1 location 1 week
                 #if ( data_group['analysis_kwargs'].contains( 'lon' ) ):
                 longitude = long_i * 360.0 / NUM_LONGIDX_GLOBAL - 180.0 # TODO: verify this math! assumes index 0 is -180.0 degrees
                 data_group['analysis_kwargs']['lon'] = longitude
                 
                 analyze_func = data_group['analyze']
-                results = analyze_func( week_i, loc_data, **data_group['analysis_kwargs'] )
+                results = analyze_func( loc_data, **data_group['analysis_kwargs'] )
 
                 # store the results
                 for variable,variable_info in results.items():
-                    for stat,value_array in variable_info.items():
-                        out_data['variables'][variable][stat]['data'].append(value_array.tolist()) #Currently no protection against mis-ordered years
+                    for stat, wk_value in variable_info.items():
+                        store_out_data( out_data, variable, stat, lat_i, long_i, wk_value )
         
             # experimenting with this. force garbage collection
-            gc.collect()
+            #gc.collect()
             
         # clear the progress output line from screen
-        print( f'\r***', end='', flush=True )
+        print( f'\r', end='', flush=True )
 
-        # save the week's output to disk
-        save_output( out_data, data_group['data_group'], year, week_i )
-        out_data.clear()
+
+    # save the year's output to disk
+    save_output( out_data, data_group['data_group'], year, 77 )
+    out_data.clear()
 
     # free the ds objects
     for ncds in ncds_group:
