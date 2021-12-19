@@ -12,21 +12,15 @@ import random
 import copy
 
 import hwxpo
-from generate_HWITW_statistics_Hig import (
+from generate_HWITW_stats import (
     do_temp_dp,
     do_wind,
     do_precip,
     do_cloud_cover,
     do_cloud_ceiling,
+    HOURS_PER_WEEK,
     HOURS_PER_YEAR,
     WEEKS_PER_YEAR
-)
-from generate_HWITW_statistics_2021 import (
-    do_temp_dp_2021,
-    do_wind_2021,
-    do_precip_2021,
-    do_cloud_cover_2021,
-    do_cloud_ceiling_2021
 )
 from data_settings import data_settings
 from hig_utils import pretty_duration
@@ -68,6 +62,16 @@ def export_cds_to_csv(ds,name):
     out_array = ds[0:,0,0]
     numpy.savetxt(f"{name}.csv",out_array,delimiter=',')
 
+def initialize_results(first_week_results):
+    #This is passed a data structure with a single week of results - populate the first value in relevant arrays.
+    results_dict = {}
+    for variable, stats in first_week_results.items():
+        results_dict.update([(variable,{})])
+        for stat, first_value in stats.items():
+            results_dict[variable].update([(stat,numpy.zeros(WEEKS_PER_YEAR, dtype=int))])
+            results_dict[variable][stat][0] = first_value
+    return results_dict
+
 def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
     # calculate a unique number for each quarter degree on the planet.
     # makes having a unique filename for the coordinates simpler.
@@ -85,14 +89,14 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
     CDSVAR_TP = ['total_precipitation', 'tp']
 
     process_settings = [
-        {'data_group': 'temperature and humidity', 'files': [CDSVAR_T2M, CDSVAR_D2M], 'analyze': do_temp_dp, 'analyze_2021':do_temp_dp_2021, 'analysis_kwargs': {'lon': area_lat_long[1]}},
-        {'data_group': 'wind', 'files': [CDSVAR_U10, CDSVAR_V10], 'analyze': do_wind, 'analyze_2021':do_wind_2021, 'analysis_kwargs': {}},
-        {'data_group': 'precipitation', 'files': [CDSVAR_TP, CDSVAR_PTYPE], 'analyze': do_precip, 'analyze_2021':do_precip_2021, 'analysis_kwargs': {}},
-        {'data_group': 'cloud cover', 'files': [CDSVAR_TCC], 'analyze': do_cloud_cover, 'analyze_2021':do_cloud_cover_2021, 'analysis_kwargs': {}},
-        {'data_group': 'cloud ceiling', 'files': [CDSVAR_CBH], 'analyze': do_cloud_ceiling, 'analyze_2021':do_cloud_ceiling_2021, 'analysis_kwargs': {}}
+        {'data_group': 'temperature and humidity', 'files': [CDSVAR_T2M, CDSVAR_D2M], 'analyze': do_temp_dp, 'analysis_kwargs': {'lon': area_lat_long[1]}},
+        {'data_group': 'wind', 'files': [CDSVAR_U10, CDSVAR_V10], 'analyze': do_wind, 'analysis_kwargs': {}},
+        {'data_group': 'precipitation', 'files': [CDSVAR_TP, CDSVAR_PTYPE], 'analyze': do_precip, 'analysis_kwargs': {}},
+        {'data_group': 'cloud cover', 'files': [CDSVAR_TCC], 'analyze': do_cloud_cover, 'analysis_kwargs': {}},
+        {'data_group': 'cloud ceiling', 'files': [CDSVAR_CBH], 'analyze': do_cloud_ceiling, 'analysis_kwargs': {}}
     ]
 
-    def process_data(out_data, year, data_group, files, analyze, analyze_2021, analysis_kwargs):
+    def process_data(out_data, year, data_group, files, analyze, analysis_kwargs):
         print(f"Analyzing {data_group}")
         raw_data = []
         for i, filename in enumerate([f'{path}gn{grid_num}-{year}-{var[0]}.nc' for var in files]):
@@ -106,12 +110,22 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
             except OSError:
                 print( bcolors.FAIL + f'{filename} could not be opened!' + bcolors.ENDC )
                 exit(-1)
-            if year == 2021: raw_data.append(flatten_cds_2021(ds[files[i][1]]))
+            if year == 2021: raw_data.append(flatten_cds_2021(ds[files[i][1]])) #Now this is the only divergence between 2021 and other years.
             else: raw_data.append(flatten_cds(ds[files[i][1]]))
         start_time = time.time()
-        week_idx = 0 # DEBUG - this isn't yet implemented
-        if year == 2021: results = analyze_2021( raw_data, **analysis_kwargs)
-        else: results = analyze(week_idx, raw_data, **analysis_kwargs)
+        analysis_function = analyze
+        for week in range(WEEKS_PER_YEAR):
+            if week == 0:
+                start = 0
+                end = HOURS_PER_WEEK
+                results = initialize_results(analysis_function([data_array[start:end] for data_array in raw_data], **analysis_kwargs))
+            else:
+                start = week*HOURS_PER_WEEK
+                end = (week+1)*HOURS_PER_WEEK
+                result = analysis_function([data_array[start:end] for data_array in raw_data], **analysis_kwargs)
+                for variable,variable_info in result.items():
+                    for stat,value in variable_info.items():
+                        results[variable][stat][week] = value
         run_time = time.time()-start_time
         print(f'time to process 1 year (not including loading or storing): {pretty_duration(run_time)}')
         for variable,variable_info in results.items():
@@ -175,11 +189,12 @@ print( f'** HWITW tile tool v{APP_VERSION} **\n')
 
 site_settings = [
     {"name":"Seldovia", "inp_lat": 59.45, "inp_long":-151.72},
+    {"name":"Plymouth", "inp_lat":41.96, "inp_long":-70.67},
     {"name":"Taan_Fiord", "inp_lat": 60.178, "inp_long":-141.0838},
     {"name":"Puerto_Maldonado", "inp_lat": -12.583, "inp_long":-69.195},
     {"name":"Phoenix", "inp_lat":33.4, "inp_long":-112.1},
     {"name":"Little_Diomede", "inp_lat":65.76, "inp_long":-168.93},
-    #{"name":"Plymouth", "inp_lat":41.96, "inp_long":-70.67}
+    #{"name":"Sterling", "inp_lat":60.54, "inp_long":-150.78}
 ]
 
 # inp_lat = 59.64 # homer ak
