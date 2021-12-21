@@ -10,6 +10,7 @@ HOURS_PER_WEEK = 168 #24 * DAYS_PER_WEEK
 HALF_HOURS_IN_WEEK = 84 #HOURS_PER_WEEK/2
 WEEKS_PER_YEAR = 52
 HOURS_PER_YEAR = WEEKS_PER_YEAR * HOURS_PER_WEEK  # this is actually 364 days, so we miss one day most years, and two days on leap years
+MIN_VALID_HOURS = 24 #Applies only to the edge-week: If there are less than this many hours, stats for the week are null.
 
 flat_functions = data_settings_internal['flat_functions']
 
@@ -43,19 +44,19 @@ def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), 
     day_start, day_end, day_split = lon_correct_solar_half_day(lon)
     temperatures = raw_temp_dp_data[0]
     dewpoints = raw_temp_dp_data[1]
-    relative_humidities = numpy.zeros((HOURS_PER_WEEK), dtype = float)
     temp_range_sum = 0.0
     day_temp_sum = 0.0
     night_temp_sum = 0.0
     hour_of_day = 0
     incomplete_switch = temperatures[-1] == -32767 #Deals with weeks that are incomplete - presumably just in the last year.
     if incomplete_switch:
+        relative_humidities = []
         null_count = 0
         for i in range(HOURS_PER_WEEK):
             temperature = temperatures[i]
             if temperature > -32767: #This is the costly line - what about instead branching on the value of temperatures[-1]?
                 dewpoint = dewpoints[i]
-                relative_humidities[i] = RH(temperature,dewpoint)
+                relative_humidities.append(RH(temperature,dewpoint))
                 if day_split:
                     if day_end < hour_of_day <= day_start: night_temp_sum += temperature
                     else: day_temp_sum += temperature
@@ -73,6 +74,7 @@ def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), 
                 hour_of_day += 1
             else: null_count += 1 #No protection against sprinkled nulls - this assumes null indicates we've overrun end of the dataset
     else:
+        relative_humidities = numpy.zeros(HOURS_PER_WEEK, dtype=float)
         for i in range(HOURS_PER_WEEK):
             temperature = temperatures[i]
             dewpoint = dewpoints[i]
@@ -99,7 +101,7 @@ def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), 
                     hour_of_day = -1
             hour_of_day += 1
     if incomplete_switch:
-        if null_count < HOURS_PER_WEEK:
+        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
             good_hours = HOURS_PER_WEEK - null_count
             relative_humidities = numpy.sort(relative_humidities)
             p10_RH = flat_functions['relative_humidity_p10'](relative_humidities[int(good_hours*0.1)])
@@ -234,7 +236,7 @@ def do_wind(raw_wind_data: numpy.array((2, HOURS_PER_WEEK), dtype=float)):
                 mode_count = hist_value
                 dir_modal = dir_bin #This is the already-compressed value for modal wind
     if incomplete_switch:
-        if null_count < HOURS_PER_WEEK:
+        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
             good_hours = HOURS_PER_WEEK - null_count
             speed_avg_raw = speed_sum / good_hours
             speed_avg = flat_functions['wind_speed_avg'](speed_avg_raw)
@@ -306,7 +308,7 @@ def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float)):
                     sorted_nonzero_precip.append(amount)
                     total_raw += amount
     if incomplete_switch:
-        if null_count < HOURS_PER_WEEK:
+        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
             good_hours = HOURS_PER_WEEK - null_count
             sorted_nonzero_precip = numpy.sort(sorted_nonzero_precip)
             try: max_raw = sorted_nonzero_precip[-1]
@@ -358,7 +360,7 @@ def do_cloud_cover(raw_cloud_cover_data):
             cloud_cover = cloud_cover_data[i]
             if cloud_cover > -32767: non_null_cloud_cover.append(cloud_cover)
             else: null_count += 1
-        if null_count < HOURS_PER_WEEK: #The else isn't dealt with until later
+        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK: #The else isn't dealt with until later
             sorted_data = numpy.sort(non_null_cloud_cover)
             good_hours = HOURS_PER_WEEK - null_count
             p25_raw = sorted_data[int(good_hours*0.25)]
@@ -369,7 +371,7 @@ def do_cloud_cover(raw_cloud_cover_data):
         p25_raw = sorted_data[42]
         p50_raw = sorted_data[84]
         p75_raw = sorted_data[126]
-    if not incomplete_switch or null_count < HOURS_PER_WEEK:
+    if not incomplete_switch or MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
         i = 0
         try:
             while sorted_data[i] < 0.1: i+=1

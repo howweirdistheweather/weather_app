@@ -93,7 +93,7 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long ):
         {'data_group': 'wind', 'files': [CDSVAR_U10, CDSVAR_V10], 'analyze': do_wind, 'analysis_kwargs': {}},
         {'data_group': 'precipitation', 'files': [CDSVAR_TP, CDSVAR_PTYPE], 'analyze': do_precip, 'analysis_kwargs': {}},
         {'data_group': 'cloud cover', 'files': [CDSVAR_TCC], 'analyze': do_cloud_cover, 'analysis_kwargs': {}},
-        {'data_group': 'cloud ceiling', 'files': [CDSVAR_CBH], 'analyze': do_cloud_ceiling, 'analysis_kwargs': {}}
+#        {'data_group': 'cloud ceiling', 'files': [CDSVAR_CBH], 'analyze': do_cloud_ceiling, 'analysis_kwargs': {}}
     ]
 
     def process_data(out_data, year, data_group, files, analyze, analysis_kwargs):
@@ -189,12 +189,12 @@ print( f'** HWITW tile tool v{APP_VERSION} **\n')
 
 site_settings = [
     {"name":"Seldovia", "inp_lat": 59.45, "inp_long":-151.72},
+    {"name":"Sterling", "inp_lat":60.54, "inp_long":-150.78},
     {"name":"Plymouth", "inp_lat":41.96, "inp_long":-70.67},
     {"name":"Taan_Fiord", "inp_lat": 60.178, "inp_long":-141.0838},
     {"name":"Puerto_Maldonado", "inp_lat": -12.583, "inp_long":-69.195},
     {"name":"Phoenix", "inp_lat":33.4, "inp_long":-112.1},
     {"name":"Little_Diomede", "inp_lat":65.76, "inp_long":-168.93},
-    #{"name":"Sterling", "inp_lat":60.54, "inp_long":-150.78}
 ]
 
 # inp_lat = 59.64 # homer ak
