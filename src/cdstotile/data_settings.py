@@ -18,6 +18,18 @@ data_settings = {
             "type":"linear",
             "units":"C"
         },
+        "temperature_range_sensitive":{
+            "min":0,
+            "scale":0.03,
+            "type":"linear",
+            "units":"C"
+        },
+        "water_temperature":{
+            "min":-10,
+            "scale":0.2,
+            "type":"linear",
+            "units":"C"
+        },
         "wind_speed_HiFi":{
             "min":0,
             "scale":0.1,
@@ -48,11 +60,39 @@ data_settings = {
             "type":"parabolic",
             "units":"m"
         },
+        "precipitation_sensitive":{
+            "min":0,
+            "scale":0.0005,
+            "type":"parabolic",
+            "units":"m"
+        },
+        "water_flux":{
+            "scale":0.005,
+            "type":"signed_parabolic",
+            "units":"m"
+        },
+        "water_flux_sensitive":{
+            "scale":0.0005,
+            "type":"signed_parabolic",
+            "units":"m"
+        },
         "cloud_ceiling":{
             "min":0,
             "scale":30,
             "type":"linear",
             "units":"m"
+        },
+        "wave_height":{
+            "min":0,
+            "scale":0.1,
+            "type":"linear",
+            "units":"m"
+        },
+        "wave_period":{
+            "min":0,
+            "scale":0.1,
+            "type":"linear",
+            "units":"s"
         }
     },
     "variables": {
@@ -156,32 +196,32 @@ data_settings = {
             'total_snow':{
                 "long_name":"Total snowfall over the week (water equivalent)",
                 "short_name":"Total snow",
-                "compression":"precipitation"
+                "compression":"precipitation_sensitive"
             },
             'total_wet_snow':{
                 "long_name":"Total wet snow over the week (water equivalent)",
                 "short_name":"Total wet snow",
-                "compression":"precipitation"
+                "compression":"precipitation_sensitive"
             },
             'total_freezing_rain':{
                 "long_name":"Total freezing rain over the week",
                 "short_name":"Total freezing rain",
-                "compression":"precipitation"
+                "compression":"precipitation_sensitive"
             },
             'total_ice_pellets':{
                 "long_name":"Total ice pellets or hail over the week (water equivalent)",
                 "short_name":"Total ice pellets",
-                "compression":"precipitation"
+                "compression":"precipitation_sensitive"
             },
             'p90':{
                 "long_name":"90th percentile hourly precipitation over the week (water equivalent)",
                 "short_name":"90th percentile",
-                "compression":"precipitation"
+                "compression":"precipitation_sensitive"
             },
             'max':{
                 "long_name":"Most precipitation in any hour of the week (water equivalent)",
                 "short_name":"Maximum",
-                "compression":"precipitation"
+                "compression":"precipitation_sensitive"
             }
         },
         "cloud_cover": {
@@ -237,6 +277,94 @@ data_settings = {
                 "short_name":"Highest ceiling",
                 "compression":"cloud_ceiling"
             }
+        },
+        "runoff": {
+            "total":{
+                "long_name":"Total surface and subsurface runoff through the week",
+                "short_name":"Total runoff",
+                "compression":"precipitation"
+            },
+            "p90":{
+                "long_name":"90th percentile high runoff",
+                "short_name":"90th percentile",
+                "compression":"precipitation_sensitive"
+            },
+            "max":{
+                "long_name":"Maximum single-hour runoff for the week",
+                "short_name":"Maximum runoff",
+                "compression":"precipitation_sensitive"
+            }
+        },
+        "drought": {
+            "total":{
+                "long_name":"Total potential evaporation through the week",
+                "short_name":"Total evaporation",
+                "compression":"water_flux"
+            },
+            "p90":{
+                "long_name":"90th percentile extreme potential evaporation (typically negative)",
+                "short_name":"90th percentile",
+                "compression":"water_flux_sensitive"
+            },
+            "max":{
+                "long_name":"Greatest single-hour potential evaporation for the week (typically negative)",
+                "short_name":"Maximum",
+                "compression":"water_flux_sensitive"
+            }
+        },
+        "ocean_temperature": {
+            "avg":{
+                "long_name":"Average ocean temperature over the week",
+                "short_name":"Average",
+                "compression":"water_temperature"
+            },
+            "max":{
+                "long_name":"Maximum hourly ocean temperature of the week",
+                "short_name":"Maximum",
+                "compression":"water_temperature"
+            },
+            "min":{
+                "long_name":"Minimum hourly ocean temperature of the week",
+                "short_name":"Minimum",
+                "compression":"water_temperature"
+            },
+            "range":{
+                "long_name":"Range from the highest to lowest hourly ocean temperatures in this week",
+                "short_name":"Temperature range",
+                "compression":"temperature_range_sensitive"
+            }
+        },
+        "waves": {
+            "avg":{
+                "long_name":"Average significant wave height through the week",
+                "short_name":"Average",
+                "compression":"wave_height"
+            },
+            "avg_max":{
+                "long_name":"Average of largest waves in 20-minute windows distributed hourly through the week",
+                "short_name":"Average of maximums",
+                "compression":"wave_height"
+            },
+            "avg_period":{
+                "long_name":"Average period of waves through the week",
+                "short_name":"Average period",
+                "compression":"wave_period"
+            },
+            "max":{
+                "long_name":"Approximate largest single wave of the week (amongst hourly 20-minute windows)",
+                "short_name":"Largest",
+                "compression":"wave_height"
+            },
+            "max_significant":{
+                "long_name":"Significant wave height in the single hour of the week where waves were tallest.",
+                "short_name":"Largest significant waves",
+                "compression":"wave_height"
+            },
+            "min_significant":{
+                "long_name":"Significant wave height in the single hour of the week where waves are smallest",
+                "short_name":"Smallest significant waves",
+                "compression":"wave_height"
+            }
         }
     }
 }
@@ -261,27 +389,18 @@ def create_parabolic_compression_function(scale):
         else: return compressed
     return compression_function
 
-"""
-def create_linear_compression_function(min, scale):
+def create_signed_parabolic_compression_function(scale):
     def compression_function(value):
-        try:
-            compressed = int((value-min)/scale) #It is considerably more time-costly to force it to numpy.uint8 rather than int
-            if compressed > 254: return 254
-            elif compressed < 0: return 0
-            else: return compressed
-        except: return 255
+        A = int(math.sqrt(abs(value))/scale)
+        if value < 0: compressed = 127-A
+        else: compressed = 127+A
+        if compressed < 0: return 0
+        elif compressed > 254: return 254
+        else: return compressed
     return compression_function
 
-def create_parabolic_compression_function(scale):
-    def compression_function(value):
-        try:
-            compressed = int(math.sqrt(value)/scale)
-            if compressed > 254: return 254
-            else: return compressed
-        except: return 255
-    return compression_function
-"""
 def make_compression_functions():
+    #Putting the function in two places is redundant - we should pick one and delete the other. Maybe flat_functions now that that's what we're using.
     settings = copy.deepcopy(data_settings)
     variables = settings['variables']
     settings.update([('flat_functions',{})])
@@ -309,6 +428,17 @@ def make_compression_functions():
                 )])
                 settings['flat_functions'].update([(
                     f'{variable}_{stat}',create_parabolic_compression_function(
+                        compression_info['scale']
+                    )
+                )])
+            elif compression_info['type'] == 'signed_parabolic':
+                details.update([(
+                    "compression_function",create_signed_parabolic_compression_function(
+                        compression_info['scale']
+                    )
+                )])
+                settings['flat_functions'].update([(
+                    f'{variable}_{stat}',create_signed_parabolic_compression_function(
                         compression_info['scale']
                     )
                 )])

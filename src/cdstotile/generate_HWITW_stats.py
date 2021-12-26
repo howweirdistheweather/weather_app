@@ -15,7 +15,7 @@ MIN_VALID_HOURS = 24 #Applies only to the edge-week: If there are less than this
 flat_functions = data_settings_internal['flat_functions']
 
 #################################################
-#    Temperature and RH data processing
+#    Temperature and RH data processing         #
 #################################################
 
 # Longitude-correct solar half-day
@@ -38,9 +38,10 @@ def RH(T, D):  # T = temperature, D = dewpoint
     return math.exp(A * D / (B + D)) / math.exp(A * T / (B + T))
 
 
-def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), lon):
+def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), area_lat_long):
     # Take in a week worth of temperature and dewpoint data
     # Return all 11 temp and RH stats
+    lon = area_lat_long[1]
     day_start, day_end, day_split = lon_correct_solar_half_day(lon)
     temperatures = raw_temp_dp_data[0]
     dewpoints = raw_temp_dp_data[1]
@@ -189,7 +190,7 @@ def wind_speed_and_dir(u, v):  # Report direction in compass degrees
     return speed, bearing_from_radians_wind_dir(plane_bearing_trig(u, v))
 
 
-def do_wind(raw_wind_data: numpy.array((2, HOURS_PER_WEEK), dtype=float)):
+def do_wind(raw_wind_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), area_lat_long):
     # Takes one week of data and generates specific results
     U = raw_wind_data[0]
     V = raw_wind_data[1]
@@ -267,7 +268,7 @@ def do_wind(raw_wind_data: numpy.array((2, HOURS_PER_WEEK), dtype=float)):
 # Precipitation data processing
 #################################################
 
-def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float)):
+def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), area_lat_long):
     amounts = raw_precip_data[0]
     types = raw_precip_data[1]
     total_raw = 0.0
@@ -294,6 +295,17 @@ def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float)):
                         sorted_nonzero_precip.append(amount)
                         total_raw += amount
             else: null_count += 1
+        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
+            good_hours = HOURS_PER_WEEK - null_count
+            sorted_nonzero_precip = numpy.sort(sorted_nonzero_precip)
+            try: max_raw = sorted_nonzero_precip[-1]
+            except IndexError: max_raw = 0
+            try: p90_raw = sorted_nonzero_precip[-1*int(good_hours * 0.1)]
+            except IndexError: p90_raw = 0
+            p90 = flat_functions['precipitation_p90'](p90_raw)
+            max = flat_functions['precipitation_max'](max_raw)
+        else:
+            p90, max = 255,255
     else:
         for i in range(HOURS_PER_WEEK):
             type = int(types[i] + 0.001)
@@ -307,19 +319,6 @@ def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float)):
                     elif type == 3: total_freezing_rain_raw += amount
                     sorted_nonzero_precip.append(amount)
                     total_raw += amount
-    if incomplete_switch:
-        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
-            good_hours = HOURS_PER_WEEK - null_count
-            sorted_nonzero_precip = numpy.sort(sorted_nonzero_precip)
-            try: max_raw = sorted_nonzero_precip[-1]
-            except IndexError: max_raw = 0
-            try: p90_raw = sorted_nonzero_precip[-1*int(good_hours * 0.1)]
-            except IndexError: p90_raw = 0
-            p90 = flat_functions['precipitation_p90'](p90_raw)
-            max = flat_functions['precipitation_max'](max_raw)
-        else:
-            p90, max = 255,255
-    else:
         sorted_nonzero_precip = numpy.sort(sorted_nonzero_precip)
         try: max_raw = sorted_nonzero_precip[-1]
         except IndexError: max_raw = 0
@@ -350,7 +349,7 @@ def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float)):
 #  Cloud cover data processing
 ################################################################
 
-def do_cloud_cover(raw_cloud_cover_data):
+def do_cloud_cover(raw_cloud_cover_data, area_lat_long):
     cloud_cover_data = raw_cloud_cover_data[0]
     incomplete_switch = cloud_cover_data[-1] == -32767
     if incomplete_switch:
@@ -403,7 +402,7 @@ def do_cloud_cover(raw_cloud_cover_data):
 #  Cloud ceiling data processing
 ################################################################
 
-def do_cloud_ceiling(raw_cloud_ceiling_data):
+def do_cloud_ceiling(raw_cloud_ceiling_data, area_lat_long):
     #For now, assume null ceiling means clear - however this is only true until the end of the dataset is reached, at which time it will appear that the weather is always clear.
     cloud_ceiling_data = raw_cloud_ceiling_data[0]
     compressed_cloud_ceiling_data = numpy.full(HOURS_PER_WEEK, 254, dtype=int) #254 is max height, which is both extremely high ceilings and no ceiling at all.

@@ -21,6 +21,8 @@ from parsl import python_app
 from parsl.config import Config
 from parsl.executors.threads import ThreadPoolExecutor
 
+from location_settings import site_settings
+
 # download era5 or era5 back extention data to netcdf files
 def download_dataset( ds_name, dir_name, start_year, end_year, area_lat_long, variables, force_download=False ):
     '''
@@ -113,17 +115,8 @@ def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, grid
 
 
 # 0.25 degree resolution
-Seldovia = {'inp_lat':59.45, 'inp_long':-151.72}
-Homer = {'inp_lat':59.64, 'inp_long':-151.54}
-Taan_Fiord = {'inp_lat':60.1780, 'inp_long':-141.0838}
-Puerto_Maldonado = {'inp_lat':-12.583, 'inp_long':-69.195}
-Phoenix = {'inp_lat':33.4, 'inp_long':-112.1}
-Little_Diomede = {'inp_lat':65.76, 'inp_long':-168.93}
-Plymouth = {'inp_lat':41.96, 'inp_long':-70.67}
-Sterling = {'inp_lat':60.54, 'inp_long':-150.78}
-Haida_1 = {'inp_lat':53.213405, 'inp_long':-135.854727}
 
-def main(inp_lat, inp_long):
+def main(name, inp_lat, inp_long, available_groups):
     '''Main program to download data from Copernicus.'''
 
     # Configure parsl to use a local thread pool
@@ -141,8 +134,7 @@ def main(inp_lat, inp_long):
 
     # hello
     print( f'** HWITW Copernicus data download tool v{app_version} **\n')
-
-
+    print( f'Processing {name}')
 
     # get the containing cell 
     lat0 = math.ceil( inp_lat * 4 ) / 4
@@ -164,14 +156,14 @@ def main(inp_lat, inp_long):
         #'surface_pressure',
         'total_cloud_cover',
         'total_precipitation',
-        'potential_evaporation',
-        'runoff',
+#        'potential_evaporation',
+#        'runoff',
         #'forecast_albedo', 
-#        'maximum_individual_wave_height',
-#        'peak_wave_period',
+        'maximum_individual_wave_height',
+        'peak_wave_period',
         #'sea_ice_cover', 
-#        'sea_surface_temperature',
-#        'significant_height_of_combined_wind_waves_and_swell',
+        'sea_surface_temperature',
+        'significant_height_of_combined_wind_waves_and_swell',
         #'snow_depth',
     ]
 
@@ -189,5 +181,5 @@ def main(inp_lat, inp_long):
 
 
 if __name__ == "__main__":
-    main(**Sterling)
+    main(**site_settings['North_Pacific'])
 
