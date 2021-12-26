@@ -2,14 +2,14 @@ from generate_HWITW_stats import (
     do_temp_dp,
     do_wind,
     do_precip,
-    do_cloud_cover,
-    do_cloud_ceiling
+    do_cloud_cover
 )
 from gen_extra_stats import (
     do_runoff,
     do_drought,
     do_ocean_temp,
-    do_waves
+    do_waves,
+    do_cloud_ceiling
 )
 
 # the variables we are interested, long name and short name.

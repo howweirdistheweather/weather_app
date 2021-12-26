@@ -397,34 +397,3 @@ def do_cloud_cover(raw_cloud_cover_data, area_lat_long):
         }
     }
 
-
-################################################################
-#  Cloud ceiling data processing
-################################################################
-
-def do_cloud_ceiling(raw_cloud_ceiling_data, area_lat_long):
-    #For now, assume null ceiling means clear - however this is only true until the end of the dataset is reached, at which time it will appear that the weather is always clear.
-    cloud_ceiling_data = raw_cloud_ceiling_data[0]
-    compressed_cloud_ceiling_data = numpy.full(HOURS_PER_WEEK, 254, dtype=int) #254 is max height, which is both extremely high ceilings and no ceiling at all.
-    #Assume we can use the same compression function for all cloud ceiling values as we used for p50
-    compression_function = data_settings_internal['variables']['cloud_ceiling']['p50']['compression_function']
-    for i in range(HOURS_PER_WEEK):
-        cloud_ceiling = cloud_ceiling_data[i]
-        if cloud_ceiling > -32676:
-            compressed_cloud_ceiling_data[i] = compression_function(cloud_ceiling)
-        else: compressed_cloud_ceiling_data[i] = 254 #Null is assigned to maximum
-    sorted_data = numpy.sort(compressed_cloud_ceiling_data)
-    min = sorted_data[0]
-    p25 = sorted_data[42]
-    p50 = sorted_data[84]
-    p75 = sorted_data[126]
-    max = sorted_data[-1]
-    return {
-        "cloud_ceiling":{
-            "min":min,
-            "p25":p25,
-            "p50":p50,
-            "p75":p75,
-            "max":max
-        }
-    }
