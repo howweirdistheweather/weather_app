@@ -62,6 +62,12 @@ data_settings = {
         },
         "precipitation_sensitive":{
             "min":0,
+            "scale":0.0015,
+            "type":"parabolic",
+            "units":"m"
+        },
+        "precipitation_very_sensitive":{
+            "min":0,
             "scale":0.0005,
             "type":"parabolic",
             "units":"m"
@@ -206,12 +212,12 @@ data_settings = {
             'total_freezing_rain':{
                 "long_name":"Total freezing rain over the week",
                 "short_name":"Total freezing rain",
-                "compression":"precipitation_sensitive"
+                "compression":"precipitation_very_sensitive"
             },
             'total_ice_pellets':{
                 "long_name":"Total ice pellets or hail over the week (water equivalent)",
                 "short_name":"Total ice pellets",
-                "compression":"precipitation_sensitive"
+                "compression":"precipitation_very_sensitive"
             },
             'p90':{
                 "long_name":"90th percentile hourly precipitation over the week (water equivalent)",
@@ -382,12 +388,24 @@ def create_linear_compression_function(min, scale):
         else: return compressed
     return compression_function
 
+def create_inverse_linear_compression_function(min, scale):
+    def inverse_compression_function(value):
+        if value == 255: return None
+        else: return (value * scale) + min
+    return inverse_compression_function
+
 def create_parabolic_compression_function(scale):
     def compression_function(value):
         compressed = int(math.sqrt(value)/scale)
         if compressed > 254: return 254
         else: return compressed
     return compression_function
+
+def create_inverse_parabolic_compression_function(scale):
+    def inverse_compression_function(value):
+        if value == 255: return None
+        else: return (value*scale)**2
+    return inverse_compression_function
 
 def create_signed_parabolic_compression_function(scale):
     def compression_function(value):
@@ -399,6 +417,13 @@ def create_signed_parabolic_compression_function(scale):
         else: return compressed
     return compression_function
 
+def create_inverse_signed_parabolic_compression_functino(scale):
+    def inverse_compression_function(value):
+        if value < 127: return -1*((127-value)*scale)**2
+        elif value < 254: return ((value-127)*scale)**2
+        else: return None #value == 255
+    return inverse_compression_function
+
 def make_compression_functions():
     #Putting the function in two places is redundant - we should pick one and delete the other. Maybe flat_functions now that that's what we're using.
     settings = copy.deepcopy(data_settings)
@@ -408,37 +433,37 @@ def make_compression_functions():
         for stat,details in variable_info.items():
             compression_info = data_settings['compression'][details['compression']]
             if compression_info['type'] == 'linear':
-                details.update([(
-                    "compression_function",create_linear_compression_function(
-                        compression_info['min'],
-                        compression_info['scale']
-                    )
-                )])
                 settings['flat_functions'].update([(
                     f'{variable}_{stat}',create_linear_compression_function(
                         compression_info['min'],
                         compression_info['scale']
                     )
                 )])
-            elif compression_info['type'] == 'parabolic':
-                details.update([(
-                    "compression_function",create_parabolic_compression_function(
+                settings['flat_functions'].update([(
+                    f'inverse_{variable}_{stat}',create_inverse_linear_compression_function(
+                        compression_info['min'],
                         compression_info['scale']
                     )
                 )])
+            elif compression_info['type'] == 'parabolic':
                 settings['flat_functions'].update([(
                     f'{variable}_{stat}',create_parabolic_compression_function(
                         compression_info['scale']
                     )
                 )])
+                settings['flat_functions'].update([(
+                    f'inverse_{variable}_{stat}',create_inverse_parabolic_compression_function(
+                        compression_info['scale']
+                    )
+                )])
             elif compression_info['type'] == 'signed_parabolic':
-                details.update([(
-                    "compression_function",create_signed_parabolic_compression_function(
+                settings['flat_functions'].update([(
+                    f'{variable}_{stat}',create_signed_parabolic_compression_function(
                         compression_info['scale']
                     )
                 )])
                 settings['flat_functions'].update([(
-                    f'{variable}_{stat}',create_signed_parabolic_compression_function(
+                    f'inverse_{variable}_{stat}',create_inverse_signed_parabolic_compression_functino(
                         compression_info['scale']
                     )
                 )])

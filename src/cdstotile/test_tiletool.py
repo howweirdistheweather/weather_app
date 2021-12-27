@@ -17,13 +17,19 @@ from generate_HWITW_stats import (
     HOURS_PER_YEAR,
     WEEKS_PER_YEAR
 )
-from data_settings import data_settings
+from data_settings import (
+    data_settings,
+    data_settings_internal
+)
 from location_settings import (
     site_settings,
     ready_locations
 )
 from hig_utils import pretty_duration
-from hig_csv import write_csv_from_dict_of_lists
+from hig_csv import (
+    write_csv_from_dict_of_lists,
+    write_csv_from_list_of_dicts_simple
+)
 from data_groups import (
     data_groups,
     all_variables
@@ -159,22 +165,42 @@ def export_year_to_csv(area_lat_long, year, filename):
         stored_data.update([(var[0],this_array)])
     write_csv_from_dict_of_lists(f"{year}_data_{filename}.csv",stored_data)
 
+def write_full_csv(name, out_data):
+    start_year = out_data['data_specs']['start_year']
+    year = start_year
+    csv_formatted_data = []
+    variable_list = ['year','week']
+    for variable, var_data in out_data['variables'].items():
+        for statistic, stat_data in var_data.items():
+            variable_name = f'{variable}_{statistic}'
+#            compressed_variable_name = f'compressed_{variable}_{statistic}'
+#            variable_list+=[variable_name, compressed_variable_name]
+            variable_list.append(variable_name)
+            i = 0
+            year = start_year
+            for year_data in stat_data['data']:
+                for week,value in enumerate(year_data):
+                    try:
+                        csv_formatted_data[i].update([
+                            ('year',year),
+                            ('week',week),
+#                            (compressed_variable_name, value),
+                            (variable_name, data_settings_internal['flat_functions'][f'inverse_{variable}_{statistic}'](value))
+                        ])
+                    except IndexError:
+                        csv_formatted_data.append({
+                            'year':year,
+                            'week':week,
+#                            compressed_variable_name:value,
+                            variable_name:data_settings_internal['flat_functions'][f'inverse_{variable}_{statistic}'](value)
+                        })
+                    i += 1
+                year += 1
+    write_csv_from_list_of_dicts_simple(f'{name}.csv',csv_formatted_data, keys=variable_list)
+
 
 ##########################################################
 # main
-
-print( f'** HWITW tile tool v{APP_VERSION} **\n')
-
-# inp_lat = 59.64 # homer ak
-# inp_long = -151.54
-# -141.0838,60.178 - Taan Fiord
-#inp_lat = 60.178
-#inp_long = -141.0838
-#-69.195, -12.583 - Puerto Maldonado
-#inp_lat = -12.583
-#inp_long = -69.195
-#inp_lat = 59.45 # Seldovia
-#inp_long = -151.72
 
 def process_site(out_data, name, inp_lat, inp_long, available_groups):
     print(f"Processing site {name}.")
@@ -190,7 +216,7 @@ def process_site(out_data, name, inp_lat, inp_long, available_groups):
     area0 = [ lat0, long0, lat1, long1 ]
 
     # Since 2021 data is weird, let's take a closer look.
-    export_year_to_csv(area0, 2021, filename)
+    export_year_to_csv(area0, 2021, name)
     valid_vars = []
     for data_group in available_groups: valid_vars.extend(data_groups[data_group]['sub_vars'])
 
@@ -224,6 +250,9 @@ def process_site(out_data, name, inp_lat, inp_long, available_groups):
     print( f'Output {outname} (gnum={gnum})' )
     with open( outname, 'w') as outfile:
         json.dump( out_data, outfile )
+    write_full_csv(name,out_data)
+
+print( f'** HWITW tile tool v{APP_VERSION} **\n')
 
 for site in [site_settings[name] for name in ready_locations]:
     process_site(copy.deepcopy(data_settings), **site)
