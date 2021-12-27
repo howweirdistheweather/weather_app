@@ -275,9 +275,9 @@ function makeNewMeasurmeant(curent_id_num) {
 	click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
 	click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
 	DrawLines(curent_id_num)
-	for (i = 0; i <= curent_id_num; i++){
-		DrawLines(i)
-	}
+//	for (i = 0; i <= curent_id_num; i++){
+//		DrawLines(i)
+//	}
 }
 // make wx_grdata an array of zeros
 function ClearWXGridData() {
@@ -468,14 +468,18 @@ function handleSlider(num,weight_val) {
 			}
 		}
 		for (var i = 0; i < weight_sliders.length; i++) {
-			redoSlider(i,num,total_weght)
+			is_setting = true
+			redoSlider(i,num,total_weght,null)
 		}
 		RenderGrid()
-		is_setting = false
+	}
+	else if (!is_setting && weight_sliders.length == 1){
+		is_setting = true
+		redoSlider(0,null,0,100)
 	}
 	prevs[num] = weight_val
 }
-function redoSlider(i,num,total_weght) {
+function redoSlider(i,num,total_weght,set_num) {
 	if (i != num) {
 //		console.log(total_weght)
 		if (total_weght != 0){
@@ -495,9 +499,12 @@ function redoSlider(i,num,total_weght) {
 		weight_setexes[i] = document.getElementById( 'weight_stext'+i);
 		weight_sliders[i] = document.getElementById('weight_slider'+i);
 //		console.log('r')
-//		console.log(weight_vals[num])
+		console.log(set_num)
+		if (set_num == null){
+			set_num = (i_setex+wegth_i*(prevs[num]-weight_vals[num]))*100
+		}
 		noUiSlider.create( weight_sliders[i], {
-		    start: [(i_setex+wegth_i*(prevs[num]-weight_vals[num]))*100],
+		    start: [set_num],
 		    connect: false,
 		    range: {
 		        'min': 0,
@@ -512,6 +519,7 @@ function redoSlider(i,num,total_weght) {
 			handleSlider(i,weight_val)
 			});
 	}
+	is_setting = false
 }
 
 function LoadReadingDropdown(num) {
@@ -639,6 +647,16 @@ function LoadWXGrid() {
     
 }
 
+function daysIntoYear( date ){
+    return (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
+}
+
+function month_to_week( nmonth ) {
+    let day_of_year = daysIntoYear( new Date(2020, nmonth, 1) );
+    let week = day_of_year * 52.0 / 365.0;
+    return week;
+}
+
 function DrawHistogram(compresed_data){
 	for (num = 0; num < measurement_index+1; num ++){
 		var histo_plot_st = new Array(128).fill(0);
@@ -697,7 +715,7 @@ function DrawHistogram(compresed_data){
 		if (compresion[reading_types[num]][method_types[num]]["type"] == "parabolic") {
 			expon = 2
 		}
-		`
+		
 		if (compresion[reading_types[num]][method_types[num]]["units"] == "degrees"){
 			drawDirectionLoop(expon,histo_plot,min_num,max_num,color_plot,draw)
 			mins[num] = min_num
@@ -714,7 +732,7 @@ function DrawHistogram(compresed_data){
 			}
 			return
 		}
-		`
+		
 		for (var j = 2; j < histo_plot.length-2; j++){
 			if (histo_plot[j] >= 2){
 				is_mode = true
@@ -782,17 +800,19 @@ function DrawHistogram(compresed_data){
 }
 
 function drawDirectionLoop(expon,histo_plot,min_num,max_num,color_plot,draw){
-	for (var i = 0; i < 128; i++) {
+	for (var i = 10; i < 11; i++) {
 		var r2 = (color_plot[2][i]*0.5)**(1/2)
 		var r1 = (color_plot[1][i]*0.5)**(1/2)
 		var r0 = (color_plot[0][i]*0.5)**(1/2)
-		var ang = 2.82*i+1.41
+		var section_ang = 2.8*Math.PI/180
+		var ang = (section_ang*i+section_ang/2)
 		var fillcol = '#ffffff'
-        draw.path(`M0 0 L${r1} A${r1} ${r1} 0 0 0 `).move( i*2+15, (125-color_plot[2][i])*0.5 ).attr({
+        draw.path(`m${125*0.25+4.5} ${285*0.5} l${Math.cos(ang)*r2} ${Math.sin(ang)*r2} a${r2},${r2} 0 1,0 ${Math.cos(ang+section_ang)*r2} ${Math.sin(ang+section_ang)*r2} z`).attr({  //.move(i*2+15, (125-color_plot[2][i])*0.5 )
             'fill':'#54278f',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
+		`
 		var radius = (color_plot[1][i]*0.5)**(1/2)
         draw.path("").move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
             'fill':'#9e9ac8',
@@ -807,6 +827,7 @@ function drawDirectionLoop(expon,histo_plot,min_num,max_num,color_plot,draw){
 		var line = draw.line(0, 0, 100, 100).move(0, 0)
 		line.stroke({ color: '#000', width: 1, })
 		line.remove()
+		`
 	}
 }
 
@@ -1014,7 +1035,7 @@ function invertHandeler(num, will_render) {
 	}
 }
 
-function DrawSesonalitys(compresed_data){
+function DrawSesonalitys(compresed_data,months){
 	var color_plot = [new Array(52).fill(0),new Array(52).fill(0),new Array(52).fill(0)]
 	color_plot_str = JSON.stringify(color_plot)
 	for (var year = 0; year < compresed_data.length; year ++){
@@ -1056,11 +1077,30 @@ function DrawSesonalitys(compresed_data){
             'stroke-width': 0 
         });
 	}
+    for ( i=0; i < months.length; i++ ) {
+        let bx = month_to_week( i ) * 9 + 35;
+		if (i != 0) {
+	        draw.rect( 1, compresed_data.length*0.5-1 ).move( bx-1.5, 1  ).attr({
+	            'fill':'#ffffff37',
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
+    }
 }
-function DrawYears(compresed_data){
+function DrawYears(compresed_data,num_years){
 	var color_plot = [new Array(compresed_data.length).fill(0),new Array(compresed_data.length).fill(0),new Array(compresed_data.length).fill(0)]
 	color_plot_str = JSON.stringify(color_plot)
+	var line_years = []
 	for (var year = 0; year < compresed_data.length; year ++){
+        syear = num_years + start_year - year;    
+        if ( !((syear-1)%5) ) {
+			var opacity = "37"
+			if (!((syear-1)%10)){
+				var opacity = "bb" 
+			}
+			line_years.push([opacity,year])
+		}
 		for (var week = 0; week < 52; week ++){
 			if (compresed_data[year][week] != null){
 				if (compresed_data[year][week] < wx_range_val0*255){
@@ -1105,6 +1145,13 @@ function DrawYears(compresed_data){
             'stroke-width': 0 
         });
 	}
+	for (year of line_years) {
+        draw.rect( 52*3, 1 ).move( 0, year[1]*9+9  ).attr({
+            'fill':'#ffffff'+year[0],
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+	}
 }
 
 // Renders SVG weather grid/heatmap thing
@@ -1124,7 +1171,6 @@ function RenderGrid(){
     var num_weeks = 52;	
 	var wx_data = [];
     num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
-    num_weeks = Object.keys(wx_grdata[reading_types[0]][method_types[0]][0]).length;	
 	var grids = [];
 //	console.log('rend')
 //	console.log(reading_types)
@@ -1170,8 +1216,6 @@ function RenderGrid(){
 	}
 	compresed_data = wx_data
 	DrawHistogram(wx_data)
-	DrawSesonalitys(wx_data)
-	DrawYears(wx_data)
     // var color0 = '#edf8b1';
     // var color1 = '#7fcdbb';
     // var color2 = '#2c7fb8';
@@ -1192,10 +1236,14 @@ function RenderGrid(){
     {
         sy = k * boxspace + off_y;
         // draw year label every 3 rows, vertically centered on the row, to the left of the grid
-        syear = num_years + start_year - k;        
-        if ( !(k%3) ) {
-            var stext = draw.text( `${syear-1} -` ).font('size',12).font('family','Arial');
-            syear_width = stext.length();
+        syear = num_years + start_year - k;  
+		var opacity = "bb"      
+        if ( !((syear-1)%5) ) {
+			if (!((syear-1)%10)){
+				opacity = "ff" 
+			}
+            var stext = draw.text( `${syear-1}` ).font('size',12).font('family','Arial');
+            syear_width = stext.length()+6;
             syear_height = stext.bbox().height/2; // bbox is double for some reason.
             stext.move( off_x - syear_width, sy - (syear_height/2) );
         }
@@ -1227,7 +1275,7 @@ function RenderGrid(){
                     fillcol = color1;
                     bsize = boxspace;   // bigger square
                 }
-                else{
+                else {
                     fillcol = color2;
                     bsize = boxspace;   // bigger square
                 }
@@ -1235,7 +1283,7 @@ function RenderGrid(){
 
             // draw rect
             sx = p * boxspace + off_x;
-            var rect = draw.rect( bsize, bsize-1 ).move( sx, sy ).attr({
+            var rect = draw.rect( bsize, bsize ).move( sx, sy ).attr({
                 'fill':fillcol,
                 'shape-rendering':shape_rend,
                 'stroke-width': 0 
@@ -1246,29 +1294,34 @@ function RenderGrid(){
 //				gr_sesonalitys.title = "txt"				
 //			});
         }
+		
+        draw.rect( (num_weeks) * boxspace, 1 ).move( off_x, sy ).attr({
+            'fill':'#ffffff'+opacity,
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
     }
 
     // draw bottom month labels
-    function daysIntoYear( date ){
-        return (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
-    }
-
-    function month_to_week( nmonth ) {
-        let day_of_year = daysIntoYear( new Date(2020, nmonth, 1) );
-        let week = day_of_year * 52.0 / 365.0;
-        return week;
-    }
 
     let months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec' ];
     let by = num_years * (boxspace) + off_y - (boxspace-boxsize);
-    for ( i=0; i < months.length; i++ )
-    {
+    for ( i=0; i < months.length; i++ ) {
         let btext = draw.text( `-${months[i]}` ).font('size',12).font('family','Arial');
         let bw = btext.length();        
         let bh = btext.bbox().height/2; // bbox is double for some reason.
         let bx = month_to_week( i ) * boxspace + off_x;
         btext.center(bx,by+bw/2).rotate(90);
+		if (i != 0) {
+	        draw.rect( 1, num_years*9-1 ).move( bx-1.5, 1  ).attr({
+	            'fill':'#ffffff37',
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
     }
+	DrawSesonalitys(wx_data,months)
+	DrawYears(wx_data,num_years)
 
 };
 //file:///Users/katmai/Downloads/test.json
