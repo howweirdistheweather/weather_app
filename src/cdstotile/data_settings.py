@@ -82,6 +82,11 @@ data_settings = {
             "type":"signed_parabolic",
             "units":"m"
         },
+        "water_flux_very_sensitive":{
+            "scale":0.0001,
+            "type":"signed_parabolic",
+            "units":"m"
+        },
         "cloud_ceiling":{
             "min":0,
             "scale":30,
@@ -293,29 +298,34 @@ data_settings = {
             "p90":{
                 "long_name":"90th percentile high runoff",
                 "short_name":"90th percentile",
-                "compression":"precipitation_sensitive"
+                "compression":"precipitation_very_sensitive"
             },
             "max":{
                 "long_name":"Maximum single-hour runoff for the week",
                 "short_name":"Maximum runoff",
-                "compression":"precipitation_sensitive"
+                "compression":"precipitation_very_sensitive"
             }
         },
         "drought": {
-            "total":{
+            "potential_evaporation":{
                 "long_name":"Total potential evaporation through the week",
-                "short_name":"Total evaporation",
+                "short_name":"Potential evaporation",
+                "compression":"water_flux_sensitive"
+            },
+            "evaporation":{
+                "long_name":"Total estimated evaporation (takes into consideration water availability)",
+                "short_name":"Estimated evaporation",
                 "compression":"water_flux"
             },
             "p90":{
                 "long_name":"90th percentile extreme potential evaporation (typically negative)",
                 "short_name":"90th percentile",
-                "compression":"water_flux_sensitive"
+                "compression":"water_flux_very_sensitive"
             },
             "max":{
                 "long_name":"Greatest single-hour potential evaporation for the week (typically negative)",
                 "short_name":"Maximum",
-                "compression":"water_flux_sensitive"
+                "compression":"water_flux_very_sensitive"
             }
         },
         "ocean_temperature": {

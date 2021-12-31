@@ -173,9 +173,9 @@ def write_full_csv(name, out_data):
     for variable, var_data in out_data['variables'].items():
         for statistic, stat_data in var_data.items():
             variable_name = f'{variable}_{statistic}'
-#            compressed_variable_name = f'compressed_{variable}_{statistic}'
-#            variable_list+=[variable_name, compressed_variable_name]
-            variable_list.append(variable_name)
+            compressed_variable_name = f'compressed_{variable}_{statistic}'
+            variable_list+=[variable_name, compressed_variable_name]
+#            variable_list.append(variable_name)
             i = 0
             year = start_year
             for year_data in stat_data['data']:
@@ -184,14 +184,14 @@ def write_full_csv(name, out_data):
                         csv_formatted_data[i].update([
                             ('year',year),
                             ('week',week),
-#                            (compressed_variable_name, value),
+                            (compressed_variable_name, value),
                             (variable_name, data_settings_internal['flat_functions'][f'inverse_{variable}_{statistic}'](value))
                         ])
                     except IndexError:
                         csv_formatted_data.append({
                             'year':year,
                             'week':week,
-#                            compressed_variable_name:value,
+                            compressed_variable_name:value,
                             variable_name:data_settings_internal['flat_functions'][f'inverse_{variable}_{statistic}'](value)
                         })
                     i += 1

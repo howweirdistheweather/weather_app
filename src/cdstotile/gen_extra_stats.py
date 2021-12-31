@@ -62,46 +62,55 @@ def do_runoff(raw_runoff_data: numpy.array((1, HOURS_PER_WEEK), dtype=float), ar
 #           Drought / evaporation                  #
 ####################################################
 
-def do_drought(raw_drought_data: numpy.array((1, HOURS_PER_WEEK), dtype=float), area_lat_long):
+def do_drought(raw_drought_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), area_lat_long):
     #Perhaps total, p90, max again
     #However, PET is generally negative (except for condensation - dew I guess?) so the extremes are the lowest
     PETs = raw_drought_data[0]
+    ETs = raw_drought_data[1]
     incomplete_switch = PETs[-1] == -32767 #Deals with weeks that are incomplete - presumably just in the last year.
     if incomplete_switch:
-        total_raw = 0.0
+        total_PET_raw = 0.0
+        total_ET_raw = 0.0
         null_count = 0
         valid_PETs = []
         for i in range(HOURS_PER_WEEK):
             PET = PETs[i]
             if PET > -32767:
-                total_raw += PET
+                ET = ETs[i]
+                total_PET_raw += PET
+                total_ET_raw += ET
                 valid_PETs.append(PET)
             else: null_count += 1
-        if null_count < HOURS_PER_WEEK-MIN_VALID_HOURS:
+        valid_hours = HOURS_PER_WEEK-null_count
+        if valid_hours > MIN_VALID_HOURS:
             sorted_valid_PETs = numpy.sort(valid_PETs)
             max_PET_raw = sorted_valid_PETs[0]
-            p90_PET_raw = sorted_valid_PETs[int((HOURS_PER_WEEK-null_count)*0.1)]
+            p90_PET_raw = sorted_valid_PETs[int(valid_hours*0.1)]
         else:
             return {
                 "drought":{
-                    "total":255,
+                    "potential_evaporation":255,
+                    "evaporation":255,
                     "p90":255,
                     "max":255
                 }
             }
     else:
-        total_raw=numpy.sum(PETs)
+        total_PET_raw = numpy.sum(PETs)
+        total_ET_raw = numpy.sum(ETs)
         sorted_PETs = numpy.sort(PETs)
         max_PET_raw = sorted_PETs[0]
         p90_PET_raw = sorted_PETs[17]
-    total = flat_functions['drought_total'](total_raw)
+    total_PET = flat_functions['drought_potential_evaporation'](total_PET_raw)
+    total_ET = flat_functions['drought_evaporation'](total_ET_raw)
     max = flat_functions['drought_max'](max_PET_raw)
     p90 = flat_functions['drought_p90'](p90_PET_raw)
     return {
         "drought":{
-            "total":total,
+            "potential_evaporation":total_PET,
+            "evaporation":total_ET,
             "p90":p90,
-            "max":max
+            "max":max,
         }
     }
 

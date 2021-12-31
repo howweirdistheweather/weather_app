@@ -1,12 +1,13 @@
 ready_locations = [
     "Seldovia",
-    "Haida_1",
     "Sterling",
+    "Haida_1",
     "Plymouth",
     "Taan_Fiord",
     "Puerto_Maldonado",
     "Phoenix",
     "Little_Diomede",
+    "North_Pacific"
 ]
 
 site_settings = {
@@ -18,7 +19,7 @@ site_settings = {
         "name":"Seldovia",
         "inp_lat": 59.45,
         "inp_long":-151.72,
-        "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover']
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought','ocean_temperature']
     },
     "Sterling":{
         "name":"Sterling",
@@ -66,6 +67,12 @@ site_settings = {
         "name":"North_Pacific",
         'inp_lat':48.715849,
         'inp_long':-176.966171,
+        "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temperature']
+    },
+    "Southern_Bering_Sea":{
+        "name":"Southern_Bering_Seat",
+        "inp_lat":54.217174,
+        "inp_long":-169.193876,
         "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temperature']
     }
 }
