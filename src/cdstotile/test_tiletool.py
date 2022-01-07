@@ -17,7 +17,7 @@ from generate_HWITW_stats import (
     HOURS_PER_YEAR,
     WEEKS_PER_YEAR
 )
-from data_settings import (
+from extra_data_settings import (
     data_settings,
     data_settings_internal
 )
@@ -230,7 +230,7 @@ def process_site(out_data, name, inp_lat, inp_long, available_groups):
     # era5 goes from 1979 to present
     log2 = load_netcdfs(out_data,
                         'cds_era5',
-                        1979, current_time.year,
+                        1979, 2021,
                         area0,
                         available_groups)
 

@@ -1,5 +1,7 @@
 ready_locations = [
     "Seldovia",
+    "Offshore_of_Kodiak",
+    "Southern_Bering_Sea",
     "Sterling",
     "Haida_1",
     "Plymouth",
@@ -19,13 +21,15 @@ site_settings = {
         "name":"Seldovia",
         "inp_lat": 59.45,
         "inp_long":-151.72,
-        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought','ocean_temperature']
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought','ocean_temperature'],
+#        "notes":"geocode: 861233"
     },
     "Sterling":{
         "name":"Sterling",
         "inp_lat":60.54,
         "inp_long":-150.78,
-        "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','runoff','drought']
+        "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','runoff','drought'],
+#        "notes":"geocode: 868436"
     },
     "Plymouth":{
         "name":"Plymouth",
@@ -70,9 +74,21 @@ site_settings = {
         "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temperature']
     },
     "Southern_Bering_Sea":{
-        "name":"Southern_Bering_Seat",
+        "name":"Southern_Bering_Sea",
         "inp_lat":54.217174,
         "inp_long":-169.193876,
         "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temperature']
+    },
+    "Offshore_of_Kodiak":{
+        "name":"Offshore_of_Kodiak",
+        "inp_lat":53.211884,
+        "inp_long":-154.708915,
+        "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temperature']
+    },
+    "Galveston":{
+        "name":"Galveston",
+        "inp_lat":29.3,
+        "inp_long":-94.8,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought','ocean_temperature']
     }
 }

@@ -170,5 +170,5 @@ def main(name, inp_lat, inp_long, available_groups):
 
 
 if __name__ == "__main__":
-    main(**site_settings['Southern_Bering_Sea'])
+    main(**site_settings['Galveston'])
 

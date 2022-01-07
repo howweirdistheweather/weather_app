@@ -306,7 +306,6 @@ def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), ar
                         elif type == 8: total_ice_pellets_raw += amount
                         elif type == 3: total_freezing_rain_raw += amount
                         sorted_nonzero_precip.append(amount)
-                        total_raw += amount
             else: null_count += 1
         good_hours = HOURS_PER_WEEK - null_count
         if good_hours > MIN_VALID_HOURS:
@@ -317,6 +316,13 @@ def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), ar
             except IndexError: p90_raw = 0
             p90 = flat_functions['precipitation_p90'](p90_raw)
             max = flat_functions['precipitation_max'](max_raw)
+            good_data_scaler = good_hours/HOURS_PER_WEEK
+            total_rain_raw /= good_data_scaler
+            total_snow_raw /= good_data_scaler
+            total_wet_snow_raw /= good_data_scaler
+            total_ice_pellets_raw /= good_data_scaler
+            total_freezing_rain_raw /= good_data_scaler
+            total_raw = total_rain_raw + total_snow_raw + total_wet_snow_raw + total_ice_pellets_raw + total_freezing_rain_raw
         else:
             return {
                 "precipitation": {
