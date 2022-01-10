@@ -202,7 +202,7 @@ def write_full_csv(name, out_data):
 ##########################################################
 # main
 
-def process_site(out_data, name, inp_lat, inp_long, available_groups):
+def process_site(out_data, name, inp_lat, inp_long, available_groups, output_raw_years):
     print(f"Processing site {name}.")
     filename = f'{name}.json'
     out_data['data_specs'].update([('Name',name)])
@@ -215,8 +215,8 @@ def process_site(out_data, name, inp_lat, inp_long, available_groups):
 
     area0 = [ lat0, long0, lat1, long1 ]
 
-    # Since 2021 data is weird, let's take a closer look.
-    export_year_to_csv(area0, 2021, name)
+    for year in output_raw_years:
+        export_year_to_csv(area0, year, name)
     valid_vars = []
     for data_group in available_groups: valid_vars.extend(data_groups[data_group]['sub_vars'])
 

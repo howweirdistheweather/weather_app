@@ -56,7 +56,7 @@ data_settings = {
         },
         "precipitation_sensitive":{
             "min":0,
-            "scale":0.0015,
+            "scale":0.001,
             "type":"parabolic",
             "units":"m"
         },

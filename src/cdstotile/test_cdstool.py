@@ -117,7 +117,7 @@ def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, grid
 
 # 0.25 degree resolution
 
-def main(name, inp_lat, inp_long, available_groups):
+def main(name, inp_lat, inp_long, available_groups, output_raw_years):
     '''Main program to download data from Copernicus.'''
 
     # Configure parsl to use a local thread pool
@@ -170,5 +170,5 @@ def main(name, inp_lat, inp_long, available_groups):
 
 
 if __name__ == "__main__":
-    main(**site_settings['Galveston'])
+    main(**site_settings['Solar_de_Uyuni'])
 
