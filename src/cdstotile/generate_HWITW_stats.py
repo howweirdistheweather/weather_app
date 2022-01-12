@@ -52,12 +52,14 @@ def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), 
     incomplete_switch = temperatures[-1] == -32767 #Deals with weeks that are incomplete - presumably just in the last year.
     if incomplete_switch:
         relative_humidities = []
+        valid_temperatures = []
         null_count = 0
         for i in range(HOURS_PER_WEEK):
             temperature = temperatures[i]
             if temperature > -32767: #This is the costly line - what about instead branching on the value of temperatures[-1]?
                 dewpoint = dewpoints[i]
                 relative_humidities.append(RH(temperature,dewpoint))
+                valid_temperatures.append(temperature)
                 if day_split:
                     if day_end < hour_of_day <= day_start: night_temp_sum += temperature
                     else: day_temp_sum += temperature
@@ -70,11 +72,45 @@ def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), 
                     if day_min > temperature: day_min = temperature
                     elif day_max < temperature: day_max = temperature #I think we can use elif here safely
                     if hour_of_day == 23:
-                        temp_range_sum += day_max-day_min
+                        temp_range_sum += day_max - day_min
                         hour_of_day = -1
                 hour_of_day += 1
             else: null_count += 1 #No protection against sprinkled nulls - this assumes null indicates we've overrun end of the dataset
-    else:
+        good_hours = HOURS_PER_WEEK - null_count
+        if good_hours > MIN_VALID_HOURS:
+            half_good_hours = good_hours/2
+            relative_humidities = numpy.sort(relative_humidities)
+            p10_RH = flat_functions['relative_humidity_p10'](relative_humidities[int(good_hours*0.1)])
+            p50_RH = flat_functions['relative_humidity_p50'](relative_humidities[int(good_hours*0.5)])
+            p90_RH = flat_functions['relative_humidity_p90'](relative_humidities[int(good_hours*0.9)])
+            ave_day_temp_raw = day_temp_sum / half_good_hours
+            ave_night_temp_raw = night_temp_sum / half_good_hours
+            ave_temp_raw = (ave_day_temp_raw + ave_night_temp_raw) / 2
+            ave_temp_range = flat_functions['temperature_range_avg'](temp_range_sum / DAYS_PER_WEEK)
+            sorted_temps = numpy.sort(valid_temperatures)
+            min_temp = flat_functions['temperature_min'](K_to_C(sorted_temps[0]))
+            p10_temp = flat_functions['temperature_p10'](K_to_C(sorted_temps[int(good_hours*0.1)]))
+            p90_temp = flat_functions['temperature_p90'](K_to_C(sorted_temps[int(good_hours*0.9)]))
+            max_temp = flat_functions['temperature_max'](K_to_C(sorted_temps[-1]))
+        else:
+            return {
+                "temperature": {
+                    "min": 255,
+                    "p10": 255,
+                    "avg": 255,
+                    "p90": 255,
+                    "max": 255,
+                    "day_avg": 255,
+                    "night_avg": 255,
+                    "range_avg": 255
+                },
+                "relative_humidity": {
+                    "p10": 255,
+                    "p50": 255,
+                    "p90": 255
+                }
+            }
+    else: #Complete week
         relative_humidities = numpy.zeros(HOURS_PER_WEEK, dtype=float)
         for i in range(HOURS_PER_WEEK):
             temperature = temperatures[i]
@@ -101,29 +137,6 @@ def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), 
                     temp_range_sum += day_max - day_min
                     hour_of_day = -1
             hour_of_day += 1
-    if incomplete_switch:
-        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
-            good_hours = HOURS_PER_WEEK - null_count
-            relative_humidities = numpy.sort(relative_humidities)
-            p10_RH = flat_functions['relative_humidity_p10'](relative_humidities[int(good_hours*0.1)])
-            p50_RH = flat_functions['relative_humidity_p50'](relative_humidities[int(good_hours*0.5)])
-            p90_RH = flat_functions['relative_humidity_p90'](relative_humidities[int(good_hours*0.9)])
-            ave_day_temp_raw = day_temp_sum / good_hours * 2
-            ave_night_temp_raw = night_temp_sum / good_hours * 2
-            ave_temp_raw = (ave_day_temp_raw + ave_night_temp_raw) / 2
-            ave_day_temp = flat_functions['temperature_day_avg'](K_to_C(ave_day_temp_raw))
-            ave_night_temp = flat_functions['temperature_night_avg'](K_to_C(ave_night_temp_raw))
-            ave_temp = flat_functions['temperature_avg'](K_to_C(ave_temp_raw))
-            ave_temp_range = flat_functions['temperature_range_avg'](temp_range_sum / DAYS_PER_WEEK)
-            temperatures = numpy.sort(temperatures)
-            min_temp = flat_functions['temperature_min'](K_to_C(temperatures[0]))
-            p10_temp = flat_functions['temperature_p10'](K_to_C(temperatures[int(good_hours*0.1)]))
-            p90_temp = flat_functions['temperature_p90'](K_to_C(temperatures[int(good_hours*0.9)]))
-            max_temp = flat_functions['temperature_max'](K_to_C(temperatures[-1]))
-        else:
-            min_temp, p10_temp, ave_temp, p90_temp, max_temp, ave_day_temp, ave_night_temp, ave_temp_range = tuple([255]*8)
-            p10_RH, p50_RH, p90_RH = tuple([255]*3)
-    else:
         relative_humidities = numpy.sort(relative_humidities)
         p10_RH = flat_functions['relative_humidity_p10'](relative_humidities[17])
         p50_RH = flat_functions['relative_humidity_p50'](relative_humidities[84])
@@ -131,15 +144,15 @@ def do_temp_dp(raw_temp_dp_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), 
         ave_day_temp_raw = day_temp_sum / HALF_HOURS_IN_WEEK
         ave_night_temp_raw = night_temp_sum / HALF_HOURS_IN_WEEK
         ave_temp_raw = (ave_day_temp_raw + ave_night_temp_raw) / 2
-        ave_day_temp = flat_functions['temperature_day_avg'](K_to_C(ave_day_temp_raw))
-        ave_night_temp = flat_functions['temperature_night_avg'](K_to_C(ave_night_temp_raw))
-        ave_temp = flat_functions['temperature_avg'](K_to_C(ave_temp_raw))
         ave_temp_range = flat_functions['temperature_range_avg'](temp_range_sum / DAYS_PER_WEEK)
         temperatures = numpy.sort(temperatures)
         min_temp = flat_functions['temperature_min'](K_to_C(temperatures[0]))
         p10_temp = flat_functions['temperature_p10'](K_to_C(temperatures[17]))
         p90_temp = flat_functions['temperature_p90'](K_to_C(temperatures[151]))
         max_temp = flat_functions['temperature_max'](K_to_C(temperatures[-1]))
+    ave_day_temp = flat_functions['temperature_day_avg'](K_to_C(ave_day_temp_raw))
+    ave_night_temp = flat_functions['temperature_night_avg'](K_to_C(ave_night_temp_raw))
+    ave_temp = flat_functions['temperature_avg'](K_to_C(ave_temp_raw))
     return {
         "temperature":{
            "min":min_temp,
@@ -237,8 +250,8 @@ def do_wind(raw_wind_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), area_l
                 mode_count = hist_value
                 dir_modal = dir_bin #This is the already-compressed value for modal wind
     if incomplete_switch:
-        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
-            good_hours = HOURS_PER_WEEK - null_count
+        good_hours = HOURS_PER_WEEK - null_count
+        if good_hours > MIN_VALID_HOURS:
             speed_avg_raw = speed_sum / good_hours
             speed_avg = flat_functions['wind_speed_avg'](speed_avg_raw)
             net_speed_raw, net_dir_raw = wind_speed_and_dir(u_sum/good_hours, v_sum/good_hours)
@@ -293,10 +306,9 @@ def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), ar
                         elif type == 8: total_ice_pellets_raw += amount
                         elif type == 3: total_freezing_rain_raw += amount
                         sorted_nonzero_precip.append(amount)
-                        total_raw += amount
             else: null_count += 1
-        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
-            good_hours = HOURS_PER_WEEK - null_count
+        good_hours = HOURS_PER_WEEK - null_count
+        if good_hours > MIN_VALID_HOURS:
             sorted_nonzero_precip = numpy.sort(sorted_nonzero_precip)
             try: max_raw = sorted_nonzero_precip[-1]
             except IndexError: max_raw = 0
@@ -304,8 +316,26 @@ def do_precip(raw_precip_data: numpy.array((2, HOURS_PER_WEEK), dtype=float), ar
             except IndexError: p90_raw = 0
             p90 = flat_functions['precipitation_p90'](p90_raw)
             max = flat_functions['precipitation_max'](max_raw)
+            good_data_scaler = good_hours/HOURS_PER_WEEK
+            total_rain_raw /= good_data_scaler
+            total_snow_raw /= good_data_scaler
+            total_wet_snow_raw /= good_data_scaler
+            total_ice_pellets_raw /= good_data_scaler
+            total_freezing_rain_raw /= good_data_scaler
+            total_raw = total_rain_raw + total_snow_raw + total_wet_snow_raw + total_ice_pellets_raw + total_freezing_rain_raw
         else:
-            p90, max = 255,255
+            return {
+                "precipitation": {
+                    "total": 255,
+                    "total_rain": 255,
+                    "total_snow": 255,
+                    "total_wet_snow": 255,
+                    "total_ice_pellets": 255,
+                    "total_freezing_rain": 255,
+                    "p90": 255,
+                    "max": 255
+                }
+            }
     else:
         for i in range(HOURS_PER_WEEK):
             type = int(types[i] + 0.001)
@@ -357,20 +387,40 @@ def do_cloud_cover(raw_cloud_cover_data, area_lat_long):
         null_count = 0
         for i in range(HOURS_PER_WEEK):
             cloud_cover = cloud_cover_data[i]
-            if cloud_cover > -32767: non_null_cloud_cover.append(cloud_cover)
+            if cloud_cover > -32767:
+                non_null_cloud_cover.append(cloud_cover)
             else: null_count += 1
-        if MIN_VALID_HOURS < null_count < HOURS_PER_WEEK: #The else isn't dealt with until later
+        good_hours = HOURS_PER_WEEK - null_count
+        if good_hours > MIN_VALID_HOURS:
             sorted_data = numpy.sort(non_null_cloud_cover)
-            good_hours = HOURS_PER_WEEK - null_count
             p25_raw = sorted_data[int(good_hours*0.25)]
             p50_raw = sorted_data[int(good_hours*0.5)]
             p75_raw = sorted_data[int(good_hours*0.75)]
+            i = 0
+            try:
+                while sorted_data[i] < 0.1: i+=1
+            except IndexError: i = good_hours
+            p_sunny_raw = float(i)/good_hours
+            i = good_hours-1
+            try:
+                while sorted_data[i] > 0.9: i-=1
+            except IndexError: i = 0
+            p_cloudy_raw = float(good_hours-i)/good_hours
+        else:
+            return {
+                "cloud_cover": {
+                    "p25": 255,
+                    "p50": 255,
+                    "p75": 255,
+                    "p_sunny": 255,
+                    "p_cloudy": 255
+                }
+            }
     else:
         sorted_data = numpy.sort(cloud_cover_data)
         p25_raw = sorted_data[42]
         p50_raw = sorted_data[84]
         p75_raw = sorted_data[126]
-    if not incomplete_switch or MIN_VALID_HOURS < null_count < HOURS_PER_WEEK:
         i = 0
         try:
             while sorted_data[i] < 0.1: i+=1
@@ -379,14 +429,13 @@ def do_cloud_cover(raw_cloud_cover_data, area_lat_long):
         i = 167
         try:
             while sorted_data[i] > 0.9: i-=1
-        except IndexError: i = -1 #Is this right? Seems like it should be 100%, so it would have to be -1.
-        p_cloudy_raw = float(167-i)/HOURS_PER_WEEK
-        p25 = flat_functions['cloud_cover_p25'](p25_raw)
-        p50 = flat_functions['cloud_cover_p50'](p50_raw)
-        p75 = flat_functions['cloud_cover_p75'](p75_raw)
-        p_sunny = flat_functions['cloud_cover_p_sunny'](p_sunny_raw)
-        p_cloudy = flat_functions['cloud_cover_p_cloudy'](p_cloudy_raw)
-    else: p25, p50, p75, p_sunny, p_cloudy = tuple([255]*5)
+        except IndexError: i = 0
+        p_cloudy_raw = float(HOURS_PER_WEEK-i)/HOURS_PER_WEEK
+    p25 = flat_functions['cloud_cover_p25'](p25_raw)
+    p50 = flat_functions['cloud_cover_p50'](p50_raw)
+    p75 = flat_functions['cloud_cover_p75'](p75_raw)
+    p_sunny = flat_functions['cloud_cover_p_sunny'](p_sunny_raw)
+    p_cloudy = flat_functions['cloud_cover_p_cloudy'](p_cloudy_raw)
     return {
         "cloud_cover":{
             "p25":p25,

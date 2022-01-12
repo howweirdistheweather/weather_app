@@ -22,6 +22,7 @@ from parsl.config import Config
 from parsl.executors.threads import ThreadPoolExecutor
 
 from location_settings import site_settings
+from data_groups import data_groups
 
 # download era5 or era5 back extention data to netcdf files
 def download_dataset( ds_name, dir_name, start_year, end_year, area_lat_long, variables, force_download=False ):
@@ -116,7 +117,7 @@ def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, grid
 
 # 0.25 degree resolution
 
-def main(name, inp_lat, inp_long, available_groups):
+def main(name, inp_lat, inp_long, available_groups, output_raw_years):
     '''Main program to download data from Copernicus.'''
 
     # Configure parsl to use a local thread pool
@@ -145,27 +146,15 @@ def main(name, inp_lat, inp_long, available_groups):
     area0 = [ lat0, long0, lat1, long1 ]
     #area0 = None  # we are doing global downloads!
 
-    # the variables we are interested in
-    variables = [
-        '10m_u_component_of_wind',
-        '10m_v_component_of_wind',
-        '2m_dewpoint_temperature',
-        '2m_temperature',
-        #'cloud_base_height',
-        'precipitation_type',
-        #'surface_pressure',
-        'total_cloud_cover',
-        'total_precipitation',
-#        'potential_evaporation',
-#        'runoff',
-        #'forecast_albedo', 
-        'maximum_individual_wave_height',
-        'peak_wave_period',
-        #'sea_ice_cover', 
-        'sea_surface_temperature',
-        'significant_height_of_combined_wind_waves_and_swell',
+    # A few variables we haven't implemented that sound cool:
+        #'forecast_albedo',
+        #'sea_ice_cover',
         #'snow_depth',
-    ]
+
+    variables = []
+    for data_group in available_groups:
+        variables += [file[0] for file in data_groups[data_group]['files']]
+    print(f"Downloading {variables} for site {name}")
 
     # era5 back extension goes from 1950 to 1978
     download_dataset(   'reanalysis-era5-single-levels-preliminary-back-extension',
@@ -181,5 +170,5 @@ def main(name, inp_lat, inp_long, available_groups):
 
 
 if __name__ == "__main__":
-    main(**site_settings['North_Pacific'])
+    main(**site_settings['Solar_de_Uyuni'])
 

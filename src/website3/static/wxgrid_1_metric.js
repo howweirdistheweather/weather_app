@@ -14,16 +14,16 @@ document.onkeydown = function() {
         HandleDelete()
 	}
 	if (key == 38) {
-		arrowHandler(2)
+		arrowHandler(1)
 	}
 	if (key == 40) {
-		arrowHandler(-2)
+		arrowHandler(-1)
 	}
 	if (key == 37) {
-		horizontalArrowHandler(-2)
+		horizontalArrowHandler(-1)
 	}
 	if (key == 39) {
-		horizontalArrowHandler(2)
+		horizontalArrowHandler(1)
 	}
 	if (key == 13) {
 		select = null
@@ -92,6 +92,8 @@ var prevs = []
 var start_year = 0
 var is_setting = false
 var is_active = true
+var color_lists = [['#dadaeb','#9e9ac8','#54278f'],['#ffffb2','#fecc5c','#e31a1c'],['#67a9cf','#f7e3f7','#ef8a62'],['#bdd7e7','#6baed6','#1871bc'],['#bae4b3','#74c476','#006d2c'],['#ffc','#b2aa93','#110800'],['#e9a3c9','#f7f7f7','#a1d76a']]
+var color_num = 0
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.004]};
 var wxgrid_url = `http://localhost:5001/wxapp/getwxvar`;
 fetch( wxgrid_url, {   method:'GET',
@@ -110,6 +112,7 @@ fetch( wxgrid_url, {   method:'GET',
                 // parse JSON and determine some stuff
                 start_data = data;//JSON.parse( data.response );
 				start_year = start_data["data_specs"]["start_year"];
+				document.getElementById( 'location' ).innerHTML = start_data["data_specs"]["Name"];
 				compresion_types = start_data["compression"];
 				compresion = {}
 				start_data = start_data["variables"];
@@ -144,7 +147,12 @@ fetch( wxgrid_url, {   method:'GET',
 .catch(function(err) {
     console.error('Fetch Error -', err);
 });
-
+var color_selector = document.getElementById("color_selector")
+color_selector.onchange =
+		function () {
+			color_num = parseInt(color_selector.value)
+			RenderGrid()
+		};
 //var type_selector = document.getElementById('type_selector')
 //type_selector.onchange =
 //	function () {
@@ -715,7 +723,7 @@ function DrawHistogram(compresed_data){
 		if (compresion[reading_types[num]][method_types[num]]["type"] == "parabolic") {
 			expon = 2
 		}
-		
+		`
 		if (compresion[reading_types[num]][method_types[num]]["units"] == "degrees"){
 			drawDirectionLoop(expon,histo_plot,min_num,max_num,color_plot,draw)
 			mins[num] = min_num
@@ -732,7 +740,7 @@ function DrawHistogram(compresed_data){
 			}
 			return
 		}
-		
+		`
 		for (var j = 2; j < histo_plot.length-2; j++){
 			if (histo_plot[j] >= 2){
 				is_mode = true
@@ -764,17 +772,17 @@ function DrawHistogram(compresed_data){
 			
 			var fillcol = '#ffffff'
 	        draw.rect( 2, color_plot[2][i]*0.5 ).move( i*2+15, (125-color_plot[2][i])*0.5 ).attr({
-	            'fill':'#54278f',
+	            'fill':color_lists[color_num][2],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
 	        draw.rect( 2, color_plot[1][i]*0.5 ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
-	            'fill':'#9e9ac8',
+	            'fill':color_lists[color_num][1],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
 	        draw.rect( 2, color_plot[0][i]*0.5 ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
-	            'fill':'#dadaeb',
+	            'fill':color_lists[color_num][0],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
@@ -800,16 +808,16 @@ function DrawHistogram(compresed_data){
 }
 
 function drawDirectionLoop(expon,histo_plot,min_num,max_num,color_plot,draw){
-	for (var i = 10; i < 11; i++) {
+	for (var i = 0; i < 2; i++) {
 		var r2 = (color_plot[2][i]*0.5)**(1/2)
 		var r1 = (color_plot[1][i]*0.5)**(1/2)
 		var r0 = (color_plot[0][i]*0.5)**(1/2)
 		var section_ang = 2.8*Math.PI/180
 		var ang = (section_ang*i+section_ang/2)
 		var fillcol = '#ffffff'
-        draw.path(`m${125*0.25+4.5} ${285*0.5} l${Math.cos(ang)*r2} ${Math.sin(ang)*r2} a${r2},${r2} 0 1,0 ${Math.cos(ang+section_ang)*r2} ${Math.sin(ang+section_ang)*r2} z`).attr({  //.move(i*2+15, (125-color_plot[2][i])*0.5 )
+        draw.path("M200 150 l100 0 a100,100 0 0,1 -6.06 37.1 z").attr({  //.move(i*2+15, (125-color_plot[2][i])*0.5 )`m${125*0.25+4.5} ${285*0.5} l${Math.cos(ang)*r2} ${Math.sin(ang)*r2} a${r2},${r2} 0 1,0 ${Math.cos(ang+section_ang)*r2} ${Math.sin(ang+section_ang)*r2} z`
             'fill':'#54278f',
-            'shape-rendering':'crispEdges',
+//            'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
 		`
@@ -931,7 +939,7 @@ function arrowHandler(y_dif) {
 	}
 	var shift_mul = 1
 	if (event.shiftKey){
-		shift_mul = 5
+		shift_mul = 10
 	}
 	num = select[1]
 	val = select[0]
@@ -961,7 +969,7 @@ function horizontalArrowHandler(x_dif) {
 	}
 	var shift_mul = 1
 	if (event.shiftKey){
-		shift_mul = 5
+		shift_mul = 10
 	}
 	var num = select[1]
 	var val = select[0]
@@ -1062,17 +1070,17 @@ function DrawSesonalitys(compresed_data,months){
 		
 		var fillcol = '#ffffff'
         draw.rect( 9, color_plot[2][i]*0.5 ).move( i*9+35, (compresed_data.length-color_plot[2][i])*0.5 ).attr({
-            'fill':'#54278f',
+            'fill':color_lists[color_num][2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
         draw.rect( 9, color_plot[1][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
-            'fill':'#9e9ac8',
+            'fill':color_lists[color_num][1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
         draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
-            'fill':'#dadaeb',
+            'fill':color_lists[color_num][0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
@@ -1123,17 +1131,17 @@ function DrawYears(compresed_data,num_years){
 	for (var i = 0; i < compresed_data.length; i++) {
 		
         draw.rect( color_plot[2][i]*3, 9 ).move( 0, (compresed_data.length-i)*9 ).attr({
-            'fill':'#54278f',
+            'fill':color_lists[color_num][2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
         draw.rect( color_plot[1][i]*3, 9 ).move( color_plot[2][i]*3, (compresed_data.length-i)*9 ).attr({
-            'fill':'#9e9ac8',
+            'fill':color_lists[color_num][1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
         draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3, (compresed_data.length-i)*9  ).attr({
-            'fill':'#dadaeb',
+            'fill':color_lists[color_num][0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
@@ -1219,9 +1227,9 @@ function RenderGrid(){
     // var color0 = '#edf8b1';
     // var color1 = '#7fcdbb';
     // var color2 = '#2c7fb8';
-    var color0 = '#dadaeb';
-    var color1 = '#9e9ac8';
-    var color2 = '#54278f';
+    var color0 = color_lists[color_num][0];
+    var color1 = color_lists[color_num][1];
+    var color2 = color_lists[color_num][2];
 
     // create the svg drawing object and draw the grid elements    
     var total_width = boxspace * num_weeks + year_label_width;

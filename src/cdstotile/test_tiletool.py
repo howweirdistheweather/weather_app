@@ -17,7 +17,7 @@ from generate_HWITW_stats import (
     HOURS_PER_YEAR,
     WEEKS_PER_YEAR
 )
-from data_settings import (
+from extra_data_settings import (
     data_settings,
     data_settings_internal
 )
@@ -173,9 +173,9 @@ def write_full_csv(name, out_data):
     for variable, var_data in out_data['variables'].items():
         for statistic, stat_data in var_data.items():
             variable_name = f'{variable}_{statistic}'
-#            compressed_variable_name = f'compressed_{variable}_{statistic}'
-#            variable_list+=[variable_name, compressed_variable_name]
-            variable_list.append(variable_name)
+            compressed_variable_name = f'compressed_{variable}_{statistic}'
+            variable_list+=[variable_name, compressed_variable_name]
+#            variable_list.append(variable_name)
             i = 0
             year = start_year
             for year_data in stat_data['data']:
@@ -184,14 +184,14 @@ def write_full_csv(name, out_data):
                         csv_formatted_data[i].update([
                             ('year',year),
                             ('week',week),
-#                            (compressed_variable_name, value),
+                            (compressed_variable_name, value),
                             (variable_name, data_settings_internal['flat_functions'][f'inverse_{variable}_{statistic}'](value))
                         ])
                     except IndexError:
                         csv_formatted_data.append({
                             'year':year,
                             'week':week,
-#                            compressed_variable_name:value,
+                            compressed_variable_name:value,
                             variable_name:data_settings_internal['flat_functions'][f'inverse_{variable}_{statistic}'](value)
                         })
                     i += 1
@@ -202,7 +202,7 @@ def write_full_csv(name, out_data):
 ##########################################################
 # main
 
-def process_site(out_data, name, inp_lat, inp_long, available_groups):
+def process_site(out_data, name, inp_lat, inp_long, available_groups, output_raw_years):
     print(f"Processing site {name}.")
     filename = f'{name}.json'
     out_data['data_specs'].update([('Name',name)])
@@ -215,8 +215,8 @@ def process_site(out_data, name, inp_lat, inp_long, available_groups):
 
     area0 = [ lat0, long0, lat1, long1 ]
 
-    # Since 2021 data is weird, let's take a closer look.
-    export_year_to_csv(area0, 2021, name)
+    for year in output_raw_years:
+        export_year_to_csv(area0, year, name)
     valid_vars = []
     for data_group in available_groups: valid_vars.extend(data_groups[data_group]['sub_vars'])
 
@@ -230,7 +230,7 @@ def process_site(out_data, name, inp_lat, inp_long, available_groups):
     # era5 goes from 1979 to present
     log2 = load_netcdfs(out_data,
                         'cds_era5',
-                        1979, current_time.year,
+                        1979, 2021,
                         area0,
                         available_groups)
 
