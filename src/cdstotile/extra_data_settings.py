@@ -133,7 +133,7 @@ extra_data_settings = {
                 "compression": "water_flux"
             }
         },
-        "ocean_temperature": {
+        "ocean_temp": {
             "avg": {
                 "description": "",
                 "long_name": "Average ocean temperature over the week",
