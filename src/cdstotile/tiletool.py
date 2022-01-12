@@ -29,7 +29,7 @@ WEEKS_PER_YEAR = 52
 NUM_LONGIDX_GLOBAL = 1440
 NUM_LATIDX_GLOBAL  = 721
 
-APP_VERSION = "0.66"
+APP_VERSION = "0.70"
 current_time = datetime.datetime.now()
 
 # the variables we are interested, long name and short name.
@@ -290,7 +290,7 @@ def CalcQtrDegGridNum( area_lat_long ):
 ##########################################################
 # main
 def main():
-    print( f'** HWITW tile tool v{APP_VERSION} **\n')
+    print( f'** HWITW data processing tool v{APP_VERSION} **\n')
 
     input_path = '.'
     output_path = '.'
