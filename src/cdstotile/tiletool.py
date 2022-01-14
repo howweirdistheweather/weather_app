@@ -16,7 +16,7 @@ import concurrent.futures
 
 from generate_HWITW_stats import *
 from data_settings import data_settings
-from data_groups import data_groups
+from data_groups import data_groups, all_variables
 
 
 # ignoring leap years (i.e. week 53)!
@@ -32,46 +32,37 @@ NUM_LATIDX_GLOBAL  = 721
 APP_VERSION = "0.70"
 current_time = datetime.datetime.now()
 
-# the variables we are interested, long name and short name.
-# short name is used inside the netcdf files
-CDSVAR_U10      = ['10m_u_component_of_wind', 'u10']
-CDSVAR_V10      = ['10m_v_component_of_wind', 'v10']
-CDSVAR_D2M      = ['2m_dewpoint_temperature', 'd2m']
-CDSVAR_T2M      = ['2m_temperature',          't2m']
-CDSVAR_CBH      = ['cloud_base_height',       'cbh']
-CDSVAR_PTYPE    = ['precipitation_type',      'ptype']
-CDSVAR_TCC      = ['total_cloud_cover',       'tcc']
-CDSVAR_TP       = ['total_precipitation',     'tp']
 
-asdfprocess_settings = [
-    {
-        'data_group': 'temperature_and_humidity',
-        'files': [CDSVAR_T2M, CDSVAR_D2M],
-        'analyze': do_temp_dp,
-        'analysis_kwargs': {
-            'lon': 0.0
-        }
-    },
-    {
-        'data_group': 'wind',
-        'files': [CDSVAR_U10, CDSVAR_V10],
-        'analyze': do_wind,
-        'analysis_kwargs': {}
-    },
-    {
-        'data_group': 'precipitation',
-        'files': [CDSVAR_TP, CDSVAR_PTYPE],
-        'analyze': do_precip,
-        'analysis_kwargs': {}
-    },
-    {
-        'data_group': 'cloud_cover',
-        'files': [CDSVAR_TCC],
-        'analyze': do_cloud_cover,
-        'analysis_kwargs': {}
-    }
+global_data_groups = ['temperature_and_humidity','wind','precipitation','cloud_cover']
+#process_settings = [
+    #{
+        #'data_group': 'temperature_and_humidity',
+        #'files': [CDSVAR_T2M, CDSVAR_D2M],
+        #'analyze': do_temp_dp,
+        #'analysis_kwargs': {
+            #'lon': 0.0
+        #}
+    #},
+    #{
+        #'data_group': 'wind',
+        #'files': [CDSVAR_U10, CDSVAR_V10],
+        #'analyze': do_wind,
+        #'analysis_kwargs': {}
+    #},
+    #{
+        #'data_group': 'precipitation',
+        #'files': [CDSVAR_TP, CDSVAR_PTYPE],
+        #'analyze': do_precip,
+        #'analysis_kwargs': {}
+    #},
+    #{
+        #'data_group': 'cloud_cover',
+        #'files': [CDSVAR_TCC],
+        #'analyze': do_cloud_cover,
+        #'analysis_kwargs': {}
+    #}
 
-]
+#]
 
 
 # make full pathname string for Global var nc input file
@@ -84,26 +75,41 @@ def var_filename( inp_path:str, dir_name:str, year:int, var_name:str ) -> (str, 
     return fullname, filename
 
 
-# make full pathname string for Global output json file
-def out_filename( out_path:str, dgroup_name:str, year:int, week:int ) -> (str, str, str):
-    # file naming scheme
+# make full pathname string for a Global output netcdf file
+def out_filename( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> (dict):
+    week = week_idx + 1
     pathname = f'{out_path}/tt_output/{year}/'
     # filename = f'gn{grid_num}-{year}-{var_name}.nc'
-    filename = f'global-{dgroup_name}-{year}-{week}.nc'
+    filestr = f'hwglobal-{dgroup_name}-{year}-{week}'
+    filename = filestr + '.nc'
+    tempfilename = filestr +'.tempnc'
     fullname = pathname + filename
-    return pathname, fullname, filename
+    tempfullname = pathname + tempfilename
+    o_names = {
+        'pathname':pathname,
+        'fullname':fullname,
+        'filename':filename,
+        'tempfullname':tempfullname
+    }
+    return o_names
+
+
+# does output file already exist
+def output_exists( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> bool:
+    o_names = out_filename( out_path, dgroup_name, year, week_idx )
+    return os.path.isfile( o_names['fullname'] )
 
 
 # create output netcdf
 def create_output( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> (netCDF4.Dataset, str):
     # create & initialize the output dataset
-    o_pathname, o_fullname, o_filename = out_filename( out_path, dgroup_name, year, week_idx + 1 )
-    os.makedirs( o_pathname, exist_ok=True )    # create the path if necessary
+    o_names = out_filename( out_path, dgroup_name, year, week_idx )
+    os.makedirs( o_names['pathname'], exist_ok=True )    # create the path if necessary
 
     try:
-        ods = netCDF4.Dataset( o_fullname, "w", format="NETCDF4" )
+        ods = netCDF4.Dataset( o_names['tempfullname'], "w", format="NETCDF4" )
     except OSError:
-        print( f'{o_filename} could not be opened!' )
+        print( f'output {o_names["filename"]} could not be created!' )
         exit(-1)
 
     ods.createDimension( "latitude",  NUM_LATIDX_GLOBAL )
@@ -117,7 +123,12 @@ def create_output( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> (n
     longitude[:] = [(i * 360.0 / NUM_LONGIDX_GLOBAL) for i in range( NUM_LONGIDX_GLOBAL )]
     longitude.units = 'degrees_east'
 
-    return (ods, o_filename)
+    return (ods, o_names)
+
+
+# rename temporary output
+def rename_finished_output( o_names:dict ):
+    os.rename( o_names['tempfullname'], o_names['fullname'] )
 
 
 # write to output netcdf
@@ -179,15 +190,18 @@ def process_lat( lat_i:int, lat_data, data_group:dict ):
 
 
 # process one full year for one data_group
-def process_data_group( inp_path:str, out_path:str, dir_name:str, year:int, dg_name:str, data_group:dict ):
-    print( f"Analyzing {dg_name}..." )
+def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str, year:int, dg_name:str, data_group:dict ):
+    fcalc = flag_args[ 'force_recalc' ]
+    show_progress = flag_args[ 'show_progress' ]
+
+    if show_progress: print( f"Analyzing {dg_name}..." )
     # open all the netcdf input files needed to process this data_group
     ncds_group = []
     for var in data_group['files']:
         var_name = var[0]
         short_var_name = var[1]
 
-        # make sure file exists
+        # make sure input file exists
         fullname, filename = var_filename( inp_path, dir_name, year, var_name )
         already_exists = os.path.isfile( fullname )
         if not already_exists:
@@ -202,7 +216,7 @@ def process_data_group( inp_path:str, out_path:str, dir_name:str, year:int, dg_n
             print( f'{filename} could not be opened!' )
             exit(-1)
 
-        # these should all be true for a global var nc1
+        # these should all be true for a global var nc
         total_num_hours = ds.dimensions['time'].size
         num_lat         = ds.dimensions['latitude'].size
         num_long        = ds.dimensions['longitude'].size
@@ -210,21 +224,29 @@ def process_data_group( inp_path:str, out_path:str, dir_name:str, year:int, dg_n
         assert num_long == NUM_LONGIDX_GLOBAL
         assert num_lat == NUM_LATIDX_GLOBAL
 
-        # store the ds
+        # store the Dataset
         ncds_group.append( {
             'dataset':          ds,
             'var_name':         var_name,
-            'short_var_name':   short_var_name } )
+            'short_var_name':   short_var_name
+        } )
 
     # for each week of the year...
     num_weeks = WEEKS_PER_YEAR
     for week_i in range( num_weeks ):
 
-        # store output in this guy
-        ods, o_filename = create_output( out_path, dg_name, year, week_i )
-        print( f'\rOutput {o_filename}', end='', flush=True )
+        # if output file already exists and not force_recalc, skip this one
+        if output_exists( out_path, dg_name, year, week_i ) and (fcalc == False):
+            print( f'\rSkipping completed output {dg_name}-{year}-{week_i+1}' )
+            continue
 
-        # for each ds needed by the data_group
+        ods, o_names = create_output( out_path, dg_name, year, week_i )
+        if show_progress:
+            print( f'\rOutput {o_names["filename"]}', end='', flush=True )
+        else:
+            print( f'\rOutput {o_names["filename"]}', flush=True )
+
+        # for each Dataset needed by the data_group
         week_data = []
         for ncds in ncds_group:
             ds =                ncds['dataset']
@@ -252,17 +274,17 @@ def process_data_group( inp_path:str, out_path:str, dir_name:str, year:int, dg_n
             # wait for futures and save to ods
             cnt = 1
             for lf in lfuts:
-                print( f'\rOutput {o_filename} {year} week {week_i+1}/{num_weeks} latitude {cnt}/{num_lat} ', end='', flush=True )
+                if show_progress: print( f'\rOutput {o_names["filename"]} {year} week {week_i+1}/{num_weeks} latitude {cnt}/{num_lat} ', end='', flush=True )
                 olat = lf.result()
                 save_output( ods, olat )
                 cnt += 1
 
         # clear the progress output line from screen
-        print( f'\rOutput {o_filename} ...done                         ', flush=True )
+        if show_progress: print( f'\rOutput {o_names["filename"]} done.                            ', flush=True )
 
-        # close ods file
+        # close ods file and rename to mark as done
         ods.close()
-        # todo: rename ods file to mark it as done.
+        rename_finished_output( o_names )
 
     # free the input ds objects
     for ncds in ncds_group:
@@ -270,7 +292,7 @@ def process_data_group( inp_path:str, out_path:str, dir_name:str, year:int, dg_n
 
 
 # for all years process data_groups'
-def load_netcdfs( inp_path:str, out_path:str, dir_name:str, start_year:int, end_year:int ):
+def load_netcdfs( flag_args:dict, inp_path:str, out_path:str, dir_name:str, start_year:int, end_year:int ):
     # calculate a unique number for each quarter degree on the planet.
     # makes having a unique filename for the coordinates simpler.
     #grid_num = CalcQtrDegGridNum( area_lat_long )
@@ -278,8 +300,9 @@ def load_netcdfs( inp_path:str, out_path:str, dir_name:str, start_year:int, end_
     for year in years:
         yidx = year - start_year
         
-        for dg_name, data_group in data_groups.items():
-            process_data_group( inp_path, out_path, dir_name, year, dg_name, data_group );
+        for dg_name in global_data_groups:
+            dg = data_groups[ dg_name ]
+            process_data_group( flag_args, inp_path, out_path, dir_name, year, dg_name, dg );
 
 
 def CalcQtrDegGridNum( area_lat_long ):
@@ -292,6 +315,7 @@ def CalcQtrDegGridNum( area_lat_long ):
 def main():
     print( f'** HWITW data processing tool v{APP_VERSION} **\n')
 
+    # default options
     input_path = '.'
     output_path = '.'
 
@@ -299,7 +323,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument( "-i", "--input", help = "Set input path" )
     parser.add_argument( "-o", "--output", help = "Set output path" )
+    parser.add_argument( "-f", "--force", action='store_true', help = "Force recalculation of all output" )
+    parser.add_argument( "-p", "--progress", action='store_true', help = "Show fancy progress" )
     args = parser.parse_args()
+
+    flag_args = {
+        'force_recalc':args.force,
+        'show_progress':args.progress }
+
+    show_progress = args.progress
 
     if args.input:
         input_path = args.input
@@ -316,10 +348,10 @@ def main():
         exit( -1 )
 
     # era5 goes from 1979 to present
-    load_netcdfs(  input_path, output_path, 'cds_era5', 1979, current_time.year )
+    load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
 
     # era5 back extension goes from 1950 to 1978
-    load_netcdfs(  input_path, output_path, 'cds_era5_backext', 1950, 1978 )
+    load_netcdfs( flag_args, input_path, output_path, 'cds_era5_backext', 1950, 1978 )
 
 
 if __name__ == '__main__':
