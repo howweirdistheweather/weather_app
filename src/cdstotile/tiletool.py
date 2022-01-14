@@ -31,38 +31,8 @@ NUM_LATIDX_GLOBAL  = 721
 
 APP_VERSION = "0.70"
 current_time = datetime.datetime.now()
-
-
+# what data processing to do for the whole globe (as opposed to specific locations)
 global_data_groups = ['temperature_and_humidity','wind','precipitation','cloud_cover']
-#process_settings = [
-    #{
-        #'data_group': 'temperature_and_humidity',
-        #'files': [CDSVAR_T2M, CDSVAR_D2M],
-        #'analyze': do_temp_dp,
-        #'analysis_kwargs': {
-            #'lon': 0.0
-        #}
-    #},
-    #{
-        #'data_group': 'wind',
-        #'files': [CDSVAR_U10, CDSVAR_V10],
-        #'analyze': do_wind,
-        #'analysis_kwargs': {}
-    #},
-    #{
-        #'data_group': 'precipitation',
-        #'files': [CDSVAR_TP, CDSVAR_PTYPE],
-        #'analyze': do_precip,
-        #'analysis_kwargs': {}
-    #},
-    #{
-        #'data_group': 'cloud_cover',
-        #'files': [CDSVAR_TCC],
-        #'analyze': do_cloud_cover,
-        #'analysis_kwargs': {}
-    #}
-
-#]
 
 
 # make full pathname string for Global var nc input file
@@ -147,7 +117,7 @@ def save_output( ods:netCDF4.Dataset, odat:dict ):
                 nc_var[lat_idx] = numpy.asarray( stat, dtype=numpy.uint8 )
 
 
-# store output data in a dictionary
+# store hig stats output data in a dictionary
 def store_out_lat( odat:dict, var_name:str, stat_name:str, lat_i:int, long_i:int, wk_value ):
     if not var_name in odat.keys():
         odat[ var_name ] = { stat_name: { lat_i: [None for i in range(NUM_LONGIDX_GLOBAL)] } }
