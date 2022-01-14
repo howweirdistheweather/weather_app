@@ -152,7 +152,7 @@ def do_ocean_temp(raw_ocean_temp_data: numpy.array((1, HOURS_PER_WEEK), dtype=fl
             range_raw = max_temp_raw-min_temp_raw
         else:
             return {
-                'ocean_temperature':{
+                'ocean_temp':{
                     'avg':255,
                     'max':255,
                     'min':255,
@@ -170,12 +170,12 @@ def do_ocean_temp(raw_ocean_temp_data: numpy.array((1, HOURS_PER_WEEK), dtype=fl
                 elif temp > max_temp_raw: max_temp_raw = temp
         average_raw = total_raw / HOURS_PER_WEEK
         range_raw = max_temp_raw - min_temp_raw
-    avg = flat_functions['ocean_temperature_avg'](K_to_C(average_raw))
-    min = flat_functions['ocean_temperature_min'](K_to_C(min_temp_raw))
-    max = flat_functions['ocean_temperature_max'](K_to_C(max_temp_raw))
-    temp_range = flat_functions['ocean_temperature_range'](range_raw)
+    avg = flat_functions['ocean_temp_avg'](K_to_C(average_raw))
+    min = flat_functions['ocean_temp_min'](K_to_C(min_temp_raw))
+    max = flat_functions['ocean_temp_max'](K_to_C(max_temp_raw))
+    temp_range = flat_functions['ocean_temp_range'](range_raw)
     return {
-        "ocean_temperature":{
+        "ocean_temp":{
             'avg':avg,
             'max':max,
             'min':min,

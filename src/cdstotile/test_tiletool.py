@@ -51,22 +51,30 @@ class bcolors:
 APP_VERSION = "0.50"
 current_time = datetime.datetime.now()
 
-def flatten_cds(ds):
-    flattened_array = ds[0:HOURS_PER_YEAR,0,0] #Truncate, pulling out the first dimension, since lat & lon are constant
-    return flattened_array.flatten() #May be too short - current year doesn't have enough hours. Without .flatten() it's an array of 1-element arrays
-
-def flatten_cds_2021(ds): #This is very slow. Is there any more efficient way to detect the break between the two expver columns?
-    #This hunts for nulls, and if there's a null checks for a real value in the other expver column. Very slow.
-    #Check for a NumPy "memscan" type function
-    flattened_array = numpy.full((HOURS_PER_YEAR),-32767 , dtype = numpy.float32)#Start out with an array of Nulls (-32767)
-    try:
-        for i in range(HOURS_PER_YEAR):
-            value = ds[i,0,0,0]
-            if value > -32767: flattened_array[i] = value
-            else:
-                flattened_array[i] = ds[i,1,0,0]
-    except IndexError: pass #We ran out of input arrays, so we're done.
-    return flattened_array
+def universal_flatten_cds(ds):
+    dimensions = len(ds.dimensions)
+    if dimensions == 3:
+        time_size = len(ds[:,0,0])
+        if time_size >= HOURS_PER_YEAR:
+            flattened_array = ds[0:HOURS_PER_YEAR,0,0] #Truncate, pulling out the first dimension, since lat & lon are constant
+            return flattened_array.flatten() #May be too short - current year doesn't have enough hours. Without .flatten() it's an array of 1-element arrays
+        else:
+            flattened_array = numpy.full((HOURS_PER_YEAR), -32767, dtype=numpy.float32)  # Start out with an array of Nulls (-32767)
+            flattened_array[0:time_size] = ds[0:time_size,0,0]
+            return flattened_array
+    elif dimensions == 4:
+        #This hunts for nulls, and if there's a null checks for a real value in the other expver column. Very slow.
+        #Check for a NumPy "memscan" type function
+        flattened_array = numpy.full((HOURS_PER_YEAR),-32767 , dtype = numpy.float32)#Start out with an array of Nulls (-32767)
+        try:
+            for i in range(HOURS_PER_YEAR):
+                value = ds[i,0,0,0]
+                if value > -32767: flattened_array[i] = value
+                else:
+                    flattened_array[i] = ds[i,1,0,0]
+        except IndexError: pass #We ran out of input arrays, so we're done.
+        return flattened_array
+    else: raise RuntimeError(f"Unknown dataset - it should have either 3 or 4 dimensions, but instead has {dimensions}.")
 
 def export_cds_to_csv(ds,name):
     out_array = ds[0:,0,0]
@@ -101,8 +109,7 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long, availa
             except OSError:
                 print( bcolors.FAIL + f'{filename} could not be opened!' + bcolors.ENDC )
                 exit(-1)
-            if year == 2021: raw_data.append(flatten_cds_2021(ds[files[i][1]])) #Now this is the only divergence between 2021 and other years.
-            else: raw_data.append(flatten_cds(ds[files[i][1]]))
+            raw_data.append(universal_flatten_cds(ds[files[i][1]]))
         start_time = time.time()
         analysis_function = analyze
         for week in range(WEEKS_PER_YEAR):
@@ -160,8 +167,7 @@ def export_year_to_csv(area_lat_long, year, filename):
         except OSError:
             print( bcolors.FAIL + f'{filepath} could not be opened!' + bcolors.ENDC )
             exit(-1)
-        if year == 2021: this_array = flatten_cds_2021(ds[all_variables[i][1]])
-        else: this_array = flatten_cds(ds[all_variables[i][1]])
+        this_array = universal_flatten_cds(ds[all_variables[i][1]])
         stored_data.update([(var[0],this_array)])
     write_csv_from_dict_of_lists(f"{year}_data_{filename}.csv",stored_data)
 
@@ -202,7 +208,7 @@ def write_full_csv(name, out_data):
 ##########################################################
 # main
 
-def process_site(out_data, name, inp_lat, inp_long, available_groups, output_raw_years):
+def process_site(out_data, name, end_year, inp_lat, inp_long, available_groups, output_raw_years):
     print(f"Processing site {name}.")
     filename = f'{name}.json'
     out_data['data_specs'].update([('Name',name)])
@@ -230,7 +236,7 @@ def process_site(out_data, name, inp_lat, inp_long, available_groups, output_raw
     # era5 goes from 1979 to present
     log2 = load_netcdfs(out_data,
                         'cds_era5',
-                        1979, 2021,
+                        1979, end_year,
                         area0,
                         available_groups)
 
