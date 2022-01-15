@@ -89,10 +89,12 @@ var has_reading = false
 var all_data = []
 var short_names = {}
 var prevs = []
+var PDO = [-2.24, -1.12, -1.55, -0.64, -0.4, -2.07, -1.81, 0.29, 0.86, 0.27, 0.04, -0.57, -1.1, -0.24, -0.89, -0.14, -0.44, -0.74, -0.15, -0.34, -0.4, -1.32, -1.14, -1.14, -0.3, -1.41, -0.15, 0.05, 0.07, 0.11, 0.31, 0.84, -0.26, 1.25, 0.6, 0.03, 1.01, 1.14, -0.04, -0.5, -0.83, -0.88, 0.76, 1.04, -0.49, 0.44, 0.68, 1.32, -0.48, -1.84, -1.13, -1.13, -0.44, 0.38, -0.22, -0.19, -0.35, -0.7, -1.66, -1.03, -1.06, -1.81, -1.73, -1.17, 0.55, 0.92, 0.67, -0.1, -0.36, -0.15, -1.14, -1.88]
+var ENSO = [-1.31, 0.45, 0.03, 0.65, -0.45, -1.16, -0.97, 0.6, 0.58, 0.09, -0.13, -0.06, -0.34, 0.44, -0.55, 0.88, 0.46, -0.29, -0.05, 0.72, -0.3, -1.04, 0.96, -0.67, -1.0, -1.24, -0.04, 0.86, 0.03, 0.26, 0.31, -0.17, 0.97, 1.22, -0.32, -0.43, 0.3, 1.37, -0.87, -0.82, 0.18, 0.61, 1.16, 0.88, 0.5, -0.18, -0.61, 1.17, 0.32, -1.24, -0.85, -0.39, 0.35, 0.17, 0.14, -0.02, 0.02, -0.6, -1.09, -0.03, -0.89, -1.34, -0.32, -0.41, -0.02, 1.28, 0.45, -0.5, -0.29, 0.34, -0.59, -1.2]
 var start_year = 0
 var is_setting = false
 var is_active = true
-var color_lists = [['#dadaeb','#9e9ac8','#54278f'],['#ffffb2','#fecc5c','#e31a1c'],['#67a9cf','#f7e3f7','#ef8a62'],['#bdd7e7','#6baed6','#1871bc'],['#bae4b3','#74c476','#006d2c'],['#ffc','#b2aa93','#110800'],['#e9a3c9','#f7f7f7','#a1d76a']]
+var color_lists = [['#dadaeb','#9e9ac8','#54278f'],['#ffffb2','#fecc5c','#e31a1c'],['#1871bc','#f7e3f7','#ef8a62'],['#bdd7e7','#6baed6','#1871bc'],['#bae4b3','#74c476','#006d2c'],['#ffc','#b2aa93','#110800'],['#e9a3c9','#f7f7f7','#a1d76a']]
 var color_num = 0
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.004]};
 var wxgrid_url = `http://localhost:5001/wxapp/getwxvar`;
@@ -1124,42 +1126,94 @@ function DrawYears(compresed_data,num_years){
 		}
 	}
 	document.getElementById( 'gr_years').innerHTML = ""; // clear existing
-	var draw = SVG().addTo('#gr_years').size( 52*3, (compresed_data.length+1)*9 );
+	var draw = SVG().addTo('#gr_years').size( 52*3 + 22, (compresed_data.length+1)*9.5 - 0.5 );
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
+	console.log(compresed_data.length)
 	for (var i = 0; i < compresed_data.length; i++) {
 		
-        draw.rect( color_plot[2][i]*3, 9 ).move( 0, (compresed_data.length-i)*9 ).attr({
+        draw.rect( color_plot[2][i]*3, 9 ).move( 22, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
             'fill':color_lists[color_num][2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( color_plot[1][i]*3, 9 ).move( color_plot[2][i]*3, (compresed_data.length-i)*9 ).attr({
+        draw.rect( color_plot[1][i]*3, 9 ).move( color_plot[2][i]*3 + 22, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
             'fill':color_lists[color_num][1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3, (compresed_data.length-i)*9  ).attr({
+        draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3 + 22, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
             'fill':color_lists[color_num][0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
+		if ((i < PDO.length) && (PDO[i] > 0.75)) {
+	        draw.rect( 9, 9 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	            'fill':color_lists[2][2],
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
+		else if ((i < PDO.length) && (PDO[i] > -0.75)) {
+	        draw.rect( 9, 9 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	            'fill':color_lists[2][1],
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
+		else if (i < PDO.length) {
+	        draw.rect( 9, 9 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	            'fill':color_lists[2][0],
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
+		if ((i < ENSO.length) && (ENSO[i] > 0.75)) {
+	        draw.rect( 9, 9 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	            'fill':color_lists[2][2],
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
+		else if ((i < ENSO.length) && (ENSO[i] > -0.75)) {
+	        draw.rect( 9, 9 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	            'fill':color_lists[2][1],
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
+		else if (i < ENSO.length) {
+	        draw.rect( 9, 9 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	            'fill':color_lists[2][0],
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        });
+		}
 	}
 	for (var i = 0; i < 4; i++) {
-        draw.rect( 2, (compresed_data.length+1)*9 ).move( i*31+31, 0  ).attr({
+        draw.rect( 2, (compresed_data.length+1)*9 ).move( i*31+53, 0  ).attr({
             'fill':'#ffffff66',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
 	}
 	for (year of line_years) {
-        draw.rect( 52*3, 1 ).move( 0, year[1]*9+9  ).attr({
+        draw.rect( 52*3 +22, 1 ).move( 0, year[1]*9+9 + compresed_data.length/2+5).attr({
             'fill':'#ffffff'+year[0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
 	}
+    let btextPDO = draw.text( `- PDO` ).font('size',10).font('family','Arial');
+    let bwPDO = btextPDO.length();   
+	let bhPDO = btextPDO.bbox().height; // bbox is double for some reason.     
+    btextPDO.center(4.5,compresed_data.length/2+9-2).rotate(270);
+	
+    let btextENSO = draw.text( `- ENSO` ).font('size',10).font('family','Arial');
+    let bwENSO = btextENSO.length();   
+	let bhENSO = btextENSO.bbox().height; // bbox is double for some reason.     
+    btextENSO.center(15.5 ,compresed_data.length/2+9-5.5).rotate(270);
 }
 
 // Renders SVG weather grid/heatmap thing
