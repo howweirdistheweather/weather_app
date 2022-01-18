@@ -29,13 +29,14 @@ WEEKS_PER_YEAR = 52
 NUM_LONGIDX_GLOBAL = 1440
 NUM_LATIDX_GLOBAL  = 721
 
-APP_VERSION = "0.70"
+APP_VERSION = "0.72"
 current_time = datetime.datetime.now()
+
 # what data processing to do for the whole globe (as opposed to specific locations)
 global_data_groups = ['temperature_and_humidity','wind','precipitation','cloud_cover']
 
 
-# make full pathname string for Global var nc input file
+# make full pathname string for Global var netcdf input file
 def var_filename( inp_path:str, dir_name:str, year:int, var_name:str ) -> (str, str):
     # file naming scheme
     pathname = f'{inp_path}/{dir_name}/{year}/'
@@ -46,11 +47,10 @@ def var_filename( inp_path:str, dir_name:str, year:int, var_name:str ) -> (str, 
 
 
 # make full pathname string for a Global output netcdf file
-def out_filename( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> (dict):
-    week = week_idx + 1
+def out_filename( out_path:str, dgroup_name:str, year:int ) -> (dict):
     pathname = f'{out_path}/tt_output/{year}/'
     # filename = f'gn{grid_num}-{year}-{var_name}.nc'
-    filestr = f'hwglobal-{dgroup_name}-{year}-{week}'
+    filestr = f'hwglobal-{dgroup_name}-{year}'
     filename = filestr + '.nc'
     tempfilename = filestr +'.tempnc'
     fullname = pathname + filename
@@ -65,15 +65,15 @@ def out_filename( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> (di
 
 
 # does output file already exist
-def output_exists( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> bool:
-    o_names = out_filename( out_path, dgroup_name, year, week_idx )
+def output_exists( out_path:str, dgroup_name:str, year:int ) -> bool:
+    o_names = out_filename( out_path, dgroup_name, year )
     return os.path.isfile( o_names['fullname'] )
 
 
 # create output netcdf
-def create_output( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> (netCDF4.Dataset, str):
+def create_output( out_path:str, dgroup_name:str, year:int ) -> (netCDF4.Dataset, str):
     # create & initialize the output dataset
-    o_names = out_filename( out_path, dgroup_name, year, week_idx )
+    o_names = out_filename( out_path, dgroup_name, year )
     os.makedirs( o_names['pathname'], exist_ok=True )    # create the path if necessary
 
     try:
@@ -82,8 +82,13 @@ def create_output( out_path:str, dgroup_name:str, year:int, week_idx:int ) -> (n
         print( f'output {o_names["filename"]} could not be created!' )
         exit(-1)
 
+    ods.createDimension( "week",      WEEKS_PER_YEAR )
     ods.createDimension( "latitude",  NUM_LATIDX_GLOBAL )
     ods.createDimension( "longitude", NUM_LONGIDX_GLOBAL )
+
+    week_var = ods.createVariable( 'Week', 'f4', 'week' )
+    week_var[:] = [ range(1, WEEKS_PER_YEAR+1) ]
+    week_var.units = 'weeks'
 
     latitude = ods.createVariable( 'Latitude', 'f4', 'latitude' )
     latitude[:] = [(90 - (i * 180.25 / NUM_LATIDX_GLOBAL)) for i in range( NUM_LATIDX_GLOBAL )]
@@ -101,23 +106,25 @@ def rename_finished_output( o_names:dict ):
     os.rename( o_names['tempfullname'], o_names['fullname'] )
 
 
-# write to output netcdf
-def save_output( ods:netCDF4.Dataset, odat:dict ):
+# write to netcdf output Dataset
+def save_output( ods:netCDF4.Dataset, week_idx:int, odat:dict ):
     # iterate thru the odat dictionary & save stuff to ods
     for ovar_name, ovar in odat.items():
         for stat_name, lat_dat in ovar.items():
             comb_name = ovar_name + '.' + stat_name
             if not comb_name in ods.variables:
-                nc_var = ods.createVariable( comb_name, 'u1', ("latitude", "longitude") )
-                #nc_var.description =
-                #annotate with descriptino compression type etc
+                nc_var = ods.createVariable( comb_name, 'u1', ("week","latitude", "longitude") )
+                #todo: annotate with descriptino compression type etc
+                nc_var.description = data_settings['variables'][ovar_name][stat_name]['long_name']
+                comp_type = data_settings['variables'][ovar_name][stat_name]['compression']
+                nc_var.units = comp_type + json.dumps( data_settings['compression'][comp_type] )
 
             nc_var = ods.variables[ comb_name ]
             for lat_idx, stat in lat_dat.items():
-                nc_var[lat_idx] = numpy.asarray( stat, dtype=numpy.uint8 )
+                nc_var[week_idx, lat_idx] = numpy.asarray( stat, dtype=numpy.uint8 )
 
 
-# store hig stats output data in a dictionary
+# store the hig stats output data in a dictionary.
 def store_out_lat( odat:dict, var_name:str, stat_name:str, lat_i:int, long_i:int, wk_value ):
     if not var_name in odat.keys():
         odat[ var_name ] = { stat_name: { lat_i: [None for i in range(NUM_LONGIDX_GLOBAL)] } }
@@ -161,8 +168,14 @@ def process_lat( lat_i:int, lat_data, data_group:dict ):
 
 # process one full year for one data_group
 def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str, year:int, dg_name:str, data_group:dict ):
+
     fcalc = flag_args[ 'force_recalc' ]
     show_progress = flag_args[ 'show_progress' ]
+
+    # if output file already exists and not force_recalc, skip this one. it is done.
+    if output_exists( out_path, dg_name, year ) and (fcalc == False):
+        print( f'\rSkipping completed output {dg_name}-{year}' )
+        return
 
     if show_progress: print( f"Analyzing {dg_name}..." )
     # open all the netcdf input files needed to process this data_group
@@ -201,20 +214,17 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             'short_var_name':   short_var_name
         } )
 
+    # create netcdf Output file
+    ods, o_names = create_output( out_path, dg_name, year )
+    if show_progress:
+        print( f'\rOutput {o_names["filename"]}', end='', flush=True )
+    else:
+        print( f'\rOutput {o_names["filename"]}', flush=True )
+
+
     # for each week of the year...
     num_weeks = WEEKS_PER_YEAR
     for week_i in range( num_weeks ):
-
-        # if output file already exists and not force_recalc, skip this one
-        if output_exists( out_path, dg_name, year, week_i ) and (fcalc == False):
-            print( f'\rSkipping completed output {dg_name}-{year}-{week_i+1}' )
-            continue
-
-        ods, o_names = create_output( out_path, dg_name, year, week_i )
-        if show_progress:
-            print( f'\rOutput {o_names["filename"]}', end='', flush=True )
-        else:
-            print( f'\rOutput {o_names["filename"]}', flush=True )
 
         # for each Dataset needed by the data_group
         week_data = []
@@ -246,15 +256,15 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             for lf in lfuts:
                 if show_progress: print( f'\rOutput {o_names["filename"]} {year} week {week_i+1}/{num_weeks} latitude {cnt}/{num_lat} ', end='', flush=True )
                 olat = lf.result()
-                save_output( ods, olat )
+                save_output( ods, week_i, olat )
                 cnt += 1
 
-        # clear the progress output line from screen
-        if show_progress: print( f'\rOutput {o_names["filename"]} done.                            ', flush=True )
+    # clear the progress output line from screen
+    if show_progress: print( f'\rOutput {o_names["filename"]} done.                            ', flush=True )
 
-        # close ods file and rename to mark as done
-        ods.close()
-        rename_finished_output( o_names )
+    # close ods file and rename to mark as done
+    ods.close()
+    rename_finished_output( o_names )
 
     # free the input ds objects
     for ncds in ncds_group:
