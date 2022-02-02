@@ -59,6 +59,8 @@ var lines = []
 var invert_btns = []
 var file_names = []
 var mins = []
+var states = []
+var state_index = null
 var maxes = []
 var select = null
 var select_draw = null
@@ -272,6 +274,7 @@ function makeNewMeasurmeant(curent_id_num) {
 			}
 			DrawLines(curent_id_num)
 			RenderGrid()
+			updateStates()
 		};
 	reading_dropdowns[curent_id_num].onchange =
 		function () {
@@ -426,6 +429,7 @@ function deleteMeasurement() {
 	invert_btns.splice(-1)
 	measurement.remove()
 	measurement_index --
+	updateStates()
 }
 
 function reset_sliders(num){
@@ -586,6 +590,7 @@ function LoadMethodDropdown(num) {
 	}
 	DrawLines(num)
 	RenderGrid()
+	updateStates()
 	
 }
 function LoadDirectionDropdown(num) {
@@ -904,6 +909,7 @@ function RegisterClick(num,event) {
 	click_coords[num][click_x] = click_y
 	DrawLines(num)
 	RenderGrid()
+	updateStates()
 }
 
 function HandleDelete() {
@@ -933,6 +939,7 @@ function HandleDelete() {
 	select = null
 	DrawLines(num)
 	RenderGrid()
+	updateStates()
 }
 
 function arrowHandler(y_dif) {
@@ -963,6 +970,7 @@ function arrowHandler(y_dif) {
     });
 	DrawLines(num)
 	RenderGrid()
+	updateStates()
 }
 
 function horizontalArrowHandler(x_dif) {
@@ -1014,6 +1022,7 @@ function horizontalArrowHandler(x_dif) {
     });
 	DrawLines(num)
 	RenderGrid()
+	updateStates()
 }
 
 function DrawLines(num) {
@@ -1126,7 +1135,7 @@ function DrawYears(compresed_data,num_years){
 		}
 	}
 	document.getElementById( 'gr_years').innerHTML = ""; // clear existing
-	var draw = SVG().addTo('#gr_years').size( 52*3 + 22, (compresed_data.length+1)*9.5 - 0.5 );
+	var draw = SVG().addTo('#gr_years').size( 52*3 + 22, (compresed_data.length+1)*9.5+10 );
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
@@ -1192,7 +1201,7 @@ function DrawYears(compresed_data,num_years){
 		}
 	}
 	for (var i = 0; i < 4; i++) {
-        draw.rect( 2, (compresed_data.length+1)*9 ).move( i*31+53, 0  ).attr({
+        draw.rect( 2, (compresed_data.length+1)*9.5+10 ).move( i*31+53, 0  ).attr({
             'fill':'#ffffff66',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
@@ -1205,17 +1214,45 @@ function DrawYears(compresed_data,num_years){
             'stroke-width': 0 
         });
 	}
+	var PDOoffset = compresed_data.length-PDO.length
+	var ENSOoffset = compresed_data.length-ENSO.length
     let btextPDO = draw.text( `- PDO` ).font('size',10).font('family','Arial');
     let bwPDO = btextPDO.length();   
 	let bhPDO = btextPDO.bbox().height; // bbox is double for some reason.     
-    btextPDO.center(4.5,compresed_data.length/2+9-2).rotate(270);
+    btextPDO.center(4.5,compresed_data.length/2+9*PDOoffset-2).rotate(270);
 	
     let btextENSO = draw.text( `- ENSO` ).font('size',10).font('family','Arial');
     let bwENSO = btextENSO.length();   
 	let bhENSO = btextENSO.bbox().height; // bbox is double for some reason.     
-    btextENSO.center(15.5 ,compresed_data.length/2+9-5.5).rotate(270);
+    btextENSO.center(15.5 ,compresed_data.length/2+9*ENSOoffset-5.5).rotate(270);
 }
-
+function updateStates(){
+	state_dict = {
+		'mins':mins.slice(),
+		'maxes':maxes.slice(),
+		'compresed_data':compresed_data.slice(),
+		'is_valid':is_valid,
+		'wx_grdata_min':wx_grdata_min,
+		'wx_grdata_max':wx_grdata_max,
+		'wx_range_val0':wx_range_val0,
+		'wx_range_val1':wx_range_val1,
+		'weight_val':weight_val,
+		'weight_val2':weight_val2,
+		'click_coords':click_coords.slice(),
+		'weight_vals':weight_vals.slice(),
+		'close_btns':close_btns,
+		'measurement_index':measurement_index,
+		'reading_types':reading_types.slice(),
+		'method_types':method_types.slice(),
+		'prevs':prevs.slice()
+	}
+	if (state_index != null){
+		states = states.slice(0,state_index+1)
+	}
+	state_index ++
+	states.push(state_dict)
+	console.log(states)
+}
 // Renders SVG weather grid/heatmap thing
 function RenderGrid(){
     if ( wx_grdata == null )
@@ -1384,7 +1421,8 @@ function RenderGrid(){
     }
 	DrawSesonalitys(wx_data,months)
 	DrawYears(wx_data,num_years)
+	
 
 };
 //file:///Users/katmai/Downloads/test.json
-//file:///Users/katmai/Downloads/test.json
+//file:///Users/katmai/Downloads/test.json 
