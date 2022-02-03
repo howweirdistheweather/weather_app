@@ -1158,42 +1158,42 @@ function DrawYears(compresed_data,num_years){
             'stroke-width': 0 
         });
 		if ((i < PDO.length) && (PDO[i] > 0.75)) {
-	        draw.rect( 9, 9 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
 	            'fill':color_lists[2][2],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
 		}
 		else if ((i < PDO.length) && (PDO[i] > -0.75)) {
-	        draw.rect( 9, 9 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
 	            'fill':color_lists[2][1],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
 		}
 		else if (i < PDO.length) {
-	        draw.rect( 9, 9 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
 	            'fill':color_lists[2][0],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
 		}
 		if ((i < ENSO.length) && (ENSO[i] > 0.75)) {
-	        draw.rect( 9, 9 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
 	            'fill':color_lists[2][2],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
 		}
 		else if ((i < ENSO.length) && (ENSO[i] > -0.75)) {
-	        draw.rect( 9, 9 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
 	            'fill':color_lists[2][1],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
 	        });
 		}
 		else if (i < ENSO.length) {
-	        draw.rect( 9, 9 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+	        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
 	            'fill':color_lists[2][0],
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
