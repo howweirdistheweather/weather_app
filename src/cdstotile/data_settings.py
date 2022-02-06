@@ -187,13 +187,13 @@ data_settings = {
                 "description":"",
                 "long_name":"Total snowfall over the week (water equivalent)",
                 "short_name":"Total snow",
-                "compression":"precipitation_sensitive"
+                "compression":"precipitation"
             },
             'total_wet_snow':{
                 "description":"",
                 "long_name":"Total wet snow over the week (water equivalent)",
                 "short_name":"Total wet snow",
-                "compression":"precipitation_sensitive"
+                "compression":"precipitation"
             },
             'total_freezing_rain':{
                 "description":"",
