@@ -345,7 +345,7 @@ def main():
         exit( -1 )
 
     # era5 goes from 1979 to present
-    load_netcdfs( flag_args, input_path, output_path, 'cds_era5', current_time.year, current_time.year )#1979, current_time.year )
+    load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
 
     # era5 back extension goes from 1950 to 1978
     load_netcdfs( flag_args, input_path, output_path, 'cds_era5_backext', 1950, 1978 )
