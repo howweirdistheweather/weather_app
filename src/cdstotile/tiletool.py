@@ -71,23 +71,23 @@ def output_exists( out_path:str, dgroup_name:str, year:int ) -> bool:
 
 
 # create output netcdf
-def create_output( out_path:str, dgroup_name:str, year:int ) -> (netCDF4.Dataset, str):
+def create_output( out_path:str, dgroup_name:str, year:int, num_weeks:int ) -> (netCDF4.Dataset, str):
     # create & initialize the output dataset
     o_names = out_filename( out_path, dgroup_name, year )
     os.makedirs( o_names['pathname'], exist_ok=True )    # create the path if necessary
 
     try:
-        ods = netCDF4.Dataset( o_names['tempfullname'], "w", format="NETCDF4" )
+        ods = netCDF4.Dataset( o_names['tempfullname'], mode="w", clobber=True, format="NETCDF4" )
     except OSError:
-        print( f'output {o_names["filename"]} could not be created!' )
+        print( f'output {o_names["tempfullname"]} could not be created!' )
         exit(-1)
 
-    ods.createDimension( "week",      WEEKS_PER_YEAR )
+    ods.createDimension( "week",      num_weeks )
     ods.createDimension( "latitude",  NUM_LATIDX_GLOBAL )
     ods.createDimension( "longitude", NUM_LONGIDX_GLOBAL )
 
     week_var = ods.createVariable( 'Week', 'f4', 'week' )
-    week_var[:] = [ range(1, WEEKS_PER_YEAR+1) ]
+    week_var[:] = [ range(1, num_weeks+1) ]
     week_var.units = 'weeks'
 
     latitude = ods.createVariable( 'Latitude', 'f4', 'latitude' )
@@ -192,7 +192,6 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             return
 
         # load file
-        #print( f'loading {filename}', flush=True )
         try:
             ds = netCDF4.Dataset( fullname, 'r' )
         except OSError:
@@ -200,12 +199,15 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             exit(-1)
 
         # these should all be true for a global var nc
-        total_num_hours = ds.dimensions['time'].size
+        total_num_hours = min( ds.dimensions['time'].size, HOURS_PER_YEAR )
         num_lat         = ds.dimensions['latitude'].size
         num_long        = ds.dimensions['longitude'].size
-        assert total_num_hours >= 8753  #HOURS_PER_YEAR ...whats up with this 8753 hours?
+        num_dimensions  = len(ds.dimensions)
+
+        assert total_num_hours >= 0
         assert num_long == NUM_LONGIDX_GLOBAL
         assert num_lat == NUM_LATIDX_GLOBAL
+        assert (num_dimensions == 3 or num_dimensions == 4)
 
         # store the Dataset
         ncds_group.append( {
@@ -215,15 +217,15 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         } )
 
     # create netcdf Output file
-    ods, o_names = create_output( out_path, dg_name, year )
+    num_weeks = min( total_num_hours // HOURS_PER_WEEK, WEEKS_PER_YEAR )
+    ods, o_names = create_output( out_path, dg_name, year, num_weeks )
     if show_progress:
         print( f'\rOutput {o_names["filename"]}', end='', flush=True )
     else:
         print( f'\rOutput {o_names["filename"]}', flush=True )
 
 
-    # for each week of the year...
-    num_weeks = WEEKS_PER_YEAR
+    # for each week present in the data
     for week_i in range( num_weeks ):
 
         # for each Dataset needed by the data_group
@@ -235,7 +237,22 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             # load the weeks worth of hours (for all locations in file). transpose to lat,long,hour
             hr_0 = week_i * HOURS_PER_WEEK
             hr_1 = hr_0 + HOURS_PER_WEEK
-            var_week = numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:], axes=(1, 2, 0) )
+            if num_dimensions == 3:
+                var_week = numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:], axes=(1, 2, 0) )
+
+            elif num_dimensions == 4:
+                # handle current year. it has a weird expver column / extra dimension
+                var_week = numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:][:], axes=(2, 3, 0, 1) )
+                # convert invalids to 0
+                var_week = numpy.ma.filled( var_week, 0 )
+                # sum columns on dimension 3 and then drop column 1
+                var_week[:, :, :, 0] = var_week[:, :, :, 0] + var_week[:, :, :, 1]
+                var_week = numpy.delete( var_week, 1, axis=3 )
+
+
+            else:
+                raise RuntimeError(f"Unknown dataset - it should have either 3 or 4 dimensions, but instead has {num_dimensions}.")
+
             assert( var_week.dtype == numpy.float64 )
             week_data.append( var_week )
 
@@ -260,7 +277,7 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
                 cnt += 1
 
     # clear the progress output line from screen
-    if show_progress: print( f'\rOutput {o_names["filename"]} done.                            ', flush=True )
+    if show_progress: print( f'\rOutput {o_names["filename"]} done.                                 ', flush=True )
 
     # close ods file and rename to mark as done
     ods.close()
@@ -328,7 +345,7 @@ def main():
         exit( -1 )
 
     # era5 goes from 1979 to present
-    load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
+    load_netcdfs( flag_args, input_path, output_path, 'cds_era5', current_time.year, current_time.year )#1979, current_time.year )
 
     # era5 back extension goes from 1950 to 1978
     load_netcdfs( flag_args, input_path, output_path, 'cds_era5_backext', 1950, 1978 )
