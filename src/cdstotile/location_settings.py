@@ -29,7 +29,7 @@ site_settings = {
         "inp_lat": 59.45,
         "inp_long":-151.72,
         "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought', 'ocean_temp'],
-        "output_raw_years":[2021],
+        "output_raw_years":[1989, 2021],
 #        "notes":"geocode: 861233"
     },
     "Sterling":{

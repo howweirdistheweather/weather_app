@@ -83,19 +83,19 @@ extra_data_settings = {
                 "description": "",
                 "long_name": "Total surface and subsurface runoff through the week",
                 "short_name": "Total runoff",
-                "compression": "precipitation"
+                "compression": "water_flux"
             },
             "p90": {
                 "description": "",
                 "long_name": "90th percentile high runoff",
                 "short_name": "90th percentile",
-                "compression": "precipitation_very_sensitive"
+                "compression": "water_flux_sensitive"
             },
             "max": {
                 "description": "",
                 "long_name": "Maximum single-hour runoff for the week",
                 "short_name": "Maximum runoff",
-                "compression": "precipitation_very_sensitive"
+                "compression": "water_flux_sensitive"
             }
         },
         "drought": {
