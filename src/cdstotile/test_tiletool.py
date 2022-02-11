@@ -258,7 +258,9 @@ def process_site(out_data, name, end_year, inp_lat, inp_long, available_groups, 
         json.dump( out_data, outfile )
     write_full_csv(name,out_data)
 
-print( f'** HWITW tile tool v{APP_VERSION} **\n')
 
-for site in [site_settings[name] for name in ready_locations]:
-    process_site(copy.deepcopy(data_settings), **site)
+
+if __name__ == "__main__":
+    print(f'** HWITW tile tool v{APP_VERSION} **\n')
+    for site in [site_settings[name] for name in ready_locations]:
+        process_site(copy.deepcopy(data_settings), **site)
