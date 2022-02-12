@@ -1,4 +1,5 @@
 import copy
+import math
 import os
 from test_tiletool import *
 from data_groups import *
@@ -19,6 +20,35 @@ grid_num = int( ((area0[0] + 90) * 4) * 360 * 4 + ((area0[1] + 180) * 4) )
 
 year = 1989
 
+def test_similarity(variable, statistic, processed, independent, verbose=False):
+    cmp_name = data_settings['variables'][variable][statistic]['compression']
+    cmp_info = data_settings['compression'][cmp_name]
+    cmp_type = cmp_info['type']
+    cmp_scale = cmp_info['scale']
+    if cmp_type == 'linear':
+        try: assert abs(processed-independent) < cmp_scale*2
+        except AssertionError as error_text:
+            print(f'{processed} too dissimilar to {independent}: difference {abs(processed-independent)} greater than threshold {cmp_scale*2}')
+            print(error_text)
+            raise AssertionError
+        if verbose:
+            print(f'Comparing {variable} {statistic} processed: {processed} (via {cmp_type}), independent: {independent}, difference: {abs(processed-independent)}, 2x scale: {2*cmp_scale}')
+    elif cmp_type in ['parabolic', 'signed_parabolic']:
+        try:
+            assert processed == independent or \
+                   0.95 < processed/independent < 1.05 or \
+                   (math.sqrt(independent) < cmp_scale*3 and math.sqrt(processed) < cmp_scale*3)
+        except AssertionError as error_text:
+            print(f'{processed} too dissimilar to {independent}: ratio {processed/independent} > 5% different and sqrt source ({math.sqrt(independent)}) > {cmp_scale*3}.')
+            print(error_text)
+            raise AssertionError
+        if verbose:
+            if independent > 0:
+                if math.sqrt(independent) > cmp_scale * 3:
+                    print(f'Comparing {variable} {statistic} processed: {processed} (via {cmp_type}), independent: {independent}, ratio: {processed/independent}, scale: {cmp_scale}')
+                else: print(f'Independent value {independent} close enough to zero relative to scale {cmp_scale} that a larger discrepancy is acceptable as long as processed {processed} is also close to zero.')
+            else: print(f'Both processed {processed} and independent {independent} are zero.')
+
 def load_file(filename, key):
     already_exists = os.path.isfile(filename)  # and os.path.getsize( fullname ) > 500
     if not already_exists:
@@ -31,18 +61,24 @@ def load_file(filename, key):
         exit(-1)
     return universal_flatten_cds(ds[key])
 
-def test_temp_RH():
+def compare_test_results(test_results, independent_values, verbose=False):
+    test_results_decompressed = copy.deepcopy(test_results) #Will be overwritten by decompressed values
+    for variable,details in test_results_decompressed.items():
+        for statistic, value in details.items():
+            test_results_decompressed[variable][statistic] = data_settings_internal['flat_functions'][f'inverse_{variable}_{statistic}'](value)
+    #Compare to values computed in excel:
+    for variable,details in test_results_decompressed.items():
+        for statistic, value in details.items():
+            independent = independent_values[variable][statistic]
+            test_similarity(variable,statistic,value,independent, verbose)
+
+def test_temp_RH(verbose=False):
     temp_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-2m_temperature.nc','t2m')
     DP_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-2m_dewpoint_temperature.nc', 'd2m')
     test_data = numpy.zeros((2,HOURS_PER_WEEK), dtype=float)
     test_data[0] = temp_raw[0:HOURS_PER_WEEK]
     test_data[1] = DP_raw[0:HOURS_PER_WEEK]
     test_results = do_temp_dp(test_data, area0) #A dict like {"temperature":{"min":xxx,"p10":...},"relative_humidity":{"p10":xxx,"p50":...}}
-    test_results_decompressed = copy.deepcopy(test_results) #Will be overwritten by decompressed values
-    for variable,details in test_results_decompressed.items():
-        for statistic, value in details.items():
-            test_results_decompressed[variable][statistic] = data_settings_internal['flat_functions'][f'inverse_{variable}_{statistic}'](value)
-    #Compare to values computed in excel:
     independent_values = {
         "temperature":{
             "min":-2.428058784,
@@ -60,10 +96,52 @@ def test_temp_RH():
             "p90":0.97510
         }
     }
-    for variable,details in test_results_decompressed.items():
-        for statistic, value in details.items():
-            independent = independent_values[variable][statistic]
-            print(f'For {variable} {statistic}: {value} vs. {independent} ({round(value/independent*100)}%)')
+    compare_test_results(test_results, independent_values, verbose)
 
-test_temp_RH()
 
+def test_wind(verbose=False):
+    U_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-10m_u_component_of_wind.nc', 'u10')
+    V_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-10m_v_component_of_wind.nc', 'v10')
+    test_data = numpy.zeros((2,HOURS_PER_WEEK), dtype=float)
+    test_data[0] = U_raw[0:HOURS_PER_WEEK]
+    test_data[1] = V_raw[0:HOURS_PER_WEEK]
+    test_results = do_wind(test_data, area0)
+    independent_values = {"wind":{
+        "speed_avg":8.480671507,
+        "speed_max":15.88650145,
+        "speed_net":2.102308947,
+        "dir_net":340.0535809,
+        "dir_modal":272 #2-degree bin width
+    }}
+    compare_test_results(test_results, independent_values, verbose)
+
+def test_precip(verbose=False):
+    amount_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-total_precipitation.nc', 'tp')
+    type_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-precipitation_type.nc', 'ptype')
+    test_data = numpy.zeros((2,HOURS_PER_WEEK), dtype=float)
+    test_data[0] = amount_raw[0:HOURS_PER_WEEK]
+    test_data[1] = type_raw[0:HOURS_PER_WEEK]
+    test_results = do_precip(test_data, area0)
+    independent_values = {
+        "precipitation":{
+            "total":0.060222441,
+            "total_rain":0.026671887,
+            "total_snow":0.0000611576,
+            "total_wet_snow":0.033482141,
+            "total_ice_pellets":0,
+            "total_freezing_rain":0,
+            "p90":0.001120499,
+            "max":0.003818076
+        }
+    }
+    compare_test_results(test_results, independent_values, verbose)
+
+def test_all():
+    test_temp_RH()
+    test_wind()
+    test_precip()
+
+if __name__ == '__main__':
+    test_temp_RH(verbose=True)
+    test_wind(verbose=True)
+    test_precip(verbose=True)
