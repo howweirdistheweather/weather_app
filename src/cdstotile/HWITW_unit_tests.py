@@ -98,7 +98,6 @@ def test_temp_RH(verbose=False):
     }
     compare_test_results(test_results, independent_values, verbose)
 
-
 def test_wind(verbose=False):
     U_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-10m_u_component_of_wind.nc', 'u10')
     V_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-10m_v_component_of_wind.nc', 'v10')
@@ -136,12 +135,30 @@ def test_precip(verbose=False):
     }
     compare_test_results(test_results, independent_values, verbose)
 
+def test_cloud_cover(verbose=False):
+    clouds_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-total_cloud_cover.nc', 'tcc')
+    test_data = numpy.zeros((1,HOURS_PER_WEEK), dtype=float)
+    test_data[0] = clouds_raw[0:HOURS_PER_WEEK]
+    test_results = do_cloud_cover(test_data, area0)
+    independent_values = {
+        "cloud_cover":{
+            "p25":0.584987716,
+            "p50":0.993346863,
+            "p75":1.0,
+            "p_sunny":0.041666667,
+            "p_cloudy":0.636904762
+        }
+    }
+    compare_test_results(test_results, independent_values, verbose)
+
 def test_all():
     test_temp_RH()
     test_wind()
     test_precip()
+    test_cloud_cover()
 
 if __name__ == '__main__':
     test_temp_RH(verbose=True)
     test_wind(verbose=True)
     test_precip(verbose=True)
+    test_cloud_cover(verbose=True)

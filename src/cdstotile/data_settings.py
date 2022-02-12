@@ -44,7 +44,7 @@ data_settings = {
         },
         "proportion":{
             "min":0,
-            "scale":0.0039,
+            "scale":0.00394,
             "type":"linear",
             "units":""
         },
