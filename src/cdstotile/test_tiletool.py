@@ -34,6 +34,8 @@ from data_groups import (
     data_groups,
     all_variables
 )
+from HWITW_unit_tests import test_all
+
 
 # a helper class for printing color text
 class bcolors:
@@ -75,6 +77,8 @@ def universal_flatten_cds(ds):
         except IndexError: pass #We ran out of input arrays, so we're done.
         return flattened_array
     else: raise RuntimeError(f"Unknown dataset - it should have either 3 or 4 dimensions, but instead has {dimensions}.")
+
+test_all(universal_flatten_cds)
 
 def export_cds_to_csv(ds,name):
     out_array = ds[0:,0,0]

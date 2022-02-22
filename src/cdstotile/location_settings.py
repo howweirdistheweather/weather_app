@@ -1,5 +1,6 @@
 ready_locations = [
     "Seldovia",
+    "Seattle",
     "Batagaika",
     "Dubai",
     "Grewingk",
@@ -167,6 +168,14 @@ site_settings = {
         "end_year":2022,
         "inp_lat":47.6,
         "inp_long":-122.336,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "Aachen":{
+        "name":"Seattle",
+        "end_year":2022,
+        "inp_lat":50.77,
+        "inp_long":6.08,
         "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
         "output_raw_years":[]
     }

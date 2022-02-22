@@ -1,8 +1,7 @@
-import copy
-import math
 import os
-from test_tiletool import *
-from data_groups import *
+import netCDF4
+#from test_tiletool import * #This should be eliminated so that test_tiletool.py
+from data_settings import *
 from location_settings import *
 from generate_HWITW_stats import *
 
@@ -49,17 +48,17 @@ def test_similarity(variable, statistic, processed, independent, verbose=False):
                 else: print(f'Independent value {independent} close enough to zero relative to scale {cmp_scale} that a larger discrepancy is acceptable as long as processed {processed} is also close to zero.')
             else: print(f'Both processed {processed} and independent {independent} are zero.')
 
-def load_file(filename, key):
+def load_file(filename, key, flatten_function):
     already_exists = os.path.isfile(filename)  # and os.path.getsize( fullname ) > 500
     if not already_exists:
-        print(bcolors.WARNING + f'{filename} is missing!' + bcolors.ENDC)
+        print(f'{filename} is missing!' + bcolors.ENDC)
     print(f'processing {filename}')
     try:
         ds = netCDF4.Dataset(filename)
     except OSError:
-        print(bcolors.FAIL + f'{filename} could not be opened!' + bcolors.ENDC)
+        print(f'{filename} could not be opened!' + bcolors.ENDC)
         exit(-1)
-    return universal_flatten_cds(ds[key])
+    return flatten_function(ds[key])
 
 def compare_test_results(test_results, independent_values, verbose=False):
     test_results_decompressed = copy.deepcopy(test_results) #Will be overwritten by decompressed values
@@ -72,9 +71,9 @@ def compare_test_results(test_results, independent_values, verbose=False):
             independent = independent_values[variable][statistic]
             test_similarity(variable,statistic,value,independent, verbose)
 
-def test_temp_RH(verbose=False):
-    temp_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-2m_temperature.nc','t2m')
-    DP_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-2m_dewpoint_temperature.nc', 'd2m')
+def test_temp_RH(flatten_function, verbose=False):
+    temp_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-2m_temperature.nc','t2m', flatten_function)
+    DP_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-2m_dewpoint_temperature.nc', 'd2m', flatten_function)
     test_data = numpy.zeros((2,HOURS_PER_WEEK), dtype=float)
     test_data[0] = temp_raw[0:HOURS_PER_WEEK]
     test_data[1] = DP_raw[0:HOURS_PER_WEEK]
@@ -98,9 +97,9 @@ def test_temp_RH(verbose=False):
     }
     compare_test_results(test_results, independent_values, verbose)
 
-def test_wind(verbose=False):
-    U_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-10m_u_component_of_wind.nc', 'u10')
-    V_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-10m_v_component_of_wind.nc', 'v10')
+def test_wind(flatten_function, verbose=False):
+    U_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-10m_u_component_of_wind.nc', 'u10', flatten_function)
+    V_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-10m_v_component_of_wind.nc', 'v10', flatten_function)
     test_data = numpy.zeros((2,HOURS_PER_WEEK), dtype=float)
     test_data[0] = U_raw[0:HOURS_PER_WEEK]
     test_data[1] = V_raw[0:HOURS_PER_WEEK]
@@ -114,9 +113,9 @@ def test_wind(verbose=False):
     }}
     compare_test_results(test_results, independent_values, verbose)
 
-def test_precip(verbose=False):
-    amount_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-total_precipitation.nc', 'tp')
-    type_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-precipitation_type.nc', 'ptype')
+def test_precip(flatten_function, verbose=False):
+    amount_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-total_precipitation.nc', 'tp', flatten_function)
+    type_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-precipitation_type.nc', 'ptype', flatten_function)
     test_data = numpy.zeros((2,HOURS_PER_WEEK), dtype=float)
     test_data[0] = amount_raw[0:HOURS_PER_WEEK]
     test_data[1] = type_raw[0:HOURS_PER_WEEK]
@@ -135,8 +134,8 @@ def test_precip(verbose=False):
     }
     compare_test_results(test_results, independent_values, verbose)
 
-def test_cloud_cover(verbose=False):
-    clouds_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-total_cloud_cover.nc', 'tcc')
+def test_cloud_cover(flatten_function, verbose=False):
+    clouds_raw = load_file(f'./cds_era5/{year}/gn{grid_num}-{year}-total_cloud_cover.nc', 'tcc', flatten_function)
     test_data = numpy.zeros((1,HOURS_PER_WEEK), dtype=float)
     test_data[0] = clouds_raw[0:HOURS_PER_WEEK]
     test_results = do_cloud_cover(test_data, area0)
@@ -151,14 +150,9 @@ def test_cloud_cover(verbose=False):
     }
     compare_test_results(test_results, independent_values, verbose)
 
-def test_all():
-    test_temp_RH()
-    test_wind()
-    test_precip()
-    test_cloud_cover()
-
-if __name__ == '__main__':
-    test_temp_RH(verbose=True)
-    test_wind(verbose=True)
-    test_precip(verbose=True)
-    test_cloud_cover(verbose=True)
+def test_all(flatten_function, verbose=False):
+    test_temp_RH(flatten_function, verbose=verbose)
+    test_wind(flatten_function, verbose=verbose)
+    test_precip(flatten_function, verbose=verbose)
+    test_cloud_cover(flatten_function, verbose=verbose)
+    print('  Unit tests completed successfully')
