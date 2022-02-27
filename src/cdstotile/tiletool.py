@@ -315,6 +315,9 @@ def main():
     # default options
     input_path = '.'
     output_path = '.'
+    start_year = 1979
+    end_year = current_time.year
+    data_dir = 'cds_era5'
 
     # Initialize parser
     parser = argparse.ArgumentParser()
@@ -322,6 +325,8 @@ def main():
     parser.add_argument( "-o", "--output", help = "Set output path" )
     parser.add_argument( "-f", "--force", action='store_true', help = "Force recalculation of all output" )
     parser.add_argument( "-p", "--progress", action='store_true', help = "Show fancy progress" )
+    parser.add_argument( "-s", "--start", help = "Set start year" )
+    parser.add_argument( "-e", "--end", help = "Set end year" )
     args = parser.parse_args()
 
     flag_args = {
@@ -344,11 +349,21 @@ def main():
         print( f'output path does not exist: {output_path}' )
         exit( -1 )
 
+    if args.start:
+        start_year = int(args.start)
+
+    if args.end:
+        end_year = int(args.end)
+
+    if end_year < 1979:
+        data_dir = 'cds_era5_backext'
+
     # era5 goes from 1979 to present
-    load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
+    #load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
+    load_netcdfs( flag_args, input_path, output_path, data_dir, start_year, end_year )
 
     # era5 back extension goes from 1950 to 1978
-    load_netcdfs( flag_args, input_path, output_path, 'cds_era5_backext', 1950, 1978 )
+    #load_netcdfs( flag_args, input_path, output_path, 'cds_era5_backext', 1950, 1978 )
 
 
 if __name__ == '__main__':
