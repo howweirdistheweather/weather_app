@@ -29,7 +29,7 @@ WEEKS_PER_YEAR = 52
 NUM_LONGIDX_GLOBAL = 1440
 NUM_LATIDX_GLOBAL  = 721
 
-APP_VERSION = "0.72"
+APP_VERSION = "0.72.0"
 current_time = datetime.datetime.now()
 
 # what data processing to do for the whole globe (as opposed to specific locations)
