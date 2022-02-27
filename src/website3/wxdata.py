@@ -32,7 +32,7 @@ def get_wxvar_list():
     return HPO_VARIABLES
 
 def get_wxvar( var_lat, var_long ):
-    with open( 'Seldovia.json', 'r') as infile:
+    with open( 'examples/Seldovia.json', 'r') as infile:
         wxvar_json = infile.read()
         infile.close()
     return wxvar_json
