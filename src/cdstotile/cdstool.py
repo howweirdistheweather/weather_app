@@ -183,6 +183,13 @@ def main():
                         1979, current_time.year,
                         area0, variables, force_download )
 
+    # call one more time to always force_download the current year.
+    # so we pick up the latest data
+    download_dataset(   'reanalysis-era5-single-levels',
+                        'cds_era5',
+                        current_time.year, current_time.year,
+                        area0, variables, force_download=True )
+
 
 if __name__ == "__main__":
     main()
