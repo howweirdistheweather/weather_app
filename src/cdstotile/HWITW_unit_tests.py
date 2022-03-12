@@ -5,8 +5,9 @@ from data_settings import *
 from location_settings import *
 from generate_HWITW_stats import *
 
-inp_lat = site_settings['Seldovia']['inp_lat']
-inp_long = site_settings['Seldovia']['inp_long']
+location = "Seldovia"
+inp_lat = site_settings[location]['inp_lat']
+inp_long = site_settings[location]['inp_long']
 
 lat0 = math.ceil(inp_lat * 4) / 4
 lat1 = (math.floor(inp_lat * 4) / 4)  # + 0.01 # edge is not inclusive
@@ -151,6 +152,7 @@ def test_cloud_cover(flatten_function, verbose=False):
     compare_test_results(test_results, independent_values, verbose)
 
 def test_all(flatten_function, verbose=False):
+    print(f'  Testing statistics, compression, and decompression code using {location} in {year} (first week of year). For example reading ./cds_era5/{year}/gn{grid_num}-{year}-2m_temperature.nc')
     test_temp_RH(flatten_function, verbose=verbose)
     test_wind(flatten_function, verbose=verbose)
     test_precip(flatten_function, verbose=verbose)
