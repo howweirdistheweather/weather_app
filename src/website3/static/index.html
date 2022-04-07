@@ -125,12 +125,13 @@
   <div id=data_storage></div>
   <div style="padding-bottom: 5px;">HWITW project Copyright (C) 2020 2021</div>
   <select id=color_selector style="display: inline-block;"><option value="0">purple</option><option value="1">red</option><option value="2">hot-cold</option><option value="3">blue</option><option value="4">green</option><option value="5">sepia</option><option value="6">pastell</option></select>
+  <select id=unit_selector style="display: inline-block;"><option value="0">metric</option><option value="1">american</option></select>
   <div id=location style="display: inline-block;"></div> <!--  margin-left: 100px;-->
   <!--select id=type_selector><option value="1">one metric</option><option value="2">two metrics</option></select>
   <button type="button" id=save_measurement_button style="display: inline-block;">save</button></div>
   <button type="button" id=load_measurement_button style="display: inline-block;">load</button></div-->
   <hr>
-  <div id=gr_plot class="center_horisontal">
+
 	<div id=gr_choices class="center_verticle" style="overflow: auto; display: inline-block;">
 		<div id=measurements></div>
 		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="measurement_button">add new measurement</button></div>
@@ -144,16 +145,22 @@
 		  </div>
 	    </div>
 	</div>
-    <div id=outer0 style="margin:0 auto; display: inline-block; overflow: auto; margin-left: 10px;">
+    <div id=outer0 style=" display: inline-block; overflow: auto; margin-left: 10px">
 	    <div id=gr_sesonalitys style="display: inline-block;"></div>
 		<div id=gr_years style="float: right; display: inline-block; margin-left: 15px;"></div>
 	    <div>
-	      
+      
 	    <!--div id=mouseover_box style="z-index: 1; width: 46.82%; height: 100%; background-color: rgba(0,0,0,0); left: 19.78%; padding-top: 9px; position: fixed;">
 		  <div style="width: 9; height: 9; background-color: rgba(0,0,0,0);"></div>
 	    </div-->
           <div id=gr_grid style="display: inline-block; padding-top: 9px;" title=""></div>
 	    </div>
+    </div>
+    <div id=click_data style="display: inline-block; overflow: auto;">
+	    <div id=histos style="display: inline-block; padding-bottom: 20px; align-items: vertical;"></div>
+		<div id=tables style="display: inline-block;">
+		</div>
+	
     </div>
 	<!--div id=gr_choices2 class="center_verticle" style="overflow: auto; display: none; float: right; margin-left: 10px;">
 		<div id=measurements2></div>
@@ -168,7 +175,7 @@
 		  </div>
 	    </div>
 	</div-->
-  </div>
+
   <link href="nouislider/nouislider.css" rel="stylesheet">
   <script src="nouislider/nouislider.js"></script>
   <script src="wxgrid_1_metric.js"></script>
