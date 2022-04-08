@@ -1,5 +1,5 @@
 # utility to process downloaded netcdf files into processed output data
-# HWITW (C) 2021
+# HWITW (C) 2021, 2022
 #
 import math
 import copy
@@ -180,6 +180,7 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
     if show_progress: print( f"Analyzing {dg_name}..." )
     # open all the netcdf input files needed to process this data_group
     ncds_group = []
+    total_num_hours = HOURS_PER_YEAR
     for var in data_group['files']:
         var_name = var[0]
         short_var_name = var[1]
@@ -199,7 +200,7 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             exit(-1)
 
         # these should all be true for a global var nc
-        total_num_hours = min( ds.dimensions['time'].size, HOURS_PER_YEAR )
+        total_num_hours = min( ds.dimensions['time'].size, total_num_hours )
         num_lat         = ds.dimensions['latitude'].size
         num_long        = ds.dimensions['longitude'].size
         num_dimensions  = len(ds.dimensions)
@@ -224,7 +225,6 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
     else:
         print( f'\rOutput {o_names["filename"]}', flush=True )
 
-
     # for each week present in the data
     for week_i in range( num_weeks ):
 
@@ -248,7 +248,6 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
                 # sum columns on dimension 3 and then drop column 1
                 var_week[:, :, :, 0] = var_week[:, :, :, 0] + var_week[:, :, :, 1]
                 var_week = numpy.delete( var_week, 1, axis=3 )
-
 
             else:
                 raise RuntimeError(f"Unknown dataset - it should have either 3 or 4 dimensions, but instead has {num_dimensions}.")
@@ -360,10 +359,13 @@ def main():
 
     # era5 goes from 1979 to present
     #load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
-    load_netcdfs( flag_args, input_path, output_path, data_dir, start_year, end_year )
+    #load_netcdfs( flag_args, input_path, output_path, data_dir, start_year, end_year )
 
     # era5 back extension goes from 1950 to 1978
-    #load_netcdfs( flag_args, input_path, output_path, 'cds_era5_backext', 1950, 1978 )
+    load_netcdfs( flag_args, input_path, output_path, 'cds_era5_backext', 1950, 1978 )
+
+    # era5 goes from 1979 to present
+    load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
 
 
 if __name__ == '__main__':
