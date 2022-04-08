@@ -1,5 +1,8 @@
 ready_locations = [
     "Seldovia",
+    "Yakutat",
+    "McMurdo",
+    "Aachen",
     "Seattle",
     "Batagaika",
     "Dubai",
@@ -172,10 +175,34 @@ site_settings = {
         "output_raw_years":[]
     },
     "Aachen":{
-        "name":"Seattle",
+        "name":"Aachen",
         "end_year":2022,
         "inp_lat":50.77,
         "inp_long":6.08,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "McMurdo":{
+        "name":"McMurdo",
+        "end_year":2022,
+        "inp_lat":-77.85,
+        "inp_long":166.69,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "Yakutat":{
+        "name":"Yakutat",
+        "end_year":2022,
+        "inp_lat":59.55,
+        "inp_long":-139.73,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "Melbourne":{
+        "name":"Melbourne",
+        "end_year":2022,
+        "inp_lat":-37.8,
+        "inp_long":144.9,
         "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
         "output_raw_years":[]
     }
