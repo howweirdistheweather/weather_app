@@ -1,5 +1,13 @@
 ready_locations = [
     "Seldovia",
+    "Yakutat",
+    "McMurdo",
+    "Aachen",
+    "Seattle",
+    "Batagaika",
+    "Dubai",
+    "Grewingk",
+    "Solar_de_Uyuni",
     "Galveston",
     "Offshore_of_Kodiak",
     "Southern_Bering_Sea",
@@ -10,7 +18,8 @@ ready_locations = [
     "Puerto_Maldonado",
     "Phoenix",
     "Little_Diomede",
-    "North_Pacific"
+    "North_Pacific",
+    "Alert"
 ]
 
 site_settings = {
@@ -25,7 +34,7 @@ site_settings = {
         "inp_lat": 59.45,
         "inp_long":-151.72,
         "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought', 'ocean_temp'],
-        "output_raw_years":[2021],
+        "output_raw_years":[1989, 2021],
 #        "notes":"geocode: 861233"
     },
     "Sterling":{
@@ -83,7 +92,7 @@ site_settings = {
         'inp_lat':53.213405,
         'inp_long':-135.854727,
         "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temp'],
-        "output_raw_years":[2019,2020,2021],
+        "output_raw_years":[2016,2019,2020,2021],
     },
     "North_Pacific":{
         "name":"North_Pacific",
@@ -91,7 +100,7 @@ site_settings = {
         'inp_lat':48.715849,
         'inp_long':-176.966171,
         "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temp'],
-        "output_raw_years":[2019,2020,2021],
+        "output_raw_years":[2016,2019,2020,2021],
     },
     "Southern_Bering_Sea":{
         "name":"Southern_Bering_Sea",
@@ -99,7 +108,7 @@ site_settings = {
         "inp_lat":54.217174,
         "inp_long":-169.193876,
         "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temp'],
-        "output_raw_years":[2019,2020,2021],
+        "output_raw_years":[2016,2019,2020,2021],
     },
     "Offshore_of_Kodiak":{
         "name":"Offshore_of_Kodiak",
@@ -107,7 +116,7 @@ site_settings = {
         "inp_lat":53.211884,
         "inp_long":-154.708915,
         "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover','waves','ocean_temp'],
-        "output_raw_years":[2019,2020,2021],
+        "output_raw_years":[2016,2019,2020,2021],
     },
     "Galveston":{
         "name":"Galveston",
@@ -124,5 +133,77 @@ site_settings = {
         "inp_long":-68.1,
         "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
         "output_raw_years":[2021],
+    },
+    "Alert":{
+        "name":"Alert",
+        "end_year":2022,
+        "inp_lat":82.48,
+        "inp_long":-62.35,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover'],
+        "output_raw_years":[2021],
+    },
+    "Grewingk":{
+        "name":"Grewingk",
+        "end_year":2022,
+        "inp_lat":59.6,
+        "inp_long":-151.1,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "Dubai":{
+        "name":"Dubia",
+        "end_year":2022,
+        "inp_lat":25.2,
+        "inp_long":55.3,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[2021]
+    },
+    "Batagaika":{
+        "name":"Batagaika",
+        "end_year":2022,
+        "inp_lat":67.58,
+        "inp_long":134.77,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover'],# 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "Seattle":{
+        "name":"Seattle",
+        "end_year":2022,
+        "inp_lat":47.6,
+        "inp_long":-122.336,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "Aachen":{
+        "name":"Aachen",
+        "end_year":2022,
+        "inp_lat":50.77,
+        "inp_long":6.08,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "McMurdo":{
+        "name":"McMurdo",
+        "end_year":2022,
+        "inp_lat":-77.85,
+        "inp_long":166.69,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "Yakutat":{
+        "name":"Yakutat",
+        "end_year":2022,
+        "inp_lat":59.55,
+        "inp_long":-139.73,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
+    },
+    "Melbourne":{
+        "name":"Melbourne",
+        "end_year":2022,
+        "inp_lat":-37.8,
+        "inp_long":144.9,
+        "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
+        "output_raw_years":[]
     }
 }

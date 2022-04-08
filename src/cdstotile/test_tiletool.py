@@ -34,6 +34,8 @@ from data_groups import (
     data_groups,
     all_variables
 )
+from HWITW_unit_tests import test_all
+
 
 # a helper class for printing color text
 class bcolors:
@@ -76,6 +78,8 @@ def universal_flatten_cds(ds):
         return flattened_array
     else: raise RuntimeError(f"Unknown dataset - it should have either 3 or 4 dimensions, but instead has {dimensions}.")
 
+test_all(universal_flatten_cds)
+
 def export_cds_to_csv(ds,name):
     out_array = ds[0:,0,0]
     numpy.savetxt(f"{name}.csv",out_array,delimiter=',')
@@ -90,20 +94,21 @@ def initialize_results(first_week_results):
             results_dict[variable][stat][0] = first_value
     return results_dict
 
-def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long, available_groups):
+def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long, available_groups, verbose=False):
     # calculate a unique number for each quarter degree on the planet.
     # makes having a unique filename for the coordinates simpler.
+    start_time = time.time()
     grid_num = CalcQtrDegGridNum( area_lat_long )
 
     def process_data(out_data, year, files, analyze, sub_vars):
-        print(f"Analyzing {data_group}")
+        if verbose: print(f"Analyzing {data_group}", end='')
         raw_data = []
         for i, filename in enumerate([f'{path}gn{grid_num}-{year}-{var[0]}.nc' for var in files]):
             already_exists = os.path.isfile( filename ) #and os.path.getsize( fullname ) > 500
             if not already_exists:
                 print( bcolors.WARNING + f'{filename} is missing!' + bcolors.ENDC )
                 continue
-            print( f'processing {filename}' )
+            if verbose: print( f'processing {filename}' )
             try:
                 ds = netCDF4.Dataset( filename )
             except OSError:
@@ -125,7 +130,7 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long, availa
                     for stat,value in variable_info.items():
                         results[variable][stat][week] = value
         run_time = time.time()-start_time
-        print(f'time to process 1 year (not including loading or storing): {pretty_duration(run_time)}')
+        if verbose: print(f'time to process 1 year (not including loading or storing): {pretty_duration(run_time)}')
         for variable,variable_info in results.items():
             for stat,value_array in variable_info.items():
                 out_data['variables'][variable][stat]['data'].append(value_array.tolist()) #Currently no protection against mis-ordered years
@@ -142,6 +147,7 @@ def load_netcdfs(out_data, dir_name, start_year, end_year, area_lat_long, availa
                 year,
                 **data_groups[data_group]
             ))
+    print(f' ... loaded in {pretty_duration(time.time()-start_time)}')
     return benchmark_log
 
 def CalcQtrDegGridNum( area_lat_long ):
@@ -150,7 +156,7 @@ def CalcQtrDegGridNum( area_lat_long ):
 
 ##########################################################
 
-def export_year_to_csv(area_lat_long, year, filename):
+def export_year_to_csv(area_lat_long, year, filename, verbose=False):
     if year < 1979: path = f'./cds_era5_backext/{year}/'
     else: path = f'./cds_era5/{year}/'
     grid_num = CalcQtrDegGridNum(area_lat_long)
@@ -161,7 +167,7 @@ def export_year_to_csv(area_lat_long, year, filename):
         if not already_exists:
             print( bcolors.WARNING + f'{filepath} is missing!' + bcolors.ENDC )
             continue
-        print( f'processing {filepath}' )
+        if verbose: print( f'processing {filepath}' )
         try:
             ds = netCDF4.Dataset( filepath )
         except OSError:
@@ -258,7 +264,9 @@ def process_site(out_data, name, end_year, inp_lat, inp_long, available_groups, 
         json.dump( out_data, outfile )
     write_full_csv(name,out_data)
 
-print( f'** HWITW tile tool v{APP_VERSION} **\n')
 
-for site in [site_settings[name] for name in ready_locations]:
-    process_site(copy.deepcopy(data_settings), **site)
+
+if __name__ == "__main__":
+    print(f'** HWITW tile tool v{APP_VERSION} **\n')
+    for site in [site_settings[name] for name in ready_locations]:
+        process_site(copy.deepcopy(data_settings), **site)

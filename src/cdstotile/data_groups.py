@@ -41,5 +41,5 @@ data_groups = {
     'runoff':{'files': [CDSVAR_RO], 'analyze': do_runoff, 'sub_vars':['runoff']},
     'drought':{'files':[CDSVAR_PEV, CDSVAR_E, CDSVAR_TP], 'analyze': do_drought, 'sub_vars':['drought']},
     'waves':{'files':[CDSVAR_HMAX, CDSVAR_SWH, CDSVAR_PP1D], 'analyze': do_waves, 'sub_vars':['waves']},
-    'ocean_temperature':{'files':[CDSVAR_SST], 'analyze':do_ocean_temp, 'sub_vars':['ocean_temperature']}
+    'ocean_temp':{'files':[CDSVAR_SST], 'analyze':do_ocean_temp, 'sub_vars':['ocean_temp']}
 }

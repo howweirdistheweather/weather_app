@@ -170,5 +170,5 @@ def main(name, end_year, inp_lat, inp_long, available_groups, output_raw_years):
 
 
 if __name__ == "__main__":
-    main(**site_settings['Solar_de_Uyuni'])
+    main(**site_settings['Melbourne'])
 

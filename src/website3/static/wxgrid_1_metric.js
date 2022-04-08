@@ -106,7 +106,7 @@ var is_active = true
 var color_lists = [['#dadaeb','#9e9ac8','#54278f'],['#ffffb2','#fecc5c','#e31a1c'],['#1871bc','#f7e3f7','#ef8a62'],['#bdd7e7','#6baed6','#1871bc'],['#bae4b3','#74c476','#006d2c'],['#ffc','#b2aa93','#110800'],['#e9a3c9','#f7f7f7','#a1d76a']]
 var color_num = 0
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.004]};
-var wxgrid_url = `http://localhost:5001/wxapp/getwxvar`;
+var wxgrid_url = `/wxapp/getwxvar`;
 fetch( wxgrid_url, {   method:'GET',
                         headers: {'Authorization': 'Basic ' + btoa(cred_str)} 
                     }
