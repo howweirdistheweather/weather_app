@@ -1,10 +1,9 @@
 /// HWITW project Copyright (C) 2021
 // initialize as an array LoadWXGrid( st_dropdown.value, reading_dropdown.value, reading_dropdown2.value)of zeros. an empty grid.
 var wx_grdata = {"":Array(60).fill().map(() => Array(52).fill(0))}; //Array.from(Array(50), () => new Array(52));   // init empty/zero grid
-const o = { 'lastName': 'foo' }
-console.log(o['lastName'])
-delete o['lastName']
-console.log(o['lastName'])
+var o = [1,5,6,4,5,2,3]
+o.splice(5,1)
+console.log(o)
 
 var histo_hights = []
 document.onkeydown = function() {
@@ -56,6 +55,8 @@ function download(filename, text) {
 }
 //download('test.json', "Hello world!");
 var lines = []
+var year_draw = null
+var season_draw = null
 var highlights = []
 var unit_sets = ['metric','american']
 var unit_num = 0
@@ -63,6 +64,10 @@ var histo_data = []
 var invert_btns = []
 var file_names = []
 var mins = []
+var selected_years = []
+var year_covers = []
+var selected_seasons = []
+var season_covers = []
 var covers = []
 var states = []
 var state_index = null
@@ -1005,23 +1010,116 @@ function getCellCoords(x,y){
 	return [Math.floor((x-35)/9),Math.floor(num_years-y/9)]
 }
 
-function DetectYearClick(event){
-	save_clicks_x = []
-	save_clicks_y = []
-	for (let i=0; i < 52; i++){
-		save_clicks_x.push(i*9+36)
-		save_clicks_y.push(event.offsetY-compresed_data.length/2-14)
+function DetectYearClick(event,is_render_call){
+	if (!is_render_call && !event.shiftKey){
+		save_clicks_x = []
+		save_clicks_y = []
+		selected_years = []
+		selected_seasons = []
+	}
+	if (!is_render_call && !event.shiftKey){ 
+		var season_cover_length = season_covers.length
+		for (let i=0; i < season_cover_length; i++){
+			season_covers[season_covers.length-1].remove()
+			season_covers.splice(-1)
+		} 
+	}
+	if (!is_render_call && event.offsetY < compresed_data.length/2+14){
+		if (!event.shiftKey){
+			var year_cover_length = year_covers.length
+			for (let i=0; i < year_cover_length; i++){
+				year_covers[year_covers.length-1].remove()
+				year_covers.splice(-1)
+			}
+		}
+		DetectGridClick(null,true)
+		return
+	}
+	num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
+	if (!is_render_call){
+		selected_years.push(Math.floor((event.offsetY-14)/9))
+	}
+	var year_cover_length = year_covers.length
+	for (let i=0; i < year_cover_length; i++){
+		year_covers[year_covers.length-1].remove()
+		year_covers.splice(-1)
+	} 
+	if (!is_render_call){
+		for (let i=0; i < 52; i++){
+			var is_selected = false
+			for (var j=0; j < save_clicks_x.length; j++){
+				if (getCellCoords(i*9+36,event.offsetY-compresed_data.length/2-14)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(i*9+36,event.offsetY-compresed_data.length/2-14)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+					is_selected = true
+					break
+				}
+			}
+			if (!is_selected){
+				save_clicks_x.push(i*9+36)
+				save_clicks_y.push(event.offsetY-compresed_data.length/2-14)
+			}
+		}
+	}
+	for (let i=4; i < num_years+4; i++){
+		if (!(selected_years.includes(i))){
+			year_covers.push(year_draw.rect( 52*3, 9 ).move( 22, (i+2)*9-4).attr({
+					fill: '#fff'
+				, 'fill-opacity': 0.5
+						, stroke: '#ee0'
+				, 'stroke-width': 0 
+					}));
+		}
 	}
 	DetectGridClick(null,true)
 }
 
-function DetectSeasonClick(event){
-	save_clicks_x = []
-	save_clicks_y = []
+function DetectSeasonClick(event,is_render_call){
+	if (!is_render_call && !event.shiftKey){
+		save_clicks_x = []
+		save_clicks_y = []
+		selected_years = []
+		selected_seasons = []
+	}
 	num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
-	for (let i=0; i < num_years; i++){
-		save_clicks_y.push(i*9+1)
-		save_clicks_x.push(event.offsetX)
+	if (!is_render_call){
+		selected_seasons.push(Math.floor((event.offsetX)/9-4))
+	}
+	if (!is_render_call && !event.shiftKey){ 
+		var year_cover_length = year_covers.length
+		for (let i=0; i < year_cover_length; i++){
+			year_covers[year_covers.length-1].remove()
+			year_covers.splice(-1)
+		} 
+	}
+	var season_cover_length = season_covers.length
+	for (let i=0; i < season_cover_length; i++){
+		season_covers[season_covers.length-1].remove()
+		season_covers.splice(-1)
+	} 
+	num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
+	if (!is_render_call){
+		for (let i=0; i < num_years; i++){
+			var is_selected = false
+			for (var j=0; j < save_clicks_x.length; j++){
+				if (getCellCoords(event.offsetX,i*9+1)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(event.offsetX,i*9+1)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+					is_selected = true
+					break
+				}
+			}
+			if (!is_selected){
+				save_clicks_y.push(i*9+1)
+				save_clicks_x.push(event.offsetX)
+			}
+		}
+	}
+	for (let i=0; i < 52; i++){
+		if (!(selected_seasons.includes(i))){
+			season_covers.push(season_draw.rect( 9, num_years*0.5 ).move( i*9+35, 0).attr({
+					fill: '#fff'
+				, 'fill-opacity': 0.5
+						, stroke: '#ee0'
+				, 'stroke-width': 0 
+					}));
+		}
 	}
 	DetectGridClick(null,true)
 }
@@ -1033,7 +1131,6 @@ function DetectGridClick(event,is_render_call){
 	if (!is_render_call){
 		click_x = event.offsetX
 		click_y = event.offsetY
-		console.log(click_y)
 		if (event.shiftKey) {
 			num = Math.max(save_clicks_x.length)
 			var is_selected_cell = false;
@@ -1044,8 +1141,10 @@ function DetectGridClick(event,is_render_call){
 				}
 			}
 			if (is_selected_cell){
-				save_clicks_x.splice(i,i)
-				save_clicks_y.splice(i,i)
+//				console.log(save_clicks_x)
+				save_clicks_x.splice(i,1)
+//				console.log(save_clicks_x)
+				save_clicks_y.splice(i,1)
 				if (num == 1){
 					save_clicks_x = [0]
 					save_clicks_y = [num_years]
@@ -1059,15 +1158,27 @@ function DetectGridClick(event,is_render_call){
 		else {
 			save_clicks_x = [click_x]
 			save_clicks_y = [click_y]
+			selected_years = []
+			selected_seasons = []
+			var year_cover_length = year_covers.length
+			for (let i=0; i < year_cover_length; i++){
+				year_covers[year_covers.length-1].remove()
+				year_covers.splice(-1)
+			} 
+			var season_cover_length = season_covers.length
+			for (let i=0; i < season_cover_length; i++){
+				season_covers[season_covers.length-1].remove()
+				season_covers.splice(-1)
+			}
 		}
 	}
-	console.log(outlines)
+//	console.log(outlines)
 	var outline_length = outlines.length
 	for (var i=0; i < outline_length; i++){
 		outlines[outlines.length-1].remove()
 		outlines.splice(-1)
 	} 
-	console.log(covers)
+//	console.log(covers)
 	var cover_length = covers.length
 	for (var i=0; i < cover_length; i++){
 		covers[covers.length-1].remove()
@@ -1106,9 +1217,44 @@ function DetectGridClick(event,is_render_call){
 			, 'stroke-width': 0 
 				});
 	}
-	console.log(save_clicks_x)
+//	console.log(save_clicks_x)
 	for (var i=0; i<save_clicks_x.length; i++){
 		RegisterGridClick(null,save_clicks_x[i],save_clicks_y[i],null)
+	}
+	if (can_fade){
+		var txt = ""
+		for (var i=0; i < reading_options.length; i++){
+			method_options = Object.keys(all_data[reading_options[i]]) 
+			makeNewElement("tables","table",{"id":"table"+(i+1),"style":"display: inline-block; text-align: center; margin-left: 10px float: top;" },null);
+			makeNewElement("table"+(i+1),"tr",{"id":"measurementy"+(i+1)},null);
+			makeNewElement("measurementy"+(i+1),"th",{"id":"th"+(i+1)},reading_options[i].split('_').join(' '));
+			for (var j=0; j < method_options.length; j++){
+	//			console.log(all_data[reading_options[i]])
+	//			console.log(method_options[j])
+				relev_data = all_data[reading_options[i]][method_options[j]]
+				var mul = 1
+				var expon = 1
+				if (compresion[reading_options[i]][method_options[j]]["type"] == "parabolic") {
+					expon = 2
+				}
+				var compressed_value = null
+				var value_list = []
+				for (var num=0; num < save_clicks_x.length; num++){
+					value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
+				}
+				if ([method_options[j]] == 'min'){
+					compressed_value = Math.min(...value_list)
+				}
+				else if ([method_options[j]] == 'max'){
+					compressed_value = Math.max(...value_list)
+				}
+				else {
+					compressed_value = value_list.reduce((a, b) => a + b, 0)/value_list.length
+				}
+				makeNewElement("table"+(i+1),"tr",{"id":"methody"+(i+1)+','+j},null);
+				makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
+			}
+		}
 	}
 }
 function RegisterGridClick(event,click_x,click_y,num) {
@@ -1117,10 +1263,8 @@ function RegisterGridClick(event,click_x,click_y,num) {
 	if (Math.min(...coords) < 0 || wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] == null){
 		return
 	}
-	document.getElementById( "tables" ).innerHTML = "";
-	document.getElementById( "heder" ).innerHTML = "";
 	var fillcol = '#0000'
-    var mx = compresed_data[coords[1]][coords[0]] / 255; // normalize mx 0..1
+    var mx = compresed_data[coords[1]][coords[0]] / 255;
     if ( mx < wx_range_val0 ){
         fillcol = color_lists[color_num][0];
     }
@@ -1130,7 +1274,7 @@ function RegisterGridClick(event,click_x,click_y,num) {
     else {
         fillcol = color_lists[color_num][2];
     }
-	outlines.push(grid_draw.rect( 9, 8 ).move( Math.floor(click_x/9)*9-1, Math.floor(click_y/9)*9+2).attr({
+	outlines.push(grid_draw.rect( 9, 8 ).move( Math.floor((click_x)/9)*9-1, Math.floor((click_y)/9)*9+2).attr({
 			fill: fillcol
 		, 'fill-opacity': 1
 			, stroke: '#ee0'
@@ -1156,39 +1300,6 @@ function RegisterGridClick(event,click_x,click_y,num) {
             'stroke-width': 0
         }));
 		
-	}
-	var txt = ""
-	for (var i=0; i < reading_options.length; i++){
-		method_options = Object.keys(all_data[reading_options[i]]) 
-		makeNewElement("tables","table",{"id":"table"+(i+1),"style":"display: inline-block; text-align: center; margin-left: 10px float: top;" },null);
-		makeNewElement("table"+(i+1),"tr",{"id":"measurementy"+(i+1)},null);
-		makeNewElement("measurementy"+(i+1),"th",{"id":"th"+(i+1)},reading_options[i].split('_').join(' '));
-		for (var j=0; j < method_options.length; j++){
-//			console.log(all_data[reading_options[i]])
-//			console.log(method_options[j])
-			relev_data = all_data[reading_options[i]][method_options[j]]
-			var mul = 1
-			var expon = 1
-			if (compresion[reading_options[i]][method_options[j]]["type"] == "parabolic") {
-				expon = 2
-			}
-			var compressed_value = null
-			var value_list = []
-			for (var num=0; num < save_clicks_x.length; num++){
-				value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
-			}
-			if ([method_options[j]] == 'min'){
-				compressed_value = Math.min(...value_list)
-			}
-			else if ([method_options[j]] == 'max'){
-				compressed_value = Math.max(...value_list)
-			}
-			else {
-				compressed_value = value_list.reduce((a, b) => a + b, 0)/value_list.length
-			}
-			makeNewElement("table"+(i+1),"tr",{"id":"methody"+(i+1)+','+j},null);
-			makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
-		}
 	}
 	month_lenghths = [31,28,31,30,31,30,31,31,30,31,30,31]
 	var day = [coords[0]]*7
@@ -1427,6 +1538,7 @@ function DrawSesonalitys(compresed_data,months){
 	        });
 		}
     }
+	season_draw = draw
 }
 function DrawYears(compresed_data,num_years){
 	var color_plot = [new Array(compresed_data.length).fill(0),new Array(compresed_data.length).fill(0),new Array(compresed_data.length).fill(0)]
@@ -1546,6 +1658,8 @@ function DrawYears(compresed_data,num_years){
     let bwENSO = btextENSO.length();   
 	let bhENSO = btextENSO.bbox().height; // bbox is double for some reason.     
     btextENSO.center(15.5 ,compresed_data.length/2+9*ENSOoffset-5.5).rotate(270);
+	year_draw = draw
+//	year_histogram = color_plot
 }
 function updateStates(){
 	state_dict = {
@@ -1744,6 +1858,13 @@ function RenderGrid(){
 	DrawSesonalitys(wx_data,months)
 	DrawYears(wx_data,num_years)
 	DetectGridClick(null,true)
+	if (selected_years.length){
+		DetectYearClick(null,true)
+	}
+	console.log(selected_seasons)
+	if (selected_seasons.length){
+		DetectSeasonClick(null,true)
+	}
 };
 //file:///Users/katmai/Downloads/test.json
 //file:///Users/katmai/Downloads/test.json 
