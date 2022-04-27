@@ -1195,17 +1195,12 @@ function DetectGridClick(event,is_render_call){
 		}
 	}
 	fade = null
-	if (!is_render_call){
-		var coords = getCellCoords(click_x,click_y)
-		if (Math.min(...coords) < 0 || wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] == null){
-			return
-		}
-	}
+
 	var can_fade = false
 	var num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
 	for (var i=0; i < save_clicks_x.length; i++){
 		var coords = getCellCoords(save_clicks_x[i],save_clicks_y[i])
-		if (Math.min(...coords) > 0 || wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
+		if (Math.min(...coords) > 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
 			can_fade = true
 		}
 	}
@@ -1240,7 +1235,10 @@ function DetectGridClick(event,is_render_call){
 				var compressed_value = null
 				var value_list = []
 				for (var num=0; num < save_clicks_x.length; num++){
-					value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
+					var coords = getCellCoords(save_clicks_x[num],save_clicks_y[num])
+					if (Math.min(...coords) > 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
+						value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
+					}
 				}
 				if ([method_options[j]] == 'min'){
 					compressed_value = Math.min(...value_list)
