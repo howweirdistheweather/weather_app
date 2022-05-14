@@ -7,7 +7,7 @@ from data_groups import data_groups, all_variables
 from data_settings import *
 from location_settings import *
 
-APP_VERSION         = '0.65'
+APP_VERSION         = '0.68'
 
 HOURS_PER_WEEK      = 24 * 7
 HOURS_PER_YEAR      = 364 * 24
@@ -58,8 +58,11 @@ def read_data_group( flag_args:dict,
     assert num_dimensions == 3
 
     # convert lat long to index
-    lat_i = int( (90.0 - loc_lat) * NUM_LATIDX_GLOBAL / 180.25 )
-    long_i = int( (loc_long + 180.0) * NUM_LONGIDX_GLOBAL / 360.0 )
+    lat_i = int( math.ceil((90.0 - loc_lat) * NUM_LATIDX_GLOBAL / 180.25 ))
+    long_deg_e = loc_long if loc_long >= 0 else 360.0 + loc_long
+    long_i = int( long_deg_e * NUM_LONGIDX_GLOBAL / 360.0 )
+
+    #print( f'{lat_i},{long_i} {loc_lat} {loc_long} {long_deg_e}' )
 
     assert out_data['data_specs']['start_year'] == HWITW_START_YEAR
     year_i = year - HWITW_START_YEAR
@@ -128,27 +131,10 @@ def get_locdata( flag_args:dict,
             read_data_group( flag_args, loc_lat, loc_long, inp_path, year, dg_name, dg, out_data );
         print( '' )
 
-#    # last convert the data_dict's to the lists that are expected. data_dict was a convenience
-#    for dd_var in out_data['variables']:
-#        for dd_subvar in out_data['variables'][dd_var]:
-#            print( dd_var )
-#            print( dd_subvar )
-#            out_data['variables'][dd_var][dd_subvar]['data'] = [None] * num_years
-#            print( out_data['variables'][dd_var][dd_subvar]['data_dict'] )
-#            for dd_year in out_data['variables'][dd_var][dd_subvar]['data_dict']:
-#                year_i = dd_year - start_year
-#                out_data['variables'][dd_var][dd_subvar]['data'][year_i] = out_data['variables'][dd_var][dd_subvar]['data_dict'][year_i]
-#                print( year_i, end='')
-#                print( dd_subvar['data'][year_i] )
-#            
-#            dd_subvar.remove('data_dict')
-
-    #out_data['variables'][var_name][sub_name]['data_dict'][year_i].append( int(val) )
-
     return out_data
 
 
-# basically a lat,long hash. assumes N is positive, W is negative.
+# basically a lat,long hash
 def CalcQtrDegGridNum( loc_lat:float, loc_long:float ) -> int:
     grid_num = int( ((90 - loc_lat) * 4) * 360 * 4 + ((loc_long + 180) * 4) )
     return grid_num
@@ -165,11 +151,10 @@ def main():
     output_path = '.'
     start_year = 1950
     end_year = current_time.year
-    data_dir = 'cds_era5'
 
     # Initialize parser
     parser = argparse.ArgumentParser()
-    parser.add_argument( "-l", "--location", help = "Set location latxlong -N -W (ex. -64.0x-151.25)" )
+    parser.add_argument( "-l", "--location", help = "Set location latxlong +N -W (ex. 64.0x-151.25)" )
     parser.add_argument( "-i", "--input", help = "Set input path" )
     parser.add_argument( "-o", "--output", help = "Set output path" )
     parser.add_argument( "-f", "--force", action='store_true', help = "Force recalculation of all output" )
@@ -185,7 +170,7 @@ def main():
 
     show_progress = args.progress
 
-    loc_lat = 0.0   # lat N is negative, long W is negative
+    loc_lat = 0.0   # lat N is positive, long W is negative
     loc_long = 0.0
 
     if args.location:
@@ -217,7 +202,7 @@ def main():
         end_year = int(args.end)
 
     # print location
-    lat_c = 'N' if loc_lat < 0 else 'S'
+    lat_c = 'S' if loc_lat < 0 else 'N'
     long_c = 'W' if loc_long < 0 else 'E'
     print( f'location: {abs(loc_lat)}{lat_c}, {abs(loc_long)}{long_c}' )
 
