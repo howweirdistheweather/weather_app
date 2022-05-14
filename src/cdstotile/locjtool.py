@@ -1,4 +1,5 @@
 import datetime
+import numpy
 import netCDF4
 import json
 import argparse
@@ -7,7 +8,7 @@ from data_groups import data_groups, all_variables
 from data_settings import *
 from location_settings import *
 
-APP_VERSION         = '0.68'
+APP_VERSION         = '0.69'
 
 HOURS_PER_WEEK      = 24 * 7
 HOURS_PER_YEAR      = 364 * 24
@@ -95,11 +96,12 @@ def read_data_group( flag_args:dict,
             total_years = current_time.year - HWITW_START_YEAR
             out_data['variables'][var_name][sub_name]['data'] = [[] for _ in range(total_years)]
 
-        #out_data['variables'][var_name][sub_name]['data'].append( year_is )
-        #out_data['variables'][var_name][sub_name].update( {'data_dict':{year_i:[]}} )
-        for week_i in range( num_weeks ):
-            val = ds[var][week_i][lat_i][long_i]
-            out_data['variables'][var_name][sub_name]['data'][year_i].append( int(val) )
+        #print( ds[var][:,lat_i,long_i] )
+        out_data['variables'][var_name][sub_name]['data'][year_i].extend( ds[var][:num_weeks,lat_i,long_i].tolist() )
+        #out_data['variables'][var_name][sub_name]['data'][year_i] = ds[var][:num_weeks,lat_i,long_i].tolist()
+        #for week_i in range( num_weeks ):
+        #    val = ds[var][week_i][lat_i][long_i]
+        #    out_data['variables'][var_name][sub_name]['data'][year_i].append( int(val) )
 
     ds.close()
     pass
