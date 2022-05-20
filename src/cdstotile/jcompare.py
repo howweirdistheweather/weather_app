@@ -51,7 +51,8 @@ def main():
                     val1 = loc_data2['variables'][var_key][subv_key]['data'][year_i][week_i]
                     if val0 != val1:
                         print( f'    mismatch! year {year_i} week {week_i}: {val0},{val1}', end='' )
-                        prompt_for_continue()
+                        print('')
+                        #prompt_for_continue()
 
             print( ' ok' )
     print('done.')
