@@ -760,59 +760,59 @@ function month_to_week( nmonth ) {
     let week = day_of_year * 52.0 / 365.0;
     return week;
 }
-function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num){
-	for (var j = 2; j < histo_plot.length-2; j++){
-		if (histo_plot[j] >= 2){
-			is_mode = true
-			for (var i = 1; i < Math.min(10,j); i++){
-				if (histo_plot[j-i] >= histo_plot[j]){
-					is_mode = false
+function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,colors,do_text){
+	if (do_text){
+		for (var j = 2; j < histo_plot.length-2; j++){
+			if (histo_plot[j] >= 2){
+				is_mode = true
+				for (var i = 1; i < Math.min(10,j); i++){
+					if (histo_plot[j-i] > histo_plot[j]){
+						is_mode = false
+					}
 				}
-			}
-			for (var i = 1; i < histo_plot.length-Math.max(histo_plot.length-10,j); i++){
-				if (histo_plot[j+i] >= histo_plot[j]){
-					is_mode = false
+				for (var i = 1; i < histo_plot.length-Math.max(histo_plot.length-10,j); i++){
+					if (histo_plot[j+i] > histo_plot[j]){
+						is_mode = false
+					}
 				}
-			}
-			if (is_mode){
-				console.log(method_types[num])
-		        let mode = draw.text( `${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
-				let mode_length = mode.length();
-		        mode.move( j*2 - mode_length/2 + 15,125*0.5+1 ); // center vertically
+				if (is_mode){
+					console.log(method_types[num])
+			        let mode = draw.text( `${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+					let mode_length = mode.length();
+			        mode.move( j*2 - mode_length/2 + 15,125*0.5+1 ); // center vertically
+				}
 			}
 		}
-	}
-    let min_extrem = draw.text( `${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
-	let min_extrem_length = min_extrem.length();
-    min_extrem.move( min_num*2 - min_extrem_length/2 + 15,125*0.5+1 ); // center vertically
+	    let min_extrem = draw.text( `${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+		let min_extrem_length = min_extrem.length();
+	    min_extrem.move( min_num*2 - min_extrem_length/2 + 15,125*0.5+1 ); // center vertically
 
-    let max_extrem = draw.text( `${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
-	let max_extrem_length = max_extrem.length();
-    max_extrem.move( max_num*2 - max_extrem_length/2 + 15,125*0.5+1 ); // center vertically
+	    let max_extrem = draw.text( `${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+		let max_extrem_length = max_extrem.length();
+	    max_extrem.move( max_num*2 - max_extrem_length/2 + 15,125*0.5+1 ); // center vertically
+	}
+	var max_value = Math.max(...histo_plot)
 	for (var i = 0; i < 128; i++) {
 	
 		var fillcol = '#ffffff'
-        draw.rect( 2, color_plot[2][i]*0.5 ).move( i*2+15, (125-color_plot[2][i])*0.5 ).attr({
-            'fill':color_lists[color_num][2],
+        draw.rect( 2, color_plot[2][i]*0.5*125/max_value ).move( i*2+15, (125-color_plot[2][i]*125/max_value)*0.5 ).attr({
+            'fill':colors[2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 2, color_plot[1][i]*0.5 ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
-            'fill':color_lists[color_num][1],
+        draw.rect( 2, color_plot[1][i]*0.5*125/max_value ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i])*125/max_value)*0.5 ).attr({
+            'fill':colors[1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 2, color_plot[0][i]*0.5 ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
-            'fill':color_lists[color_num][0],
+        draw.rect( 2, color_plot[0][i]*0.5*125/max_value ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i])*125/max_value)*0.5 ).attr({
+            'fill':colors[0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-		var line = draw.line(0, 0, 100, 100).move(0, 0)
-		line.stroke({ color: '#000', width: 1, })
-		line.remove()
 	}
 }
-function DrawHistograms(compresed_data){
+function DrawHistograms(compresed_data,inc_data){
 	for (num = 0; num < measurement_index+1; num ++){
 		var histo_plot_st = new Array(128).fill(0);
 		var color_plot_st = [new Array(128).fill(0),new Array(128).fill(0),new Array(128).fill(0)]
@@ -821,15 +821,15 @@ function DrawHistograms(compresed_data){
 		for (var year = 0; year < relev_data.length; year ++){
 			for (var week = 0; week < 52; week ++){
 				if (relev_data[year][week] != null){
-					histo_plot_st[parseInt(relev_data[year][week]/2)] += 0.5
+					histo_plot_st[parseInt(relev_data[year][week]/2)] += 1
 					if (compresed_data[year][week] < wx_range_val0*255){
-						color_plot_st[0][parseInt(relev_data[year][week]/2)] += 0.5
+						color_plot_st[0][parseInt(relev_data[year][week]/2)] += 1
 					}
 					else if (compresed_data[year][week] < wx_range_val1*255){
-						color_plot_st[1][parseInt(relev_data[year][week]/2)] += 0.5
+						color_plot_st[1][parseInt(relev_data[year][week]/2)] += 1
 					}
 					else {
-						color_plot_st[2][parseInt(relev_data[year][week]/2)] += 0.5
+						color_plot_st[2][parseInt(relev_data[year][week]/2)] += 1
 					}
 				}
 			}
@@ -888,7 +888,66 @@ function DrawHistograms(compresed_data){
 			return
 		}
 		`
-		DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num)
+		if (save_clicks_x.length >= 20){
+			DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,['#f4f4f4','#f4f4f4','#f4f4f4'])
+			var histo_plot_st = new Array(128).fill(0);
+			var color_plot_st = [new Array(128).fill(0),new Array(128).fill(0),new Array(128).fill(0)]
+			color_plot_str = JSON.stringify(color_plot_st)
+			var relev_data = all_data[reading_types[num]][method_types[num]]
+			var compressed_coords_x = []
+			var compressed_coords_y = []
+			for (var i = 0; i < save_clicks_x.length; i++){
+				compressed_coords_x.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[0])
+				compressed_coords_y.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[1])
+			}
+			for (var year = 0; year < relev_data.length; year ++){
+				for (var week = 0; week < 52; week ++){
+					if (relev_data[year][week] != null && compressed_coords_y.includes(year) && compressed_coords_x.includes(week)){
+						
+						histo_plot_st[parseInt(relev_data[year][week]/2)] += 1
+						if (compresed_data[year][week] < wx_range_val0*255){
+							color_plot_st[0][parseInt(relev_data[year][week]/2)] += 1
+						}
+						else if (compresed_data[year][week] < wx_range_val1*255){
+							color_plot_st[1][parseInt(relev_data[year][week]/2)] += 1
+						}
+						else {
+							color_plot_st[2][parseInt(relev_data[year][week]/2)] += 1
+						}
+					}
+				}
+			}
+			var max_num_new = null
+			var max_collor_nums_new = [null,null,null]
+			for (var j = 0; j < histo_plot_st.length; j++){
+				for (var i = 0; i < 3; i++){
+					if (color_plot_st[i][j] != 0){
+						max_collor_nums_new[i] = j
+					}
+				}
+				if (histo_plot_st[j] != 0){
+					max_num_new = j
+				}
+			}
+			var min_num_new = null
+			var min_collor_nums_new = [null,null,null]
+			for (var j = histo_plot_st.length-1; j >= 0; j--){
+				for (var i = 0; i < 3; i++){
+					if (color_plot_st[i][j] != 0){
+						min_collor_nums_new[i] = j
+					}
+				}
+				if (histo_plot_st[j] != 0){
+					min_num_new = j
+				}
+			}
+			var histo_plot_new = histo_plot_st
+			var color_plot_new = color_plot_st
+			DrawHistogram(draw,histo_plot_new,min_num_new,max_num_new,expon,mul,color_plot_new,num,color_lists[color_num],true)
+		}
+		else {
+			DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,color_lists[color_num],true)
+		}
 		histo_data[num] = {'histo_plot':histo_plot,'min_num':min_num,'max_num':max_num,'expon':expon,'mul':mul,'color_plot':color_plot}
 //		console.log(min_num*2+15)
 //		console.log(max_num*2+15)
@@ -1212,7 +1271,7 @@ function DetectGridClick(event,is_render_call){
 			, 'stroke-width': 0 
 				});
 	}
-//	console.log(save_clicks_x)
+	DrawHistograms(compresed_data)
 	for (var i=0; i<save_clicks_x.length; i++){
 		RegisterGridClick(null,save_clicks_x[i],save_clicks_y[i],null)
 	}
@@ -1284,20 +1343,21 @@ function RegisterGridClick(event,click_x,click_y,num) {
 			, stroke: '#000'
 		, 'stroke-width': 1 
         }));
-	
-	for (var num = 0; num < measurement_index+1; num ++){
-		var data = wx_grdata[reading_types[num]][method_types[num]][coords[1]][coords[0]]
-		histo_index = parseInt(data/2)
-		draw = draws[num]
-		if (highlights[num] == null){
-			highlights[num] = []
+	if (save_clicks_x.length < 20){
+		for (var num = 0; num < measurement_index+1; num ++){
+			var max_value = Math.max(...histo_data[num]['histo_plot'])
+			var data = wx_grdata[reading_types[num]][method_types[num]][coords[1]][coords[0]]
+			histo_index = parseInt(data/2)
+			draw = draws[num]
+			if (highlights[num] == null){
+				highlights[num] = []
+			}
+	        highlights[num].push(draw.rect( 2, histo_data[num]['histo_plot'][histo_index]*0.5*125/max_value ).move( histo_index*2+15,(125-histo_data[num]['histo_plot'][histo_index]*125/max_value)*0.5).attr({
+	            'fill':'#eeee00',
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0
+	        }));
 		}
-        highlights[num].push(draw.rect( 2, histo_data[num]['histo_plot'][histo_index]*0.5 ).move( histo_index*2+15,(125-histo_data[num]['histo_plot'][histo_index])*0.5).attr({
-            'fill':'#eeee00',
-            'shape-rendering':'crispEdges',
-            'stroke-width': 0
-        }));
-		
 	}
 	month_lenghths = [31,28,31,30,31,30,31,31,30,31,30,31]
 	var day = [coords[0]]*7
