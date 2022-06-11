@@ -70,6 +70,7 @@ var selected_seasons = []
 var season_covers = []
 var covers = []
 var states = []
+var line_opacidy = 0.1
 var state_index = null
 var maxes = []
 var select = null
@@ -173,6 +174,24 @@ color_selector.onchange =
 		function () {
 			color_num = parseInt(color_selector.value)
 			RenderGrid()
+		};
+var enable_line_editing = document.getElementById("enable_line_editing")
+enable_line_editing.onchange =
+		function () {
+			if (enable_line_editing.checked){
+				line_opacidy = 1
+			}
+			else {
+				select = null
+				if (select_draw != null){
+					select_draw.remove()
+				}
+				select_draw = null
+				line_opacidy = 0.1
+			}
+			for (let i=0; i<=measurement_index; i++){
+				DrawLines(i)
+			}
 		};
 var unit_selector = document.getElementById("unit_selector")
 unit_selector.onchange =
@@ -360,7 +379,7 @@ function makeNewMeasurmeant(curent_id_num) {
 			}
 			DrawLines(curent_id_num)
 			RenderGrid()
-			updateStates()
+			//updateStates()
 		};
 	reading_dropdowns[curent_id_num].onchange =
 		function () {
@@ -518,7 +537,7 @@ function deleteMeasurement() {
 	measurement.remove()
 	histo.remove()
 	measurement_index --
-	updateStates()
+	//updateStates()
 }
 
 function reset_sliders(num){
@@ -679,7 +698,7 @@ function LoadMethodDropdown(num) {
 	}
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 	
 }
 function LoadDirectionDropdown(num) {
@@ -900,20 +919,21 @@ function DrawHistograms(compresed_data,inc_data){
 				compressed_coords_x.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[0])
 				compressed_coords_y.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[1])
 			}
-			for (var year = 0; year < relev_data.length; year ++){
-				for (var week = 0; week < 52; week ++){
-					if (relev_data[year][week] != null && compressed_coords_y.includes(year) && compressed_coords_x.includes(week)){
-						
-						histo_plot_st[parseInt(relev_data[year][week]/2)] += 1
-						if (compresed_data[year][week] < wx_range_val0*255){
-							color_plot_st[0][parseInt(relev_data[year][week]/2)] += 1
-						}
-						else if (compresed_data[year][week] < wx_range_val1*255){
-							color_plot_st[1][parseInt(relev_data[year][week]/2)] += 1
-						}
-						else {
-							color_plot_st[2][parseInt(relev_data[year][week]/2)] += 1
-						}
+			var new_compressed = []
+			var new_relev = []
+			for (var index = 0; index < compressed_coords_x.length; index ++){
+				let year = compressed_coords_y[index]
+				let week = compressed_coords_x[index]
+				if (relev_data[year][week] != null){
+					histo_plot_st[parseInt(relev_data[year][week]/2)] += 1
+					if (compresed_data[year][week] < wx_range_val0*255){
+						color_plot_st[0][parseInt(relev_data[year][week]/2)] += 1
+					}
+					else if (compresed_data[year][week] < wx_range_val1*255){
+						color_plot_st[1][parseInt(relev_data[year][week]/2)] += 1
+					}
+					else {
+						color_plot_st[2][parseInt(relev_data[year][week]/2)] += 1
 					}
 				}
 			}
@@ -1004,10 +1024,52 @@ function AddClickHandler(num) {
 		if (!is_active) {
 			return
 		}
+		else if (!enable_line_editing.checked){
+			DetectHistoClick(num,event)
+			return
+		}
 		RegisterClick(num,event)
 	});
 }
-
+function DetectHistoClick(num,event) {
+	if (!event.shiftKey){
+		save_clicks_x = []
+		save_clicks_y = []
+		selected_years = []
+		selected_seasons = []
+	}
+	click_x = event.offsetX
+	click_y = histo_hights[num]-event.offsetY
+	if (click_y < 0 || click_x < mins[num]*2+13 || click_x > maxes[num]*2+17 ||  click_y > 71){
+		return
+	}
+	click_x -= 17
+	var compressed_coords_x = []
+	var compressed_coords_y = []
+	for (var i = 0; i < save_clicks_x.length; i++){
+		compressed_coords_x.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[0])
+		compressed_coords_y.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[1])
+	}
+	console.log(reading_types[num],method_types[num])
+	for (let i=0; i<all_data[reading_types[num]][method_types[num]].length; i++){
+		for (let k=0; k<all_data[reading_types[num]][method_types[num]][i].length; k++){
+			if (parseInt(all_data[reading_types[num]][method_types[num]][i][k]/2) == parseInt(click_x/2)){
+				let is_selected = false
+				for (var j=0; j < save_clicks_x.length; j++){
+					if (k == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && i == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+						is_selected = true
+						break
+					}
+				}
+				if (!is_selected){
+					save_clicks_x.push(k*9+37)
+					save_clicks_y.push((all_data[reading_types[num]][method_types[num]].length-i)*9-2)
+				}
+			}
+		}
+	}
+	DetectGridClick(null,true)
+}
 function RegisterClick(num,event) {
 	click_x = event.offsetX
 	click_y = histo_hights[num]-event.offsetY
@@ -1061,7 +1123,7 @@ function RegisterClick(num,event) {
 	click_coords[num][click_x] = click_y
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 }
 
 function getCellCoords(x,y){
@@ -1259,7 +1321,7 @@ function DetectGridClick(event,is_render_call){
 	var num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
 	for (var i=0; i < save_clicks_x.length; i++){
 		var coords = getCellCoords(save_clicks_x[i],save_clicks_y[i])
-		if (Math.min(...coords) > 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
+		if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
 			can_fade = true
 		}
 	}
@@ -1295,7 +1357,7 @@ function DetectGridClick(event,is_render_call){
 				var value_list = []
 				for (var num=0; num < save_clicks_x.length; num++){
 					var coords = getCellCoords(save_clicks_x[num],save_clicks_y[num])
-					if (Math.min(...coords) > 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
+					if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
 						value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
 					}
 				}
@@ -1429,7 +1491,7 @@ function HandleDelete() {
 	select = null
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 }
 
 function arrowHandler(y_dif) {
@@ -1460,7 +1522,7 @@ function arrowHandler(y_dif) {
     });
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 }
 
 function horizontalArrowHandler(x_dif) {
@@ -1512,7 +1574,7 @@ function horizontalArrowHandler(x_dif) {
     });
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 }
 
 function DrawLines(num) {
@@ -1525,11 +1587,26 @@ function DrawLines(num) {
 	console.log(x_vals)
 	for (var b = 0; b < x_vals.length-1; b ++) {
 		lines[num].push(draw.line(0, histo_hights[num], x_vals[b+1]-x_vals[b], (click_coords[num][x_vals[b+1]]-click_coords[num][x_vals[b]]-histo_hights[num])*(-1))
-		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)).stroke({ color: '#000', width: 1, linecap: 'round' }))
-		lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).fill('#000'))
+		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)).attr({
+					fill: '#000'
+			, 'stroke-opacity': line_opacidy
+					, stroke: '#000'
+			, 'stroke-width': 1 
+				}));
+		lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).attr({
+					fill: '#000'
+			, 'fill-opacity': line_opacidy
+					, stroke: '#ee0'
+			, 'stroke-width': 0 
+				}));
 	}
 	b = x_vals.length-1
-	lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).fill('#000'))
+	lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).attr({
+					fill: '#000'
+			, 'fill-opacity': line_opacidy
+					, stroke: '#ee0'
+			, 'stroke-width': 0 
+				}));
 }
 
 function invertHandeler(num, will_render) {
@@ -1744,7 +1821,6 @@ function updateStates(){
 	}
 	state_index ++
 	states.push(state_dict)
-	console.log(states)
 }
 // Renders SVG weather grid/heatmap thing
 function RenderGrid(){
