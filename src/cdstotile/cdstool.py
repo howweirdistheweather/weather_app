@@ -15,6 +15,7 @@ import datetime
 import os.path
 import cdsapi
 import netCDF4
+import argparse
 
 import parsl
 from parsl import python_app
@@ -22,7 +23,7 @@ from parsl.config import Config
 from parsl.executors.threads import ThreadPoolExecutor
 
 # download era5 or era5 back extention data to netcdf files
-def download_dataset( ds_name, dir_name, start_year, end_year, area_lat_long, variables, force_download=False ):
+def download_dataset( start_year, end_year, area_lat_long, variables, force_download=False ):
     '''
     Download a multi-year dataset.
     :param ds_name: The dataset name to be downloaded from CDS
@@ -36,10 +37,18 @@ def download_dataset( ds_name, dir_name, start_year, end_year, area_lat_long, va
     assert start_year <= end_year
     years = list( range( start_year, end_year + 1 ) )
 
-    print( f'Downloading {ds_name} {area_lat_long} from {start_year} to {end_year}')
-
     # download year, variable for entire globe
     for year in reversed( years ):
+
+        # era5 back extension goes from 1950 to 1978
+        # era5 goes from 1979 to present
+        if year >= 1950 and year <= 1978:
+            ds_name = 'reanalysis-era5-single-levels-preliminary-back-extension'
+            dir_name = 'cds_era5_backext'
+        else:
+            ds_name = 'reanalysis-era5-single-levels'
+            dir_name = 'cds_era5'
+
         for var_name in variables:
             download_var_for_year( ds_name, dir_name, year, area_lat_long, var_name, force_download)
             #print_var_for_year( ds_name, dir_name, year, area_lat_long, var_name, force_download)
@@ -78,8 +87,7 @@ def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, forc
     fullname = pathname + filename
 
     # see if file already downloaded.. if it exists and is larger then some nonsense amount
-    already_exists = os.path.isfile(
-        fullname) and os.path.getsize(fullname) > 500
+    already_exists = os.path.isfile(fullname) and os.path.getsize(fullname) > 500
     if already_exists:
         print(f'{filename} exists already')
         # todo: validate the existing netcdf file
@@ -115,41 +123,52 @@ def main():
     # Configure parsl to use a local thread pool
     local_threads = Config(
         executors=[ 
-            ThreadPoolExecutor( max_threads=5, label='local_threads') 
+            ThreadPoolExecutor( max_threads=1, label='local_threads')
         ]
     )
     parsl.clear()
     parsl.load(local_threads)
 
-    app_version = "0.94"
-    force_download = False;
+    app_version = "0.96"
     current_time = datetime.datetime.now()
+    start_year = 1950
+    end_year = current_time.year
+    force_download = False;
 
     # hello
     print( f'** HWITW Copernicus data download tool v{app_version} **\n')
 
+    # Initialize parser
+    parser = argparse.ArgumentParser()
+    parser.add_argument( "-f", "--forcedownload", action='store_true', help = "Force download even if file already exists" )
+    parser.add_argument( "-s", "--start", help = "Set start year" )
+    parser.add_argument( "-e", "--end", help = "Set end year" )
+    parser.add_argument( "-l", "--latest", action='store_true', help = "Force download this year and last year" )
+    args = parser.parse_args()
+
+    force_download = args.forcedownload
+
+    if args.start:
+        start_year = int(args.start)
+
+    if args.end:
+        end_year = int(args.end)
+
+    if args.latest:
+        start_year = current_time.year - 1
+        end_year = current_time.year
+        force_download = True
+
+
     # 0.25 degree resolution. N positive, W negative
     #inp_lat = 59.64 # homer ak
     #inp_long = -151.54
-    #inp_lat = 59.45 # Seldovia
-    #inp_long = -151.72
-    #-141.0838,60.1780 - Taan Fiord
-    #inp_lat = 60.1780
-    #inp_long = -141.0838
-    #-69.195, -12.583 - Puerto Maldonado
-    #inp_lat = -12.583
-    #inp_long = -69.195
-    #inp_lat = 33.4 #Phoenix
-    #inp_long = -112.1
-    inp_lat = 65.76 #Little Diomede
-    inp_long = -168.93
 
     # get the containing cell 
-    lat0 = math.ceil( inp_lat * 4 ) / 4
-    lat1 = (math.floor( inp_lat * 4 ) / 4) + 0.01 # edge is not inclusive
-    long0 = math.floor( inp_long * 4 ) / 4
-    long1 = (math.ceil( inp_long * 4 ) / 4) - 0.01
-
+    #lat0 = math.ceil( inp_lat * 4 ) / 4
+    #lat1 = (math.floor( inp_lat * 4 ) / 4) + 0.01 # edge is not inclusive
+    #long0 = math.floor( inp_long * 4 ) / 4
+    #long1 = (math.ceil( inp_long * 4 ) / 4) - 0.01
     #area0 = [ lat0, long0, lat1, long1 ]
     area0 = None  # we are doing global downloads!
 
@@ -166,24 +185,7 @@ def main():
         'total_precipitation',
     ]
 
-    # era5 back extension goes from 1950 to 1978
-    download_dataset(   'reanalysis-era5-single-levels-preliminary-back-extension',
-                        'cds_era5_backext',
-                        1950, 1978,
-                        area0, variables, force_download )
-
-    # era5 goes from 1979 to present
-    download_dataset(   'reanalysis-era5-single-levels',
-                        'cds_era5',
-                        1979, current_time.year,
-                        area0, variables, force_download )
-
-    # call one more time to always force_download the current year.
-    # so we pick up the latest data
-    download_dataset(   'reanalysis-era5-single-levels',
-                        'cds_era5',
-                        current_time.year, current_time.year,
-                        area0, variables, force_download=True )
+    download_dataset( 1950, current_time.year, area0, variables, force_download )
 
 
 if __name__ == "__main__":

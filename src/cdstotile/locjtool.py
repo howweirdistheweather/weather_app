@@ -59,9 +59,9 @@ def read_data_group( flag_args:dict,
     assert num_dimensions == 3
 
     # convert lat long to index
-    lat_i = int( math.ceil((90.0 - loc_lat) * NUM_LATIDX_GLOBAL / 180.25 ))
+    lat_i = int( math.ceil((90.0 - loc_lat) * 4) )   #NUM_LATIDX_GLOBAL / 180.25 ))
     long_deg_e = loc_long if loc_long >= 0 else 360.0 + loc_long
-    long_i = int( long_deg_e * NUM_LONGIDX_GLOBAL / 360.0 )
+    long_i = int( math.floor(long_deg_e * 4) )   #NUM_LONGIDX_GLOBAL / 360.0
 
     #print( f'{lat_i},{long_i} {loc_lat} {loc_long} {long_deg_e}' )
 

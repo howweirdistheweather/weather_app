@@ -142,7 +142,7 @@ def process_lat( lat_i:int, lat_data, data_group:dict ):
         # process 1 location 1 week
         #if ( data_group['analysis_kwargs'].contains( 'lon' ) ):
         latitude_deg_n = 90.0 - (lat_i * 180.25 / NUM_LATIDX_GLOBAL)
-        longitude_deg_e = long_i * 360.0 / NUM_LONGIDX_GLOBAL - 180.0
+        bug here? longitude_deg_e = long_i * 360.0 / NUM_LONGIDX_GLOBAL - 180.0
         lat0 = math.ceil( latitude_deg_n * 4 ) / 4
         lat1 = (math.floor( latitude_deg_n * 4 ) / 4) #+ 0.01 # edge is not inclusive
         long0 = math.floor( longitude_deg_e * 4 ) / 4
@@ -288,21 +288,25 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
 
 
 # for all years process data_groups'
-def load_netcdfs( flag_args:dict, inp_path:str, out_path:str, dir_name:str, start_year:int, end_year:int ):
-    # calculate a unique number for each quarter degree on the planet.
-    # makes having a unique filename for the coordinates simpler.
-    #grid_num = CalcQtrDegGridNum( area_lat_long )
+def load_netcdfs( flag_args:dict, inp_path:str, out_path:str, start_year:int, end_year:int ):
     years = list( range( start_year, end_year + 1 ) )
     for year in years:
         yidx = year - start_year
-        
+
+        # era5 back extension goes from 1950 to 1978
+        if year >= 1950 and year <= 1978:
+            dir_name = 'cds_era5_backext'
+        # era5 goes from 1979 to present
+        else:
+            dir_name = 'cds_era5'
+
         for dg_name in global_data_groups:
             dg = data_groups[ dg_name ]
             process_data_group( flag_args, inp_path, out_path, dir_name, year, dg_name, dg );
 
 
 def CalcQtrDegGridNum( area_lat_long ):
-    grid_num = int( ((area_lat_long[0] + 90) * 4) * 360 * 4 + ((area_lat_long[1] + 180) * 4) )
+    grid_num = int( ((90 - area_lat_long[0]) * 4) * 360 * 4 + ((area_lat_long[1] + 180) * 4) )
     return grid_num
 
 
@@ -314,7 +318,7 @@ def main():
     # default options
     input_path = '.'
     output_path = '.'
-    start_year = 1979
+    start_year = 1950
     end_year = current_time.year
     data_dir = 'cds_era5'
 
@@ -354,18 +358,7 @@ def main():
     if args.end:
         end_year = int(args.end)
 
-    if end_year < 1979:
-        data_dir = 'cds_era5_backext'
-
-    # era5 goes from 1979 to present
-    #load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
-    #load_netcdfs( flag_args, input_path, output_path, data_dir, start_year, end_year )
-
-    # era5 back extension goes from 1950 to 1978
-    load_netcdfs( flag_args, input_path, output_path, 'cds_era5_backext', 1950, 1978 )
-
-    # era5 goes from 1979 to present
-    load_netcdfs( flag_args, input_path, output_path, 'cds_era5', 1979, current_time.year )
+    load_netcdfs( flag_args, input_path, output_path, start_year, end_year )
 
 
 if __name__ == '__main__':
