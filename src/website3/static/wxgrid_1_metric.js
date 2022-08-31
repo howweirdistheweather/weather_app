@@ -70,8 +70,10 @@ var selected_seasons = []
 var season_covers = []
 var covers = []
 var states = []
+var line_opacidy = 0.1
 var state_index = null
 var maxes = []
+var is_seasonaly_adjusted = false
 var select = null
 var select_draw = null
 var draws = []
@@ -103,6 +105,8 @@ var reading_types = []
 var method_types = []
 var has_reading = false
 var all_data = []
+var base_data = []
+var seasonal_data = []
 var fade = null
 var short_names = {}
 var prevs = []
@@ -135,29 +139,31 @@ fetch( wxgrid_url, {   method:'GET',
 				compresion_types = start_data["compression"];
 				compresion = {}
 				start_data = start_data["variables"];
-				all_data = {}
+				base_data = {}
 				for (mesurment of Object.keys(start_data)){
 					compresion[mesurment] = {}
-					all_data[mesurment] = {}
+					base_data[mesurment] = {}
 					short_names[mesurment] = {}
 					for (func of Object.keys(start_data[mesurment])){
 						compresion[mesurment][func] = compresion_types[start_data[mesurment][func]["compression"]]
-						all_data[mesurment][func] = []
+						base_data[mesurment][func] = []
 						short_names[mesurment][func] = start_data[mesurment][func]["short_name"]
 						for (var i = 0; i < start_data[mesurment][func]["data"].length; i++){
-							all_data[mesurment][func].push([])
+							base_data[mesurment][func].push([])
 							for (var j = 0; j < start_data[mesurment][func]["data"][i].length; j++){
-								all_data[mesurment][func][i].push(0)
+								base_data[mesurment][func][i].push(0)
 								if (start_data[mesurment][func]["data"][i][j] == 255 || start_data[mesurment][func]["data"][i][j] == null){
-									all_data[mesurment][func][i][j] = null
+									base_data[mesurment][func][i][j] = null
 								}
 								else {
-									all_data[mesurment][func][i][j] = start_data[mesurment][func]["data"][i][j]
+									base_data[mesurment][func][i][j] = start_data[mesurment][func]["data"][i][j]
 								}
 							}
 						}
 					}
 				}
+				seasonal_data = doSesonalCompression(base_data)
+				all_data = base_data
 				unitNamesHandaler()
 				unitMulHandaler()
 				makeNewMeasurmeant(0)
@@ -168,10 +174,101 @@ fetch( wxgrid_url, {   method:'GET',
 .catch(function(err) {
     console.error('Fetch Error -', err);
 });
+function doSesonalCompression(in_data){
+	var week_totals = [{},{}]
+	for (mesurment of Object.keys(in_data)){
+		week_totals[0][mesurment] = {}
+		week_totals[1][mesurment] = {}
+		for (func of Object.keys(in_data[mesurment])){
+			week_totals[0][mesurment][func] = new Array(52).fill(0);
+			week_totals[1][mesurment][func] = new Array(52).fill(0);
+			for (var i = 0; i < in_data[mesurment][func].length; i++){
+				for (var j = 0; j < in_data[mesurment][func][i].length; j++){
+					if (in_data[mesurment][func][i][j] != 255 && in_data[mesurment][func][i][j] != null){
+						week_totals[0][mesurment][func][j] += in_data[mesurment][func][i][j]
+						week_totals[1][mesurment][func][j] += 1
+					}
+				}
+			}
+		}
+	}
+	var out_data = {}
+	for (mesurment of Object.keys(in_data)){
+		out_data[mesurment] = {}
+		for (func of Object.keys(in_data[mesurment])){
+			out_data[mesurment][func] = []
+			for (var i = 0; i < in_data[mesurment][func].length; i++){
+				out_data[mesurment][func].push([])
+				for (var j = 0; j < in_data[mesurment][func][i].length; j++){
+					out_data[mesurment][func][i].push(0)
+					if (in_data[mesurment][func][i][j] == 255 || in_data[mesurment][func][i][j] == null){
+						out_data[mesurment][func][i][j] = null
+					}
+					else {
+						out_data[mesurment][func][i][j] = in_data[mesurment][func][i][j]-parseInt(week_totals[0][mesurment][func][j]/week_totals[1][mesurment][func][j])+127
+						if (out_data[mesurment][func][i][j] < 0){
+							out_data[mesurment][func][i][j] = 0
+						}
+						if (out_data[mesurment][func][i][j] > 254){
+							out_data[mesurment][func][i][j] = 254
+						}
+					}
+				}
+			}
+		}
+	}
+	console.log(week_totals)
+	return out_data
+}
 var color_selector = document.getElementById("color_selector")
 color_selector.onchange =
 		function () {
 			color_num = parseInt(color_selector.value)
+			RenderGrid()
+		};
+var enable_line_editing = document.getElementById("enable_line_editing")
+enable_line_editing.onchange =
+		function () {
+			if (enable_line_editing.checked){
+				line_opacidy = 1
+			}
+			else {
+				select = null
+				if (select_draw != null){
+					select_draw.remove()
+				}
+				select_draw = null
+				line_opacidy = 0.1
+			}
+			for (let i=0; i<=measurement_index; i++){
+				DrawLines(i)
+			}
+		};
+var seasonal_adjust = document.getElementById("seasonal_adjust")
+seasonal_adjust.onchange =
+		function () {
+			if (seasonal_adjust.checked){
+				is_seasonaly_adjusted = true
+				all_data = seasonal_data
+			}
+			else {
+				is_seasonaly_adjusted = false
+				all_data = base_data
+			}
+			LoadWXGrid();
+			for (let num=0; num<=measurement_index; num++){
+				click_coords[num] = {}
+				click_coords[num][mins[num]*2+13] = 0
+				click_coords[num][maxes[num]*2+17] = histo_hights[num]
+				if (select != null && select[1] == num){
+					select = null
+					if (select_draw != null){
+						select_draw.remove()
+					}
+					select_draw = null
+				}
+				DrawLines(num)
+			}
 			RenderGrid()
 		};
 var unit_selector = document.getElementById("unit_selector")
@@ -360,7 +457,7 @@ function makeNewMeasurmeant(curent_id_num) {
 			}
 			DrawLines(curent_id_num)
 			RenderGrid()
-			updateStates()
+			//updateStates()
 		};
 	reading_dropdowns[curent_id_num].onchange =
 		function () {
@@ -518,7 +615,7 @@ function deleteMeasurement() {
 	measurement.remove()
 	histo.remove()
 	measurement_index --
-	updateStates()
+	//updateStates()
 }
 
 function reset_sliders(num){
@@ -679,7 +776,7 @@ function LoadMethodDropdown(num) {
 	}
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 	
 }
 function LoadDirectionDropdown(num) {
@@ -760,59 +857,86 @@ function month_to_week( nmonth ) {
     let week = day_of_year * 52.0 / 365.0;
     return week;
 }
-function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num){
-	for (var j = 2; j < histo_plot.length-2; j++){
-		if (histo_plot[j] >= 2){
-			is_mode = true
-			for (var i = 1; i < Math.min(10,j); i++){
-				if (histo_plot[j-i] >= histo_plot[j]){
-					is_mode = false
+function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,colors,do_text,st_subtract,do_plus){
+	if (do_text){
+		for (var j = 2; j < histo_plot.length-2; j++){
+			if (histo_plot[j] >= 2){
+				is_mode = true
+				for (var i = 1; i < Math.min(10,j); i++){
+					if (histo_plot[j-i] > histo_plot[j]){
+						is_mode = false
+					}
 				}
-			}
-			for (var i = 1; i < histo_plot.length-Math.max(histo_plot.length-10,j); i++){
-				if (histo_plot[j+i] >= histo_plot[j]){
-					is_mode = false
+				for (var i = 1; i < histo_plot.length-Math.max(histo_plot.length-10,j); i++){
+					if (histo_plot[j+i] > histo_plot[j]){
+						is_mode = false
+					}
 				}
-			}
-			if (is_mode){
-				console.log(method_types[num])
-		        let mode = draw.text( `${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
-				let mode_length = mode.length();
-		        mode.move( j*2 - mode_length/2 + 15,125*0.5+1 ); // center vertically
+				if (is_mode){
+					console.log(method_types[num])
+					if (is_seasonaly_adjusted){
+						let st_txt = ''
+						if (parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
+							st_txt = '+'
+						}
+						var mode = draw.text( st_txt+`${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+					}
+					else {
+						var mode = draw.text( `${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+					}
+					let mode_length = mode.length();
+			        mode.move( j*2 - mode_length/2 + 15,125*0.5+1 ); // center vertically
+				}
 			}
 		}
-	}
-    let min_extrem = draw.text( `${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
-	let min_extrem_length = min_extrem.length();
-    min_extrem.move( min_num*2 - min_extrem_length/2 + 15,125*0.5+1 ); // center vertically
+		if (is_seasonaly_adjusted){
+			let st_txt = ''
+			if (parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
+				st_txt = '+'
+			}
+			var min_extrem = draw.text( st_txt+`${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+		}
+		else {
+			var min_extrem = draw.text( `${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+		}
+	    let min_extrem_length = min_extrem.length();
+	    min_extrem.move( min_num*2 - min_extrem_length/2 + 15,125*0.5+1 ); // center vertically
 
-    let max_extrem = draw.text( `${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
-	let max_extrem_length = max_extrem.length();
-    max_extrem.move( max_num*2 - max_extrem_length/2 + 15,125*0.5+1 ); // center vertically
+		if (is_seasonaly_adjusted){
+			let st_txt = ''
+			if (parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
+				st_txt = '+'
+			}
+			var max_extrem = draw.text( st_txt+`${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+		}
+		else {
+			var max_extrem = draw.text( `${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+		}
+	    let max_extrem_length = max_extrem.length();
+	    max_extrem.move( max_num*2 - max_extrem_length/2 + 15,125*0.5+1 ); // center vertically
+	}
+	var max_value = Math.max(...histo_plot)
 	for (var i = 0; i < 128; i++) {
 	
 		var fillcol = '#ffffff'
-        draw.rect( 2, color_plot[2][i]*0.5 ).move( i*2+15, (125-color_plot[2][i])*0.5 ).attr({
-            'fill':color_lists[color_num][2],
+        draw.rect( 2, color_plot[2][i]*0.5*125/max_value ).move( i*2+15, (125-color_plot[2][i]*125/max_value)*0.5 ).attr({
+            'fill':colors[2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 2, color_plot[1][i]*0.5 ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
-            'fill':color_lists[color_num][1],
+        draw.rect( 2, color_plot[1][i]*0.5*125/max_value ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i])*125/max_value)*0.5 ).attr({
+            'fill':colors[1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 2, color_plot[0][i]*0.5 ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
-            'fill':color_lists[color_num][0],
+        draw.rect( 2, color_plot[0][i]*0.5*125/max_value ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i])*125/max_value)*0.5 ).attr({
+            'fill':colors[0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-		var line = draw.line(0, 0, 100, 100).move(0, 0)
-		line.stroke({ color: '#000', width: 1, })
-		line.remove()
 	}
 }
-function DrawHistograms(compresed_data){
+function DrawHistograms(compresed_data,inc_data){
 	for (num = 0; num < measurement_index+1; num ++){
 		var histo_plot_st = new Array(128).fill(0);
 		var color_plot_st = [new Array(128).fill(0),new Array(128).fill(0),new Array(128).fill(0)]
@@ -821,15 +945,15 @@ function DrawHistograms(compresed_data){
 		for (var year = 0; year < relev_data.length; year ++){
 			for (var week = 0; week < 52; week ++){
 				if (relev_data[year][week] != null){
-					histo_plot_st[parseInt(relev_data[year][week]/2)] += 0.5
+					histo_plot_st[parseInt(relev_data[year][week]/2)] += 1
 					if (compresed_data[year][week] < wx_range_val0*255){
-						color_plot_st[0][parseInt(relev_data[year][week]/2)] += 0.5
+						color_plot_st[0][parseInt(relev_data[year][week]/2)] += 1
 					}
 					else if (compresed_data[year][week] < wx_range_val1*255){
-						color_plot_st[1][parseInt(relev_data[year][week]/2)] += 0.5
+						color_plot_st[1][parseInt(relev_data[year][week]/2)] += 1
 					}
 					else {
-						color_plot_st[2][parseInt(relev_data[year][week]/2)] += 0.5
+						color_plot_st[2][parseInt(relev_data[year][week]/2)] += 1
 					}
 				}
 			}
@@ -870,6 +994,12 @@ function DrawHistograms(compresed_data){
 		if (compresion[reading_types[num]][method_types[num]]["type"] == "parabolic") {
 			expon = 2
 		}
+		var st_subtract = 0
+		var do_plus = false
+		if (is_seasonaly_adjusted){
+			st_subtract = 127
+			do_plus = true
+		}
 		`
 		if (compresion[reading_types[num]][method_types[num]]["units"] == "degrees"){
 			drawDirectionLoop(expon,histo_plot,min_num,max_num,color_plot,draw)
@@ -888,7 +1018,67 @@ function DrawHistograms(compresed_data){
 			return
 		}
 		`
-		DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num)
+		if (save_clicks_x.length >= 20){
+			DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,['#f4f4f4','#f4f4f4','#f4f4f4'],false,st_subtract,do_plus)
+			var histo_plot_st = new Array(128).fill(0);
+			var color_plot_st = [new Array(128).fill(0),new Array(128).fill(0),new Array(128).fill(0)]
+			color_plot_str = JSON.stringify(color_plot_st)
+			var relev_data = all_data[reading_types[num]][method_types[num]]
+			var compressed_coords_x = []
+			var compressed_coords_y = []
+			for (var i = 0; i < save_clicks_x.length; i++){
+				compressed_coords_x.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[0])
+				compressed_coords_y.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[1])
+			}
+			var new_compressed = []
+			var new_relev = []
+			for (var index = 0; index < compressed_coords_x.length; index ++){
+				let year = compressed_coords_y[index]
+				let week = compressed_coords_x[index]
+				if (relev_data[year][week] != null){
+					histo_plot_st[parseInt(relev_data[year][week]/2)] += 1
+					if (compresed_data[year][week] < wx_range_val0*255){
+						color_plot_st[0][parseInt(relev_data[year][week]/2)] += 1
+					}
+					else if (compresed_data[year][week] < wx_range_val1*255){
+						color_plot_st[1][parseInt(relev_data[year][week]/2)] += 1
+					}
+					else {
+						color_plot_st[2][parseInt(relev_data[year][week]/2)] += 1
+					}
+				}
+			}
+			var max_num_new = null
+			var max_collor_nums_new = [null,null,null]
+			for (var j = 0; j < histo_plot_st.length; j++){
+				for (var i = 0; i < 3; i++){
+					if (color_plot_st[i][j] != 0){
+						max_collor_nums_new[i] = j
+					}
+				}
+				if (histo_plot_st[j] != 0){
+					max_num_new = j
+				}
+			}
+			var min_num_new = null
+			var min_collor_nums_new = [null,null,null]
+			for (var j = histo_plot_st.length-1; j >= 0; j--){
+				for (var i = 0; i < 3; i++){
+					if (color_plot_st[i][j] != 0){
+						min_collor_nums_new[i] = j
+					}
+				}
+				if (histo_plot_st[j] != 0){
+					min_num_new = j
+				}
+			}
+			var histo_plot_new = histo_plot_st
+			var color_plot_new = color_plot_st
+			DrawHistogram(draw,histo_plot_new,min_num_new,max_num_new,expon,mul,color_plot_new,num,color_lists[color_num],true,st_subtract,do_plus)
+		}
+		else {
+			DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,color_lists[color_num],true,st_subtract,do_plus)
+		}
 		histo_data[num] = {'histo_plot':histo_plot,'min_num':min_num,'max_num':max_num,'expon':expon,'mul':mul,'color_plot':color_plot}
 //		console.log(min_num*2+15)
 //		console.log(max_num*2+15)
@@ -945,10 +1135,52 @@ function AddClickHandler(num) {
 		if (!is_active) {
 			return
 		}
+		else if (!enable_line_editing.checked){
+			DetectHistoClick(num,event)
+			return
+		}
 		RegisterClick(num,event)
 	});
 }
-
+function DetectHistoClick(num,event) {
+	if (!event.shiftKey){
+		save_clicks_x = []
+		save_clicks_y = []
+		selected_years = []
+		selected_seasons = []
+	}
+	click_x = event.offsetX
+	click_y = histo_hights[num]-event.offsetY
+	if (click_y < 0 || click_x < mins[num]*2+13 || click_x > maxes[num]*2+17 ||  click_y > 71){
+		return
+	}
+	click_x -= 17
+	var compressed_coords_x = []
+	var compressed_coords_y = []
+	for (var i = 0; i < save_clicks_x.length; i++){
+		compressed_coords_x.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[0])
+		compressed_coords_y.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[1])
+	}
+	console.log(reading_types[num],method_types[num])
+	for (let i=0; i<all_data[reading_types[num]][method_types[num]].length; i++){
+		for (let k=0; k<all_data[reading_types[num]][method_types[num]][i].length; k++){
+			if (parseInt(all_data[reading_types[num]][method_types[num]][i][k]/2) == parseInt(click_x/2)){
+				let is_selected = false
+				for (var j=0; j < save_clicks_x.length; j++){
+					if (k == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && i == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+						is_selected = true
+						break
+					}
+				}
+				if (!is_selected){
+					save_clicks_x.push(k*9+37)
+					save_clicks_y.push((all_data[reading_types[num]][method_types[num]].length-i)*9-2)
+				}
+			}
+		}
+	}
+	DetectGridClick(null,true)
+}
 function RegisterClick(num,event) {
 	click_x = event.offsetX
 	click_y = histo_hights[num]-event.offsetY
@@ -1002,7 +1234,7 @@ function RegisterClick(num,event) {
 	click_coords[num][click_x] = click_y
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 }
 
 function getCellCoords(x,y){
@@ -1200,7 +1432,7 @@ function DetectGridClick(event,is_render_call){
 	var num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
 	for (var i=0; i < save_clicks_x.length; i++){
 		var coords = getCellCoords(save_clicks_x[i],save_clicks_y[i])
-		if (Math.min(...coords) > 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
+		if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
 			can_fade = true
 		}
 	}
@@ -1212,7 +1444,7 @@ function DetectGridClick(event,is_render_call){
 			, 'stroke-width': 0 
 				});
 	}
-//	console.log(save_clicks_x)
+	DrawHistograms(compresed_data)
 	for (var i=0; i<save_clicks_x.length; i++){
 		RegisterGridClick(null,save_clicks_x[i],save_clicks_y[i],null)
 	}
@@ -1236,8 +1468,21 @@ function DetectGridClick(event,is_render_call){
 				var value_list = []
 				for (var num=0; num < save_clicks_x.length; num++){
 					var coords = getCellCoords(save_clicks_x[num],save_clicks_y[num])
-					if (Math.min(...coords) > 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
-						value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
+					if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
+						var value = false
+						if (is_seasonaly_adjusted){
+							let st_txt = ''
+							if (parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((127*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
+								st_txt = '+'
+							}
+							value = parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((127*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))
+						}
+						if (!value) {
+							value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
+						}
+						else {
+							value_list.push(value);
+						}
 					}
 				}
 				if ([method_options[j]] == 'min'){
@@ -1249,8 +1494,14 @@ function DetectGridClick(event,is_render_call){
 				else {
 					compressed_value = value_list.reduce((a, b) => a + b, 0)/value_list.length
 				}
+				var st_txt = ''
+				if (is_seasonaly_adjusted){
+					if (compressed_value > 0){
+						st_txt = '+'
+					}
+				}
 				makeNewElement("table"+(i+1),"tr",{"id":"methody"+(i+1)+','+j},null);
-				makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
+				makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ st_txt+parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
 			}
 		}
 	}
@@ -1284,20 +1535,21 @@ function RegisterGridClick(event,click_x,click_y,num) {
 			, stroke: '#000'
 		, 'stroke-width': 1 
         }));
-	
-	for (var num = 0; num < measurement_index+1; num ++){
-		var data = wx_grdata[reading_types[num]][method_types[num]][coords[1]][coords[0]]
-		histo_index = parseInt(data/2)
-		draw = draws[num]
-		if (highlights[num] == null){
-			highlights[num] = []
+	if (save_clicks_x.length < 20){
+		for (var num = 0; num < measurement_index+1; num ++){
+			var max_value = Math.max(...histo_data[num]['histo_plot'])
+			var data = wx_grdata[reading_types[num]][method_types[num]][coords[1]][coords[0]]
+			histo_index = parseInt(data/2)
+			draw = draws[num]
+			if (highlights[num] == null){
+				highlights[num] = []
+			}
+	        highlights[num].push(draw.rect( 2, histo_data[num]['histo_plot'][histo_index]*0.5*125/max_value ).move( histo_index*2+15,(125-histo_data[num]['histo_plot'][histo_index]*125/max_value)*0.5).attr({
+	            'fill':'#eeee00',
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0
+	        }));
 		}
-        highlights[num].push(draw.rect( 2, histo_data[num]['histo_plot'][histo_index]*0.5 ).move( histo_index*2+15,(125-histo_data[num]['histo_plot'][histo_index])*0.5).attr({
-            'fill':'#eeee00',
-            'shape-rendering':'crispEdges',
-            'stroke-width': 0
-        }));
-		
 	}
 	month_lenghths = [31,28,31,30,31,30,31,31,30,31,30,31]
 	var day = [coords[0]]*7
@@ -1369,7 +1621,7 @@ function HandleDelete() {
 	select = null
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 }
 
 function arrowHandler(y_dif) {
@@ -1400,7 +1652,7 @@ function arrowHandler(y_dif) {
     });
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 }
 
 function horizontalArrowHandler(x_dif) {
@@ -1452,7 +1704,7 @@ function horizontalArrowHandler(x_dif) {
     });
 	DrawLines(num)
 	RenderGrid()
-	updateStates()
+	//updateStates()
 }
 
 function DrawLines(num) {
@@ -1465,11 +1717,26 @@ function DrawLines(num) {
 	console.log(x_vals)
 	for (var b = 0; b < x_vals.length-1; b ++) {
 		lines[num].push(draw.line(0, histo_hights[num], x_vals[b+1]-x_vals[b], (click_coords[num][x_vals[b+1]]-click_coords[num][x_vals[b]]-histo_hights[num])*(-1))
-		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)).stroke({ color: '#000', width: 1, linecap: 'round' }))
-		lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).fill('#000'))
+		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)).attr({
+					fill: '#000'
+			, 'stroke-opacity': line_opacidy
+					, stroke: '#000'
+			, 'stroke-width': 1 
+				}));
+		lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).attr({
+					fill: '#000'
+			, 'fill-opacity': line_opacidy
+					, stroke: '#ee0'
+			, 'stroke-width': 0 
+				}));
 	}
 	b = x_vals.length-1
-	lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).fill('#000'))
+	lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).attr({
+					fill: '#000'
+			, 'fill-opacity': line_opacidy
+					, stroke: '#ee0'
+			, 'stroke-width': 0 
+				}));
 }
 
 function invertHandeler(num, will_render) {
@@ -1684,7 +1951,6 @@ function updateStates(){
 	}
 	state_index ++
 	states.push(state_dict)
-	console.log(states)
 }
 // Renders SVG weather grid/heatmap thing
 function RenderGrid(){
