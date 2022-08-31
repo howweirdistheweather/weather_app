@@ -188,10 +188,11 @@ def concat_month( destfilename:str, srcfilename:str ):
 
     already_exists = os.path.isfile( destfilename )
     if not already_exists:
+        # for the first month, just copy src to dest
         os.rename( srcfilename, destfilename )
         return
 
-    # concatenate src to dest
+    # concatenate src with dest
     temp_filename = destfilename + '.concat'
     ds = xarray.open_mfdataset( [destfilename, srcfilename], combine ='by_coords' )
     ds.to_netcdf( temp_filename )  # Export netcdf file
