@@ -12,10 +12,12 @@
 #
 import math
 import datetime
+import dateutil
 import os.path
 import cdsapi
 import netCDF4
 import argparse
+import numpy
 
 import parsl
 from parsl import python_app
@@ -54,14 +56,14 @@ def download_dataset( start_year, end_year, area_lat_long, variables, force_down
             #print_var_for_year( ds_name, dir_name, year, area_lat_long, var_name, force_download)
             print(f'Submitted {var_name} for {year}: {ds_name}')
 
-@python_app
+#@python_app
 def print_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, force_download=False):
     '''Test method for debugging parsl operation.'''
     import time
     time.sleep(5)
     print(f'Processing {var_name} for {year}: {ds_name}')
 
-@python_app
+#@python_app
 def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, force_download=False):
     '''
     Download a single year dataset for a single variable.
@@ -102,20 +104,138 @@ def download_var_for_year(ds_name, dir_name, year, area_lat_long, var_name, forc
         # create the path if necessary
         os.makedirs(pathname, exist_ok=True)
 
-        # download to temp file
-        tempfullname = fullname + '.tempdl'
-        r = cds.retrieve(
-            ds_name,
-            {
+        # download to temp file then rename to mark as completed.
+        # So - There is ERA5 data (expver=1), and ERA5T data(expver=5). Every month a month of
+        # ERA5T data becomes ERA5. In other words 1950 to now minus 3 months is ERA5. Anything
+        # newer is ERA5T.
+        # And if downloading ERA5T, we have to respect 5day embargo on latest data. So it is
+        # NOW minus 5 days for the newest available.
+        # I am solving this request issue by requesting month data for the latest year(s).
+        # The final month request is for a partial set of days - up to a full month.
+        # Doing it this way makes it easy to cat the files together into a year file. We don't
+        # have to deal with the expver column.
+        cur_date = datetime.datetime.now().date()
+        era5_end_date = cur_date - dateutil.relativedelta.relativedelta( months=3 )
+        era5_end_date = era5_end_date.replace( day=31 )
+
+        if year < era5_end_date.year:
+            # request a full year of ERA5
+            request_dict = {
                 'product_type': 'reanalysis',
                 'format': 'netcdf',
                 'year': year,
                 'time': 'all',
-                'variable': [var_name],
+                'variable': [var_name]
                 #'area': area_lat_long,
-            }, tempfullname)
-        # rename completed download
-        os.rename(tempfullname, fullname)
+            }
+
+            tempfullname = fullname + '.tempdl'
+            r = cds.retrieve( ds_name, request_dict, tempfullname )
+            # rename completed download
+            os.rename(tempfullname, fullname)
+
+        else:
+            # request by month. could be era5 or era5t
+            start_month = 1
+            end_month = 12
+            era5t_end_date = cur_date - datetime.timedelta( days=5 )
+
+            if year >= era5t_end_date.year:
+                end_month = era5t_end_date.month
+
+            tempfullname = fullname + f'.tempdl'
+            for month in range( start_month, end_month ):
+                request_dict = {
+                    'product_type': 'reanalysis',
+                    'format': 'netcdf',
+                    'year': year,
+                    'variable': [var_name],
+                    'month': month,
+                    'day': [str(i) for i in range( 1, 32 )],
+                    'time': 'all'
+                }
+
+                temp_month_fullname = fullname + f'.tempdl-{month}'
+                r = cds.retrieve( ds_name, request_dict, temp_month_fullname )
+                # concat completed download
+                concat_month( tempfullname, temp_month_fullname )
+
+            # the final month could be partial set of days up to a whole months worth.
+            start_day = 1
+            end_day = era5t_end_date.day+1
+            request_dict = {
+                    'product_type': 'reanalysis',
+                    'format': 'netcdf',
+                    'year': year,
+                    'variable': [var_name],
+                    'month': end_month,
+                    'day': [str(i) for i in range( 1, end_day+1 )],
+                    'time': 'all'
+                }
+
+            tempfullname = fullname + f'.tempdl-{end_month}'
+            r = cds.retrieve( ds_name, request_dict, temp_month_fullname )
+            # concat completed download
+            concat_month( tempfullname, temp_month_fullname )
+            # rename completed download
+            os.rename( tempfullname, fullname )
+    pass
+
+# put monthly netcdf downloads together
+def concat_month( destfilename:str, srcfilename:str ):
+
+    import xarray
+
+    already_exists = os.path.isfile( destfilename )
+    if not already_exists:
+        os.rename( srcfilename, destfilename )
+        return
+
+    # concatenate src to dest
+    temp_filename = destfilename + '.concat'
+    ds = xarray.open_mfdataset( [destfilename, srcfilename], combine ='by_coords' )
+    ds.to_netcdf( temp_filename )  # Export netcdf file
+    ds.close()
+    # fix name
+    os.rename( temp_filename, destfilename )
+    # remove the src file
+    os.remove( srcfilename )
+    pass
+
+'''
+# get rid of the expver stuff..
+# newest ERA5 data has an experiment version dimension with 2 coordinates.
+# the data is spread across the 2 columns
+def remove_expver( filename:str ):
+
+     # open for read/write
+    try:
+        ds = netCDF4.Dataset( filename, 'a' )
+
+    except OSError:
+        print( f'{filename} could not be opened!' )
+        exit(-1)
+
+    if 'expver' not in ds.dimensions:
+        return
+
+    short_var_name = list(ds.variables)[4]
+    print( f'removing expvar for {short_var_name}' )
+    data = ds[short_var_name]
+    # convert invalids to 0
+    data[:, :, :, 0] = data[:, :, :, 0] + data[:, :, :, 1]
+    # = numpy.ma.filled( data, 0 )
+
+    #data[:,:,:,0] = data[:,:,:,0] if not math.isnan( data[:,:,:,0] ) else data[:,:,:,0]
+
+    #numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:][:], axes=(2, 3, 0, 1) )
+    # convert invalids to 0
+    #var_week = numpy.ma.filled( var_week, 0 )
+    # sum columns on dimension 3 and then drop expvar column
+    #data = numpy.delete( data, 1, axis=3 )
+    ds.close()
+    pass
+'''
 
 def main():
     '''Main program to download data from Copernicus.'''
