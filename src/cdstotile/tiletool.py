@@ -6,6 +6,7 @@ import copy
 import struct
 import datetime
 import os.path
+import shutil
 import gc
 import json
 import numpy
@@ -29,7 +30,7 @@ WEEKS_PER_YEAR = 52
 NUM_LONGIDX_GLOBAL = 1440
 NUM_LATIDX_GLOBAL  = 721
 
-APP_VERSION = "0.72.0"
+APP_VERSION = "0.8.1"
 current_time = datetime.datetime.now()
 
 # what data processing to do for the whole globe (as opposed to specific locations)
@@ -37,14 +38,22 @@ global_data_groups = ['temperature_and_humidity','wind','precipitation','cloud_c
 
 
 # make full pathname string for Global var netcdf input file
-def var_filename( inp_path:str, dir_name:str, year:int, var_name:str ) -> (str, str):
+def inp_filename( inp_path:str, dir_name:str, year:int, cds_var_name:str ) -> (str, str):
     # file naming scheme
     pathname = f'{inp_path}/{dir_name}/{year}/'
-    # filename = f'gn{grid_num}-{year}-{var_name}.nc'
-    filename = f'global-{year}-{var_name}.nc'
+    # filename = f'gn{grid_num}-{year}-{cds_var_name}.nc'
+    filename = f'global-{year}-{cds_var_name}.nc'
     fullname = pathname + filename
     return fullname, filename
 
+# make full pathname string for MultiSet Global var netcdf Input files
+def inp_multiset_filename( inp_path:str, dir_name:str, year:int, cds_var_name:str ) -> (str, str):
+    # file naming scheme
+    pathname = f'{inp_path}/{dir_name}/{year}/{cds_var_name}/'
+    # filename = f'gn{grid_num}-{year}-{cds_var_name}.nc'
+    filename = f'global-{year}-*-{cds_var_name}.nc'
+    fullname = pathname + filename
+    return fullname, filename
 
 # make full pathname string for a Global output netcdf file
 def out_filename( out_path:str, dgroup_name:str, year:int ) -> (dict):
@@ -82,12 +91,13 @@ def create_output( out_path:str, dgroup_name:str, year:int, num_weeks:int ) -> (
         print( f'output {o_names["tempfullname"]} could not be created!' )
         exit(-1)
 
-    ods.createDimension( "week",      num_weeks )
+    ods.createDimension( "week",      None ) # make this an unlimitd dimension. #num_weeks )
     ods.createDimension( "latitude",  NUM_LATIDX_GLOBAL )
     ods.createDimension( "longitude", NUM_LONGIDX_GLOBAL )
 
     week_var = ods.createVariable( 'Week', 'f4', 'week' )
-    week_var[:] = [ range(1, num_weeks+1) ]
+    for i in range(num_weeks):
+        week_var[i] = i+1
     week_var.units = 'weeks'
 
     latitude = ods.createVariable( 'Latitude', 'f4', 'latitude' )
@@ -97,6 +107,22 @@ def create_output( out_path:str, dgroup_name:str, year:int, num_weeks:int ) -> (
     longitude = ods.createVariable( 'Longitude', 'f4', 'longitude' )
     longitude[:] = [(i * 360.0 / NUM_LONGIDX_GLOBAL) for i in range( NUM_LONGIDX_GLOBAL )]
     longitude.units = 'degrees_east'
+
+    return (ods, o_names)
+
+
+# open existing output netcdf
+def open_output( out_path:str, dgroup_name:str, year:int ) -> (netCDF4.Dataset, str):
+    # create & initialize the output dataset
+    o_names = out_filename( out_path, dgroup_name, year )
+
+    try:
+        # copy existing to tempfilename, then try to open it
+        shutil.copy2( o_names['fullname'], o_names['tempfullname'] )
+        ods = netCDF4.Dataset( o_names['tempfullname'], mode="r+", clobber=False )
+    except OSError:
+        print( f'Existing output {o_names["tempfullname"]} could not be opened!' )
+        exit(-1)
 
     return (ods, o_names)
 
@@ -113,19 +139,30 @@ def save_output( ods:netCDF4.Dataset, week_idx:int, odat:dict ):
         for stat_name, lat_dat in ovar.items():
             comb_name = ovar_name + '.' + stat_name
             if not comb_name in ods.variables:
-                nc_var = ods.createVariable( comb_name, 'u1', ("week","latitude", "longitude") )
-                #todo: annotate with descriptino compression type etc
+                nc_var = ods.createVariable( comb_name, 'u1', ("week","latitude","longitude") )
+                #todo: annotate with description compression type etc
                 nc_var.description = data_settings['variables'][ovar_name][stat_name]['long_name']
                 comp_type = data_settings['variables'][ovar_name][stat_name]['compression']
                 nc_var.units = comp_type + json.dumps( data_settings['compression'][comp_type] )
 
             nc_var = ods.variables[ comb_name ]
+            
+            # make nc_var bigger if necessary
+            #if week_idx >= len( nc_var ):
+            #    numpy.append( nc_var, [None for i in range(NUM_LATIDX_GLOBAL)] )
+            #    print( nc_var )
+            #     print( ods )
+            #     nc_var[week_idx] = [[0 for j in range(NUM_LONGIDX_GLOBAL)] for i in range(NUM_LATIDX_GLOBAL)]
+            #     print( nc_var[week_idx] )
+            
             for lat_idx, stat in lat_dat.items():
+                #print( f'w{week_idx} l{lat_idx}' )
                 nc_var[week_idx, lat_idx] = numpy.asarray( stat, dtype=numpy.uint8 )
 
 
 # store the hig stats output data in a dictionary.
 def store_out_lat( odat:dict, var_name:str, stat_name:str, lat_i:int, long_i:int, wk_value ):
+    # create output dicts if they don't already exist
     if not var_name in odat.keys():
         odat[ var_name ] = { stat_name: { lat_i: [None for i in range(NUM_LONGIDX_GLOBAL)] } }
 
@@ -142,7 +179,8 @@ def process_lat( lat_i:int, lat_data, data_group:dict ):
         # process 1 location 1 week
         #if ( data_group['analysis_kwargs'].contains( 'lon' ) ):
         latitude_deg_n = 90.0 - (lat_i * 180.25 / NUM_LATIDX_GLOBAL)
-        bug here? longitude_deg_e = long_i * 360.0 / NUM_LONGIDX_GLOBAL - 180.0
+        # is this next line correct?
+        longitude_deg_e = long_i * 360.0 / NUM_LONGIDX_GLOBAL - 180.0
         lat0 = math.ceil( latitude_deg_n * 4 ) / 4
         lat1 = (math.floor( latitude_deg_n * 4 ) / 4) #+ 0.01 # edge is not inclusive
         long0 = math.floor( longitude_deg_e * 4 ) / 4
@@ -169,11 +207,13 @@ def process_lat( lat_i:int, lat_data, data_group:dict ):
 # process one full year for one data_group
 def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str, year:int, dg_name:str, data_group:dict ):
 
-    fcalc = flag_args[ 'force_recalc' ]
+    fcalc         = flag_args[ 'force_recalc' ]
     show_progress = flag_args[ 'show_progress' ]
+    fupdate       = flag_args[ 'update_data' ]
 
-    # if output file already exists and not force_recalc, skip this one. it is done.
-    if output_exists( out_path, dg_name, year ) and (fcalc == False):
+    # if output file already exists follow this logic
+    fout_exists = output_exists( out_path, dg_name, year )
+    if (fout_exists == True) and (fcalc == False) and (fupdate == False):
         print( f'\rSkipping completed output {dg_name}-{year}' )
         return
 
@@ -185,22 +225,28 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         var_name = var[0]
         short_var_name = var[1]
 
-        # make sure input file exists
-        fullname, filename = var_filename( inp_path, dir_name, year, var_name )
-        already_exists = os.path.isfile( fullname )
-        if not already_exists:
-            print( f'{filename} is missing!', flush=True )
-            return
+        # load input file(s)
+        
+        #already_exists = os.path.isfile( fullname )
+        #if not already_exists:
+        #    print( f'{filename} is missing!', flush=True )
+        #    return
 
-        # load file
+        # first try to load the daily set of netcdfs
+        fullname, filename = inp_multiset_filename( inp_path, dir_name, year, var_name )
         try:
-            ds = netCDF4.Dataset( fullname, 'r' )
-        except OSError:
-            print( f'{filename} could not be opened!' )
-            exit(-1)
-
-        # these should all be true for a global var nc
-        total_num_hours = min( ds.dimensions['time'].size, total_num_hours )
+            ds = netCDF4.MFDataset( files=fullname, check=True, aggdim='time' )
+        except OSError as ex:
+            print( f'daily input {filename} could not be opened. {ex} Trying yearly.' )
+            # try to open the single big yearly netcdf
+            fullname, filename = inp_filename( inp_path, dir_name, year, var_name )
+            try:
+                ds = netCDF4.Dataset( fullname, 'r' )
+            except OSError as ex:
+                print( f'{filename} could not be opened! {ex}' )
+                exit( -1 )
+        
+        total_num_hours = min( len(ds.dimensions['time']), total_num_hours )
         num_lat         = ds.dimensions['latitude'].size
         num_long        = ds.dimensions['longitude'].size
         num_dimensions  = len(ds.dimensions)
@@ -208,7 +254,7 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         assert total_num_hours >= 0
         assert num_long == NUM_LONGIDX_GLOBAL
         assert num_lat == NUM_LATIDX_GLOBAL
-        assert (num_dimensions == 3 or num_dimensions == 4)
+        assert (num_dimensions == 3) # or num_dimensions == 4)
 
         # store the Dataset
         ncds_group.append( {
@@ -217,23 +263,32 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             'short_var_name':   short_var_name
         } )
 
-    # create netcdf Output file
+    start_week = 0
     num_weeks = min( total_num_hours // HOURS_PER_WEEK, WEEKS_PER_YEAR )
-    ods, o_names = create_output( out_path, dg_name, year, num_weeks )
+    # create netcdf Output file
+    if fcalc == True or (fupdate == True and fout_exists == False) or fupdate == False:
+        ods, o_names = create_output( out_path, dg_name, year, num_weeks )
+    # open existing output file
+    else:
+        ods, o_names = open_output( out_path, dg_name, year )
+        print( f'debug: {ods.dimensions["week"]}' )
+        start_week = ods.dimensions['week'].size
+    print( f'debug: start_week {start_week} num_weeks {num_weeks} total_num_hours {total_num_hours}' )
+
     if show_progress:
         print( f'\rOutput {o_names["filename"]}', end='', flush=True )
     else:
         print( f'\rOutput {o_names["filename"]}', flush=True )
 
-    # for each week present in the data
-    for week_i in range( num_weeks ):
+    # for each week present in the input data
+    for week_i in range( start_week, num_weeks ):
 
         # for each Dataset needed by the data_group
         week_data = []
         for ncds in ncds_group:
             ds =                ncds['dataset']
             short_var_name =    ncds['short_var_name']
-            
+
             # load the weeks worth of hours (for all locations in file). transpose to lat,long,hour
             hr_0 = week_i * HOURS_PER_WEEK
             hr_1 = hr_0 + HOURS_PER_WEEK
@@ -270,7 +325,8 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             # wait for futures and save to ods
             cnt = 1
             for lf in lfuts:
-                if show_progress: print( f'\rOutput {o_names["filename"]} {year} week {week_i+1}/{num_weeks} latitude {cnt}/{num_lat} ', end='', flush=True )
+                if show_progress:
+                    print( f'\rOutput {o_names["filename"]} {year} week {week_i+1}/{num_weeks} latitude {cnt}/{num_lat} ', end='', flush=True )
                 olat = lf.result()
                 save_output( ods, week_i, olat )
                 cnt += 1
@@ -330,13 +386,14 @@ def main():
     parser.add_argument( "-p", "--progress", action='store_true', help = "Show fancy progress" )
     parser.add_argument( "-s", "--start", help = "Set start year" )
     parser.add_argument( "-e", "--end", help = "Set end year" )
+    parser.add_argument( "-u", "--update", action='store_true', help = "get latest data" )
+    
     args = parser.parse_args()
 
     flag_args = {
         'force_recalc':args.force,
-        'show_progress':args.progress }
-
-    show_progress = args.progress
+        'show_progress':args.progress,
+        'update_data':args.update }
 
     if args.input:
         input_path = args.input

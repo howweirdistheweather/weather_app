@@ -1,0 +1,7 @@
+numpy
+netcdf4
+cdsapi
+xarray
+dask
+python-dateutil
+parsl
