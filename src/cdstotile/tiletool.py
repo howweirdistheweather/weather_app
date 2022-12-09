@@ -30,7 +30,7 @@ WEEKS_PER_YEAR = 52
 NUM_LONGIDX_GLOBAL = 1440
 NUM_LATIDX_GLOBAL  = 721
 
-APP_VERSION = "0.8.1"
+APP_VERSION = "0.8.5"
 current_time = datetime.datetime.now()
 
 # what data processing to do for the whole globe (as opposed to specific locations)
@@ -95,7 +95,7 @@ def create_output( out_path:str, dgroup_name:str, year:int, num_weeks:int ) -> (
     ods.createDimension( "latitude",  NUM_LATIDX_GLOBAL )
     ods.createDimension( "longitude", NUM_LONGIDX_GLOBAL )
 
-    week_var = ods.createVariable( 'Week', 'f4', 'week' )
+    week_var = ods.createVariable( 'Week', 'int', 'week' )
     for i in range(num_weeks):
         week_var[i] = i+1
     week_var.units = 'weeks'
@@ -145,6 +145,9 @@ def save_output( ods:netCDF4.Dataset, week_idx:int, odat:dict ):
                 comp_type = data_settings['variables'][ovar_name][stat_name]['compression']
                 nc_var.units = comp_type + json.dumps( data_settings['compression'][comp_type] )
 
+            wk_var = ods.variables[ 'Week' ]
+            wk_var[week_idx] = week_idx + 1
+
             nc_var = ods.variables[ comb_name ]
             
             # make nc_var bigger if necessary
@@ -158,6 +161,7 @@ def save_output( ods:netCDF4.Dataset, week_idx:int, odat:dict ):
             for lat_idx, stat in lat_dat.items():
                 #print( f'w{week_idx} l{lat_idx}' )
                 nc_var[week_idx, lat_idx] = numpy.asarray( stat, dtype=numpy.uint8 )
+
 
 
 # store the hig stats output data in a dictionary.
