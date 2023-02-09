@@ -51,13 +51,13 @@ runtime.
 - build the image
 
 ```
-nerdctl build -t ghcr.io/nceas/hwitw:0.6.0 -f helm/Dockerfile ./src/website
+nerdctl build -t ghcr.io/nceas/hwitw:0.7.0 -f helm/Dockerfile ./src
 ```
 
 - Tag it to be recognized in the GHCR (if it wasn't already tagged this way)
 
 ```
-nerdctl -n k8s.io tag hwitw:0.6.0 ghcr.io/nceas/hwitw:0.6.0
+nerdctl -n k8s.io tag hwitw:0.7.0 ghcr.io/nceas/hwitw:0.7.0
 ```
 
 - login to GHCR (requires a PAT from GITHUB with repository write permissions)
@@ -69,5 +69,5 @@ echo $GITHUB_PAT | nerdctl login ghcr.io -u mbjones --password-stdin
 - And push the image to ghcr.io:
 
 ```
-nerdctl -n k8s.io push ghcr.io/nceas/hwitw:0.6.0
+nerdctl -n k8s.io push ghcr.io/nceas/hwitw:0.7.0
 ```
