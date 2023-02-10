@@ -1472,10 +1472,10 @@ function DetectGridClick(event,is_render_call){
 						var value = false
 						if (is_seasonaly_adjusted){
 							let st_txt = ''
-							if (parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((127*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
+							if (parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2)) > 0){
 								st_txt = '+'
 							}
-							value = parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((127*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))
+							value = parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2))
 						}
 						if (!value) {
 							value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
