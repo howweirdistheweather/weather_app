@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "hwitw.labels" . | nindent 4 }}
 spec:
-  schedule: "38 21 * * *"
+  schedule: "22 18 * * 5"
   jobTemplate:
     spec:
       template:
