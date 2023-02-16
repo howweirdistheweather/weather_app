@@ -45,8 +45,17 @@ spec:
             httpGet:
               path: /
               port: 5000
+          volumeMounts:
+          - name: hwitw-data
+            mountPath: {{ .Values.persistence.mountPath }}
+            readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      - name: hwitw-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistence.claimName }}
+          readOnly: true
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

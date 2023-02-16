@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "hwitw.fullname" . }}-cdstool-cronjob
+  labels:
+    {{- include "hwitw.labels" . | nindent 4 }}
+spec:
+  schedule: "38 21 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ include "hwitw.serviceAccountName" . }}
+          containers:
+            - name: {{ .Chart.Name }}-cdstool-job
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+              - name: CDSAPI_RC
+                value: "/cdsapirc/cdsapirc"
+              volumeMounts:
+              - name: config
+                mountPath: "/cdsapirc"
+                readOnly: true
+              - name: hwitw-data
+                mountPath: {{ .Values.persistence.mountPath }}
+                readOnly: false
+              #command: ['sh', '-c', 'echo "TRON Liftoff!" > {{ .Values.persistence.mountPath }}/testfile.txt && cat {{ .Values.persistence.mountPath }}/testfile.txt']
+              command: ['sh', '-c', 'cd {{ .Values.persistence.mountPath }} && python /cdstotile/cdstool.py --startyear 2023']
+          volumes:
+          - name: config
+            secret:
+              secretName: {{ .Chart.Name }}-cdsapirc-secret
+              optional: false
+          - name: hwitw-data
+            persistentVolumeClaim:
+              claimName: {{ .Values.persistence.claimName }}
+              readOnly: false
+          restartPolicy: Never
