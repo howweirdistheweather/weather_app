@@ -5,3 +5,4 @@ xarray
 dask
 python-dateutil
 parsl
+h5py
