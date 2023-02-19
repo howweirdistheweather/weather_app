@@ -60,7 +60,6 @@ def get_longitude_index( long_deg_e:float ) -> int:
 def create_wxdb( filename:str ):
     wxdb_vartable = get_src_vartable()
     wxdb_num_vars = len(wxdb_vartable)
-    #wxdb_header_size = len(WXDB_FILE_ID) + WXDB_FILE_NUMV_SZ + wxdb_num_vars * WXDB_FILE_VNAME_SZ
 
     print( 'debug: allocating wxdb file' )
     #wxfile = open( filename, 'wb+' )
@@ -75,25 +74,6 @@ def create_wxdb( filename:str ):
     wxds.attrs['WXDB_END_YEAR']     = WXDB_END_YEAR
     wxds.attrs['WXDB_VARS']         = wxdb_vartable
 
-    # # use this seek and write trick to allocate the file on disk zero-filled
-    # wxfile.seek(mega_size-1)
-    # wxfile.write(bytearray(1))
-    # #os.sync()
-    #
-    # print( 'debug: done alloc wxdb' )
-    #
-    # # write the header table
-    # wxfile.seek(0)
-    # # file id & version 8 bytes
-    # wxfile.write( WXDB_FILE_ID.encode('ascii') )
-    # # num vars
-    # wxfile.write( wxdb_num_vars.to_bytes(WXDB_FILE_NUMV_SZ,'little') )
-    # # var names as 255 char strings
-    # for wxdb_var in wxdb_vartable:
-    #     write_str_wxdb( wxfile, wxdb_var, WXDB_FILE_VNAME_SZ )
-    #
-    # wxdb_data_offset = wxfile.tell()
-    # assert wxdb_data_offset == wxdb_header_size
     wxfile.close()
     print( 'debug: wxfile close' )
 
@@ -148,65 +128,6 @@ def read_wxdb( lat_n:float, long_e:float, year:int, loc_data:list ) -> numpy.arr
     ldata = wxdb_ds[ lat_idx, long_idx ]
     return ldata
 
-# def seek_valvar_wxdb( varname:str, lat_idx:int, long_idx:int, year:int, week_idx:int ):
-#     assert lat_idx >= 0 and lat_idx < WXDB_NUM_LATIDX_GLOBAL
-#     assert long_idx >= 0 and long_idx < WXDB_NUM_LONGIDX_GLOBAL
-#     assert year >= WXDB_START_YEAR and year <= WXDB_END_YEAR
-#     assert week_idx >= 0 and week_idx < WXDB_NUM_WEEKS
-#
-#     year_idx = year - WXDB_START_YEAR
-#     vartable_idx = wxdb_vartable.index( varname )
-#
-#     woffset = ( wxdb_data_offset + wxdb_num_vars *
-#                 (lat_idx * WXDB_LATBLOCK_MULT +
-#                 long_idx * WXDB_LONGBLOCK_MULT +
-#                 year_idx * WXDB_YRBLOCK_MULT +
-#                 week_idx * WXDB_WKBLOCK_MULT +
-#                 vartable_idx * WXDB_VAL_SZ) )
-#
-#     wxdb_wxfile.seek( woffset )
-#
-#
-# def seek_val0_wxdb( lat_idx:int, long_idx:int, year:int, week_idx:int ):
-#     assert lat_idx >= 0 and lat_idx < WXDB_NUM_LATIDX_GLOBAL
-#     assert long_idx >= 0 and long_idx < WXDB_NUM_LONGIDX_GLOBAL
-#     assert year >= WXDB_START_YEAR and year <= WXDB_END_YEAR
-#     assert week_idx >= 0 and week_idx < WXDB_NUM_WEEKS
-#
-#     year_idx = year - WXDB_START_YEAR
-#     vartable_idx = 0
-#
-#     woffset = ( wxdb_data_offset + wxdb_num_vars *
-#                 (lat_idx * WXDB_LATBLOCK_MULT +
-#                 long_idx * WXDB_LONGBLOCK_MULT +
-#                 year_idx * WXDB_YRBLOCK_MULT +
-#                 week_idx * WXDB_WKBLOCK_MULT +
-#                 vartable_idx * WXDB_VAL_SZ) )
-#
-#     wxdb_wxfile.seek( woffset )
-
-
-# def write_str_wxdb( wxf, astr:str, max_len:int ):
-#     # pad with spaces to max_len, write fixed size... no null terminator
-#     assert len(astr) <= max_len
-#     wxf.write( astr.ljust(max_len,' ')[:max_len].encode('ascii') )
-#
-#
-# def read_str_wxdb( wxf, max_len:int ) -> str:
-#     astr = wxf.read(max_len).decode('ascii')
-#     astr = astr.strip()
-#     return astr
-#
-#
-# def write_val_wxdb( val:numpy.uint8 ):
-#     #wxdb_wxfile.write( val.to_bytes(WXDB_VAL_SZ,'little') )
-#     wxdb_wxfile.write( val )
-#
-#
-# def write_wxdb_byte( varname:str, lat_idx:int, long_idx:int, year:int, week_idx:int, val:numpy.uint8 ):
-#     seek_valvar_wxdb( varname, lat_idx, long_idx, year, week_idx )
-#     write_val_wxdb( val )
-
 
 # calls flush!
 def flush_wxdb():
@@ -231,20 +152,4 @@ def write_wxdb( lat_idx:int, long_idx:int, year:int, wk_var_array:numpy.array ):
     year_idx = year - WXDB_START_YEAR
     num_wk = len(wk_var_array)
     wxdb_ds[ lat_idx, long_idx, year_idx, :num_wk ] = wk_var_array[:]
-    # flush to disk periodically
-    #wxdb_wxfile.flush()
-    #print( wxdb_ds[ lat_idx, long_idx, year_idx, :num_wk ] )
-    #exit(-1)
-
-    # week_idx = 0
-    # for week_dat in loc_data:
-    #     #var_skip = wxdb_num_vars - len(week_dat)
-    #     assert len(week_dat) == wxdb_num_vars
-    #     wxdb_ds[ lat_idx, long_idx, year_idx, week_idx, : ] = week_dat[:]
-    #     week_idx=week_idx+1
-    #     print( f'debug: week_idx {week_idx}' )
-    #     print( wxdb_ds[ lat_idx, long_idx, year_idx, week_idx ] )
-    #     exit(-1)
-    # # flush to disk periodically
-    # wxdb_wxfile.flush()
 
