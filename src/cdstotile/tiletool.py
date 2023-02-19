@@ -22,7 +22,6 @@ from wxdb import *
 
 
 # ignoring leap years (i.e. week 53)!
-# Calculations will be off by one day after Feb 28.!
 HOURS_PER_WEEK = 24 * 7
 HOURS_PER_YEAR = 364 * 24
 WEEKS_PER_YEAR = 52
@@ -163,21 +162,10 @@ def save_output( ods:netCDF4.Dataset, year:int, week_idx:int, odat:dict ):
                 nc_var.units = comp_type + json.dumps( data_settings['compression'][comp_type] )
 
             nc_var = ods.variables[ comb_name ]
-            
-            # make nc_var bigger if necessary
-            #if week_idx >= len( nc_var ):
-            #    numpy.append( nc_var, [None for i in range(NUM_LATIDX_GLOBAL)] )
-            #    print( nc_var )
-            #     print( ods )
-            #     nc_var[week_idx] = [[0 for j in range(NUM_LONGIDX_GLOBAL)] for i in range(NUM_LATIDX_GLOBAL)]
-            #     print( nc_var[week_idx] )
-            
+
             for lat_idx, stat in lat_dat.items():
-                #print( f'w{week_idx} l{lat_idx}' )
                 stat_array = numpy.asarray( stat, dtype=numpy.uint8 )
                 nc_var[week_idx, lat_idx] = stat_array
-                # write to wxdb file also
-                #write_wxdb_lat( comb_name, lat_idx, year, week_idx, stat_array )
 
 
 # store the hig stats output data in a dictionary.
@@ -293,7 +281,7 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
     # open existing output file
     else:
         ods, o_names = open_output( out_path, dg_name, year )
-        print( f'debug: {ods.dimensions["week"]}' )
+        #print( f'debug: {ods.dimensions["week"]}' )
         start_week = ods.dimensions['week'].size
     print( f'debug: start_week {start_week} num_weeks {num_weeks} total_num_hours {total_num_hours}' )
 
@@ -389,35 +377,6 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
     for ncds in ncds_group:
         ncds['dataset'].close()
 
-    # #debug
-    # num_vars = len(ods.variables)
-    # print( f'debug: num_vars {num_vars}' )
-    # start_week = 0
-    # # for each location
-    # for lat_i in range( num_lat ):
-    #     for long_i in range( num_long ):
-    #         # gather the years worth of data
-    #         if show_progress:
-    #             print( f'\rSave WXDB {year} {lat_i},{long_i}                 ', end='', flush=False )
-    #         data_for_loc=[]
-    #         # for each week
-    #         for week_i in range( start_week, num_weeks ):
-    #             data_for_wk=[0 for i in range(29)]
-    #             # for each variable
-    #             var_i = 0
-    #             for nc_varname, nc_var in ods.variables.items():
-    #                 if nc_varname in ['Week','Latitude','Longitude']: # skip
-    #                     continue
-    #                 data_for_wk[var_i] = nc_var[week_i, lat_i, long_i]
-    #                 var_i=var_i+1
-    #             data_for_loc.append( data_for_wk )
-    #
-    #         # write data for location, year
-    #         write_wxdb( lat_i, long_i, year, data_for_loc )
-    #
-    # # clear the progress output line from screen
-    # if show_progress: print( f'\rWXDB Output done.                                 ', flush=True )
-
     # close ods file and rename to mark as done
     ods.close()
     rename_finished_output( o_names )
@@ -454,10 +413,7 @@ def update_wxdb( flag_args:dict, out_path:str, start_year:int, end_year:int ):
     show_progress = flag_args[ 'show_progress' ]
     fupdate       = flag_args[ 'update_data' ]
 
-    if show_progress:
-        print( f'\rWXDB Output', end='', flush=True )
-    else:
-        print( f'\rWXDB Output', flush=True )
+    print( f'\rOutput WXDB', flush=True )
 
     wxvtable = open_wxdb( 'hwitw.wxdb' )
     num_wx_vars = len(wxvtable)
