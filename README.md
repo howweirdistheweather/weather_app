@@ -38,6 +38,22 @@ fn="cds_era5_backext/1953/global-1953-2m_dewpoint_temperature.nc" openssl dgst -
 
 ## Helm deployment
 
+First you must create a secret with the CDS API key in the proper configuration file. First get your key from CDS, then format the config file such as (replace the key with your real key value):
+
+```
+url: https://cds.climate.copernicus.eu/api/v2
+key: 827815:710bb811-1cc7-51fc-4c41-ea6652529bc9
+verify: 0
+```
+
+Create the secret with kubectl, giving it a name that is prefixed with your planned release name (here we'll use `hwitw` as the release name):
+
+```
+k8 create secret -n hwitw generic hwitw-cdsapirc-secret --from-file=cdsapirc
+```
+
+Then install from helm with:
+
 ```
 helm install -n hwitw hwitw ./helm
 ```

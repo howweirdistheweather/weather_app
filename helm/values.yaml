@@ -10,6 +10,14 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   #tag: ""
 
+cdstool:
+  url: https://cds.climate.copernicus.eu/api/v2
+  key: 81982:5b07ba78-4ed8-49aa-b5b2-aed2d392809b
+
+persistence:
+  claimName: hwitw-hwitw-pvc
+  mountPath: /var/data/HWITW
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
