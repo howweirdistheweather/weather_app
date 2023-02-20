@@ -119,7 +119,12 @@ var color_lists = [['#dadaeb','#9e9ac8','#54278f'],['#ffffb2','#fecc5c','#e31a1c
 var color_num = 0
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.004]};
 var wxgrid_url = `/wxapp/getwxvar`;
-fetch( wxgrid_url, {   method:'GET',
+var urlParams = new URLSearchParams(window.location.search);
+var lat = urlParams.get('lat');
+console.log(lat)
+var lon = urlParams.get('lon');
+var url = wxgrid_url+`?lat=${lat}&lon=${lon}`
+fetch(url , {   method:'GET',
                         headers: {'Authorization': 'Basic ' + btoa(cred_str)} 
                     }
 )
@@ -286,11 +291,11 @@ function unitNamesHandaler(){
 		for (var i=0; i < reading_options.length; i++){
 			method_options = Object.keys(all_data[reading_options[i]])
 			for (var j=0; j < method_options.length; j++){ 
-				console.log(unit_names[unit_set][reading_options[i]][method_options[j]])
+//				console.log(unit_names[unit_set][reading_options[i]][method_options[j]])
 				if (unit_names[unit_set][reading_options[i]][method_options[j]] == undefined){
-					console.log(unit_names[unit_set][reading_options[i]][method_options[j]])
+//					console.log(unit_names[unit_set][reading_options[i]][method_options[j]])
 					unit_names[unit_set][reading_options[i]][method_options[j]] = unit_names[unit_set][reading_options[i]]['default']
-					console.log(unit_names[unit_set][reading_options[i]][method_options[j]])
+//					console.log(unit_names[unit_set][reading_options[i]][method_options[j]])
 				}
 			}
 		}
