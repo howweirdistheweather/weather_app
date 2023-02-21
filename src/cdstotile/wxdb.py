@@ -135,21 +135,29 @@ def flush_wxdb():
     wxdb_wxfile.flush()
 
 
-# write array of longitude values for one variable
-def write_wxdb_lat( varname:str, lat_idx:int, year:int, week_idx:int, val_array:numpy.array ):
+# # write array of longitude values for one variable
+# def write_wxdb_lat( varname:str, lat_idx:int, year:int, week_idx:int, val_array:numpy.array ):
+#     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
+#     year_idx = year - WXDB_START_YEAR
+#     vt_idx = wxdb_vartable.index( varname )
+#
+#     for long_idx in range(WXDB_NUM_LONGIDX_GLOBAL):
+#         wxdb_ds[ lat_idx, :, year_idx, week_idx, vt_idx ] = val_array[:]
+
+
+# write 1 years worth of data at one latitude, all longitudtes
+def write_wxdb_lat( lat_idx:int, year:int, wk_long_var_array:numpy.array ):
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
     year_idx = year - WXDB_START_YEAR
-    vt_idx = wxdb_vartable.index( varname )
-
-    for long_idx in range(WXDB_NUM_LONGIDX_GLOBAL):
-        wxdb_ds[ lat_idx, :, year_idx, week_idx, vt_idx ] = val_array[:]
+    num_wk = len(wk_long_var_array)
+    wxdb_ds[ lat_idx, :, year_idx, :num_wk ] = wk_long_var_array[[1],[2],:]
 
 
-# write 1 years worth of data at one location, however many weeks are present, all vars
+# write 1 years worth of data at one location, however many weeks are present
 # Assumes vars are in correct order.
-def write_wxdb( lat_idx:int, long_idx:int, year:int, wk_var_array:numpy.array ):
+def write_wxdb( lat_idx:int, long_idx:int, year:int, wk_long_var_array:numpy.array ):
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
     year_idx = year - WXDB_START_YEAR
-    num_wk = len(wk_var_array)
-    wxdb_ds[ lat_idx, long_idx, year_idx, :num_wk ] = wk_var_array[:]
+    num_wk = len(wk_long_var_array)
+    wxdb_ds[ lat_idx, long_idx, year_idx, :num_wk ] = wk_long_var_array[:,long_idx,:]
 

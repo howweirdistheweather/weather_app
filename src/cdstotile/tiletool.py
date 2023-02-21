@@ -405,6 +405,53 @@ def CalcQtrDegGridNum( area_lat_long ):
     return grid_num
 
 
+def process_lat_wxdb( out_path:str, wxvt:list, year:int, lat_i:int ) -> list:
+    num_wx_vars = len(wxvt)
+    # open all our custom processed netcdf output files for this year
+    ods_list = []
+    ods_vars = {}
+    start_week = 0
+    num_weeks = 0
+    for dg_name in global_data_groups:
+        ods, o_names = open_output_ro( out_path, dg_name, year )
+        ods_list.append( ods )
+        #print( f'debug: opened {o_names["fullname"]}' )
+        #print( f'debug week dimension: {ods.dimensions["week"]}' )
+        num_weeks = ods.dimensions['week'].size
+        #print( f'debug: start_week {start_week} num_weeks {num_weeks}' )
+
+        # get all variables in a dict
+        var_i = 0
+        for nc_varname, nc_var in ods.variables.items():
+            if nc_varname in ['Week','Latitude','Longitude']: # skip
+                continue
+            ods_vars[nc_varname] = nc_var
+            #print( f'debug: added {nc_varname} to ods_vars' )
+
+    # for each longitude
+    lat_data = []
+    for long_i in range( NUM_LONGIDX_GLOBAL ):
+        # gather the 1 year worth of data
+        # for each variable, get the weeks of data for year
+        wk_var_array = numpy.zeros( (num_weeks, num_wx_vars), dtype=numpy.uint8 )
+        var_idx = 0
+        for var_name in wxvt:
+            wk_var_array[:,var_idx] = ods_vars[var_name][start_week:num_weeks, lat_i, long_i]
+            var_idx += 1
+
+        lat_data.append( wk_var_array )
+
+    return lat_data
+
+
+def save_lat_wxdb(  year:int, lat_i:int, lat_dat:list ):
+    #for each longitude
+    for long_i in range( NUM_LONGIDX_GLOBAL ):
+        # write data for location, year
+        wk_var_array = lat_dat[ lat_i ]
+        write_wxdb( lat_i, long_i, year, wk_var_array )
+
+
 # basically pull data out of our custom processed netcdfs, and put it into the wxdb
 #@profile
 def update_wxdb( flag_args:dict, out_path:str, start_year:int, end_year:int ):
@@ -416,75 +463,96 @@ def update_wxdb( flag_args:dict, out_path:str, start_year:int, end_year:int ):
     print( f'\rOutput WXDB', flush=True )
 
     wxvtable = open_wxdb( 'hwitw.wxdb' )
-    num_wx_vars = len(wxvtable)
-    print( f'debug: num_wx_vars {num_wx_vars}' )
+    try:
+        num_wx_vars = len(wxvtable)
+        print( f'debug: num_wx_vars {num_wx_vars}' )
 
-    # we will process one year at a time
-    years = list( range( start_year, end_year + 1 ) )
-    for year in years:
-        yidx = year - start_year
-        start_week = 0
-        num_weeks = 0
-        # open all our custom processed netcdfs for this year
-        ods_list = []
-        ods_vars = {}
-        for dg_name in global_data_groups:
-            #dg = data_groups[ dg_name ]
-            ods, o_names = open_output_ro( out_path, dg_name, year )
-            ods_list.append( ods )
-            print( f'debug: opened {o_names["fullname"]}' )
-            #print( f'debug week dimension: {ods.dimensions["week"]}' )
-            num_weeks = ods.dimensions['week'].size
-            #print( f'debug: start_week {start_week} num_weeks {num_weeks}' )
+        # we will process one year at a time
+        years = list( range( start_year, end_year + 1 ) )
+        for year in years:
+            yidx = year - start_year
+            start_week = 0
+            num_weeks = 0
 
-            # get all variables in a dict
-            var_i = 0
-            for nc_varname, nc_var in ods.variables.items():
-                if nc_varname in ['Week','Latitude','Longitude']: # skip
-                    continue
-                ods_vars[nc_varname] = nc_var
-                #print( f'debug: added {nc_varname} to ods_vars' )
+            # # for each location...
+            # #
+            # # for each latitude spawn processes
+            # with concurrent.futures.ProcessPoolExecutor(max_workers=1) as execute:   #max_workers=6
+            #     lfuts = []
+            #     for lat_i in range( NUM_LATIDX_GLOBAL ):
+            #         lfuts.append( execute.submit( process_lat_wxdb, out_path, wxvtable, year, lat_i ) )
+            #
+            #     # wait for futures and save data to wxdb
+            #     cnt = 1
+            #     for lf in lfuts:
+            #         if show_progress:
+            #             print( f'\rSave WXDB {year} {cnt},{NUM_LATIDX_GLOBAL}                 ', end='', flush=True )
+            #         lat_data = lf.result()
+            #         save_lat_wxdb( year, lat_i, lat_data )
+            #         cnt += 1
+            #
+            #     # flush to disk once in a while incase we Ctrl-C or something
+            #     flush_wxdb()
 
-        #print( f'debug: ods_vars {ods_vars}' )
+            # open all our custom processed netcdf output files for this year
+            ods_list = []
+            ods_vars = {}
+            for dg_name in global_data_groups:
+                #dg = data_groups[ dg_name ]
+                ods, o_names = open_output_ro( out_path, dg_name, year )
+                ods_list.append( ods )
+                print( f'debug: opened {o_names["fullname"]}' )
+                #print( f'debug week dimension: {ods.dimensions["week"]}' )
 
-        # for each location
-        for lat_i in range( NUM_LATIDX_GLOBAL ):
-            for long_i in range( NUM_LONGIDX_GLOBAL ):
+                # get the number of weeks. make sure each file has the same
+                nw_in_file = ods.dimensions['week'].size
+                if num_weeks == 0:  num_weeks=nw_in_file
+                elif nw_in_file != num_weeks:
+                    raise RuntimeError(f'num_weeks mismatch looking for {num_weeks}, got {nw_in_file} {o_names["fullname"]}.')
+                #print( f'debug: start_week {start_week} num_weeks {num_weeks}' )
+
+                # get all variables in a dict
+                var_i = 0
+                for nc_varname, nc_var in ods.variables.items():
+                    if nc_varname in ['Week','Latitude','Longitude']: # skip
+                        continue
+                    ods_vars[nc_varname] = nc_var
+                    #print( f'debug: added {nc_varname} to ods_vars' )
+
+            # create week x longitude x variable array for grabbing netcdf data
+            wlv_array = numpy.zeros( (num_weeks, NUM_LONGIDX_GLOBAL, num_wx_vars), dtype=numpy.uint8 )
+            #for each location...
+            for lat_i in range( NUM_LATIDX_GLOBAL ):
                 # gather the 1 year worth of data
                 if show_progress:
-                    print( f'\rSave WXDB {year} {lat_i},{long_i}                 ', end='', flush=False )
+                    print( f'\rSave WXDB {year} lat {lat_i+1},{NUM_LATIDX_GLOBAL}                 ', end='', flush=False )
 
-                # for each variable, get the weeks of data for year
-                wk_var_array = numpy.zeros( (num_weeks, num_wx_vars), dtype=numpy.uint8 )
+                # for each variable, get all weeks of data for year for all longitudes
                 var_idx = 0
                 for var_name in wxvtable:
-                    wk_var_array[:,var_idx] = ods_vars[var_name][start_week:num_weeks, lat_i, long_i]
-                    var_idx = var_idx+1
+                    wlv_array[:,:,var_idx] = ods_vars[var_name][start_week:num_weeks, lat_i, :]
+                    var_idx += 1
 
-                # # for each week this year, gather the data
-                # for week_i in range( start_week, num_weeks ):
-                #     data_for_wk=numpy.zeros( (num_wx_vars), dtype=numpy.uint8 )
-                #     # for each variable in wxdb vartable. order matters here.
-                #     var_i = 0
-                #     for var_name in wxvtable:
-                #         vval = ods_vars[var_name][week_i, lat_i, long_i]
-                #         data_for_wk[var_i] = vval
+                write_wxdb_lat( lat_i, year, wlv_array )
+                # for long_i in range( NUM_LONGIDX_GLOBAL ):
+                #     if show_progress:
+                #         print( f'\rSave WXDB {year} lat {lat_i+1},long {long_i+1}                 ', end='', flush=False )
                 #
-                #     data_for_loc.append( data_for_wk )
+                #     # write data for location, year
+                #     write_wxdb( lat_i, long_i, year, wlv_array )
 
-                # write data for location, year
-                write_wxdb( lat_i, long_i, year, wk_var_array )
-            # flush to disk once in a while incase we Ctrl-C or something
-            flush_wxdb()
+                # flush to disk once in a while incase we Ctrl-C or something
+                flush_wxdb()
 
-        # clear the progress output line from screen
-        if show_progress: print( f'\rWXDB Output done {year}.                                 ', flush=True )
+            # clear the progress output line from screen
+            if show_progress: print( f'\rWXDB Output done {year}.                                 ', flush=True )
 
-        # close ods datasets
-        for ads in ods_list:
-            ads.close()
+            # close netcdf datasets
+            for ads in ods_list:
+                ads.close()
+    finally:
+        close_wxdb()
 
-    close_wxdb()
     return
 
 
@@ -545,7 +613,12 @@ def main():
     load_netcdfs( flag_args, input_path, output_path, start_year, end_year )
 
     # process the netcdfs into the wxdb
+    # import cProfile,pstats
+    # profob = cProfile.Profile()
+    # profob.enable()
     update_wxdb( flag_args, output_path, start_year, end_year )
+    # profob.disable()
+    # pstats.Stats(profob).sort_stats('cumulative').print_stats() #.strip_dirs()
 
 
 if __name__ == '__main__':
