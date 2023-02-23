@@ -14,14 +14,14 @@ CORS(app) # CORS headers to make devel easier
 # return var data as json
 @app.route('/wxapp/getwxvar')
 def getwxvarjson():
-	var_lat = request.args.get( 'vlat' )
-	var_long = request.args.get( 'vlong' )
+	var_lat = request.args.get( 'vlat',  default=59.45 )
+	var_long = request.args.get( 'vlong', default=-151.72 )
 
 	json_data = wxdata.get_wxvar( var_lat, var_long )
 	
 	resp = Response( json_data, mimetype='application/json')
 	resp.headers['Access-Control-Allow-Origin'] = '*' # get around CORS during development
-	print(resp)	#debug
+	#print(resp)	#debug
 	return resp
 
 # return reading/weather variables as json

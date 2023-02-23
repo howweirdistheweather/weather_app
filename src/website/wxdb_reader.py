@@ -17,14 +17,7 @@ WXDB_NUM_LATIDX_GLOBAL  = 721
 
 WXDB_DATASET = 'wxdb'
 WXDB_FILE_ID = 'WXDB0001'
-WXDB_FILE_NUMV_SZ = 2
-WXDB_FILE_VNAME_SZ = 255
-
 WXDB_VAL_SZ = 1
-WXDB_WKBLOCK_MULT = WXDB_VAL_SZ
-WXDB_YRBLOCK_MULT = WXDB_NUM_WEEKS * WXDB_WKBLOCK_MULT
-WXDB_LONGBLOCK_MULT = WXDB_NUM_YEARS * WXDB_YRBLOCK_MULT
-WXDB_LATBLOCK_MULT = WXDB_NUM_LONGIDX_GLOBAL * WXDB_LONGBLOCK_MULT
 
 # what data processing to do for the whole globe (as opposed to specific locations)
 wxdb_data_groups = ['temperature_and_humidity','wind','precipitation','cloud_cover']
@@ -43,6 +36,12 @@ def get_latitude_index( lat_deg_n:float ) -> int:
 def get_longitude_index( long_deg_e:float ) -> int:
         long_idx = math.floor((long_deg_e + 180.0) * 4)
         return long_idx
+
+
+# Get the 'data_settings' object used in the creation of this wxdb
+def read_src_datasettings_json() -> dict:
+    #return wxdb_ds.attrs['WXDB_SRC_DATAS_JSON']
+    return '{"data_specs": {"start_year": 1950, "Name": "Seldovia"}, "compression": {"temperature": {"min": -60, "scale": 0.5, "type": "linear", "units": "C"}, "temperature_range": {"min": 0, "scale": 0.1, "type": "linear", "units": "C"}, "temperature_range_sensitive": {"min": 0, "scale": 0.03, "type": "linear", "units": "C"}, "wind_speed_HiFi": {"min": 0, "scale": 0.1, "type": "linear", "units": "m/s"}, "wind_speed_LoFi": {"min": 0, "scale": 0.4, "type": "linear", "units": "m/s"}, "direction": {"min": 0, "scale": 1.5, "type": "linear", "units": "degrees"}, "proportion": {"min": 0, "scale": 0.00394, "type": "linear", "units": ""}, "precipitation": {"min": 0, "scale": 0.003, "type": "parabolic", "units": "m"}, "precipitation_sensitive": {"min": 0, "scale": 0.001, "type": "parabolic", "units": "m"}, "precipitation_very_sensitive": {"min": 0, "scale": 0.0005, "type": "parabolic", "units": "m"}, "water_temperature": {"min": -10, "scale": 0.2, "type": "linear", "units": "C"}, "water_flux": {"scale": 0.005, "type": "signed_parabolic", "units": "m"}, "water_flux_sensitive": {"scale": 0.0005, "type": "signed_parabolic", "units": "m"}, "water_flux_very_sensitive": {"scale": 0.0001, "type": "signed_parabolic", "units": "m"}, "cloud_ceiling": {"min": 0, "scale": 30, "type": "linear", "units": "m"}, "wave_height": {"min": 0, "scale": 0.1, "type": "linear", "units": "m"}, "wave_period": {"min": 0, "scale": 0.1, "type": "linear", "units": "s"} } }'
 
 
 # open the wxdb file for read only
@@ -75,4 +74,11 @@ def read_wxdb( lat_n:float, long_e:float ) -> numpy.array:
     lat_idx = get_latitude_index(lat_n)
     long_idx = get_longitude_index(long_e)
     ldata = wxdb_ds[ lat_idx, long_idx ]
+    # debug:
+    #ldata = numpy.copy( ldata )
+    # for a in range(WXDB_NUM_YEARS):
+    #     for b in range(WXDB_NUM_WEEKS):
+    #         for c in range(wxdb_num_vars):
+    #             ldata[a,b,c] = (a+b+c)
+    #print( ldata )
     return ldata

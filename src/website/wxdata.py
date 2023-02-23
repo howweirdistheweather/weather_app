@@ -1,28 +1,32 @@
 # get weather data for the webapp
 #
 import json
+import numpy
 import wxdb_reader as wxdb
+from collections import defaultdict
 
 WXDB_FILE = './hwitw.wxdb'
 
 
-def wxdata_to_dict() -> dict:
-    # get the 'global site' data processing settings and setup output dictionary/structure
-    global_site = site_settings['Global']
-    out_data = copy.deepcopy(data_settings)
-    site_name = f'location {loc_lat}, {loc_long}'
-    out_data['data_specs'].update( [('Name',site_name)] )
+def wxdata_to_dict( var_table:list, ldata:numpy.array ) -> dict:
+    ldict = json.loads( wxdb.read_src_datasettings_json() )
+    # build the weather data into the dict
+    outd = defaultdict(dict)
+    var_idx = 0
+    for var_name in var_table:
+        major_vn, minor_vn = var_name.split('.')
+        outd[major_vn][minor_vn] = {
+            'description':  'descr',
+            'long_name':    var_name,
+            'short_name':   var_name,
+            'compression':  major_vn,
+            'data':         ldata[:,:,var_idx].tolist()
+        }
+        var_idx += 1
 
-    # process the years of interest
-    years = list( range( start_year, end_year + 1 ) )
-    for year in years:
-        yidx = year - start_year
-        print( f'{year} ', end='' )
-        for dg_name in global_site['available_groups']:
-            print( f'{dg_name} ', end='',flush=True )
-            dg = data_groups[ dg_name ]
-            read_data_group( flag_args, loc_lat, loc_long, inp_path, year, dg_name, dg, out_data );
-        print( '' )
+    ldict['variables'] = dict(outd)
+    #"variables": {"temperature": {"avg": {"description": "", "long_name": "Average hourly temperature", "short_name": "Average", "compression": "temperature", "data": [[
+    return ldict
 
 
 def get_wxvar_list():
@@ -32,20 +36,21 @@ def get_wxvar_list():
 
 
 def get_wxvar( lat_n:float, long_e:float ):
+    print( f'debug: request lat {lat_n}, long {long_e}' )
+
+    # #for debugging, directly return a json from a file
+    # with open( 'Seldovia.json', 'r') as infile:
+    #     wxvar_json = infile.read()
+    #     infile.close()
+    # return wxvar_json
+
     wxvt = wxdb.open_wxdb_ro( WXDB_FILE )
-
-    #debug: force values for lat&long
-    lat_n = 59.45
-    long_e = -151.72
-
-    loc_data = wxdb.read_wxdb( lat_n, long_e )
-    print( 'debug: ' )
-    print( loc_data )
-    ld_dict = wxdata_to_dict( loc_data )
-    print( 'debug: ' )
-    print( ld_dict )
-    wxvar_json = json.dumps( ld_dict )
-    print( 'debug: ' )
-    print( wxvar_json )
-    wxdb.close_wxdb()
+    try:
+        loc_data = wxdb.read_wxdb( lat_n, long_e )
+        ld_dict = wxdata_to_dict( wxvt, loc_data )
+        site_name = f'location {lat_n}, {long_e}'
+        ld_dict['data_specs'].update( [('Name',site_name)] )
+        wxvar_json = json.dumps( ld_dict )
+    finally:
+        wxdb.close_wxdb()
     return wxvar_json

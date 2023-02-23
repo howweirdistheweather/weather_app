@@ -1,6 +1,7 @@
 # create & update final data output for HWITW
 #
 
+import json
 import numpy
 import h5py
 from data_settings import data_settings
@@ -15,22 +16,29 @@ WXDB_NUM_LATIDX_GLOBAL  = 721
 
 WXDB_DATASET = 'wxdb'
 WXDB_FILE_ID = 'WXDB0001'
-WXDB_FILE_NUMV_SZ = 2
-WXDB_FILE_VNAME_SZ = 255
+#WXDB_FILE_NUMV_SZ = 2
+#WXDB_FILE_VNAME_SZ = 255
 
 WXDB_VAL_SZ = 1
-WXDB_WKBLOCK_MULT = WXDB_VAL_SZ
-WXDB_YRBLOCK_MULT = WXDB_NUM_WEEKS * WXDB_WKBLOCK_MULT
-WXDB_LONGBLOCK_MULT = WXDB_NUM_YEARS * WXDB_YRBLOCK_MULT
-WXDB_LATBLOCK_MULT = WXDB_NUM_LONGIDX_GLOBAL * WXDB_LONGBLOCK_MULT
+#WXDB_WKBLOCK_MULT = WXDB_VAL_SZ
+#WXDB_YRBLOCK_MULT = WXDB_NUM_WEEKS * WXDB_WKBLOCK_MULT
+#WXDB_LONGBLOCK_MULT = WXDB_NUM_YEARS * WXDB_YRBLOCK_MULT
+#WXDB_LATBLOCK_MULT = WXDB_NUM_LONGIDX_GLOBAL * WXDB_LONGBLOCK_MULT
 
 # what data processing to do for the whole globe (as opposed to specific locations)
 wxdb_data_groups = ['temperature_and_humidity','wind','precipitation','cloud_cover']
 wxdb_num_vars = 0
 wxdb_vartable = []
-wxdb_data_offset = 0  # offset in file to start of data
 wxdb_wxfile = None
 wxdb_ds = None
+
+
+# Get the 'data_settings' object used in the creation of this wxdb
+def get_src_datasettings() -> dict:
+    # get the 'global site' data processing settings and setup output dictionary/structure
+    global_site = site_settings['Global']
+    data_s = copy.deepcopy(data_settings)
+    return data_s
 
 
 # determine the full list of variables we want to store
@@ -62,17 +70,21 @@ def create_wxdb( filename:str ):
     wxdb_num_vars = len(wxdb_vartable)
 
     print( 'debug: allocating wxdb file' )
-    #wxfile = open( filename, 'wb+' )
     wxfile = h5py.File(filename, 'w', libver='latest')
-    #mega_size = WXDB_LATBLOCK_MULT * WXDB_NUM_LATIDX_GLOBAL * WXDB_VAL_SZ * wxdb_num_vars
     print( 'debug: wxdb create_dataset' )
     wxshape = (WXDB_NUM_LATIDX_GLOBAL,WXDB_NUM_LONGIDX_GLOBAL,WXDB_NUM_YEARS,WXDB_NUM_WEEKS,wxdb_num_vars)
-    wxds = wxfile.create_dataset( WXDB_DATASET, wxshape, dtype='B', fillvalue=255) # B for byte
+    # chunking has a large impact on performance here:
+    # I tuned it for writing - multiple latitudes, single longitude, all weeks, all variables
+    # ..it should still give plenty good enough read performance.
+    wxchunk = (100,1,1,52,wxdb_num_vars)
+    # fill with our special/null value 255
+    wxds = wxfile.create_dataset( WXDB_DATASET, wxshape, dtype='uint8', fillvalue=255, chunks=wxchunk )
     print( 'debug: wxdb done create_dataset' )
-    wxds.attrs['WXDB_FILE_ID']      = WXDB_FILE_ID
-    wxds.attrs['WXDB_START_YEAR']   = WXDB_START_YEAR
-    wxds.attrs['WXDB_END_YEAR']     = WXDB_END_YEAR
-    wxds.attrs['WXDB_VARS']         = wxdb_vartable
+    wxds.attrs['WXDB_FILE_ID']          = WXDB_FILE_ID
+    wxds.attrs['WXDB_START_YEAR']       = WXDB_START_YEAR
+    wxds.attrs['WXDB_END_YEAR']         = WXDB_END_YEAR
+    wxds.attrs['WXDB_SRC_DATAS_JSON']   = json.dumps( get_src_datasettings() )
+    wxds.attrs['WXDB_VARS']             = wxdb_vartable
 
     wxfile.close()
     print( 'debug: wxfile close' )
@@ -121,7 +133,8 @@ def close_wxdb():
 
 # read all data for a single location
 # pass latitude degrees north(+), longitude degress east(+)
-def read_wxdb( lat_n:float, long_e:float, year:int, loc_data:list ) -> numpy.array:
+# returns byte array [year,week,var]
+def read_wxdb( lat_n:float, long_e:float ) -> numpy.array:
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
     lat_idx = get_latitude_index(lat_n)
     long_idx = get_longitude_index(long_e)
@@ -135,29 +148,20 @@ def flush_wxdb():
     wxdb_wxfile.flush()
 
 
-# # write array of longitude values for one variable
-# def write_wxdb_lat( varname:str, lat_idx:int, year:int, week_idx:int, val_array:numpy.array ):
-#     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
-#     year_idx = year - WXDB_START_YEAR
-#     vt_idx = wxdb_vartable.index( varname )
-#
-#     for long_idx in range(WXDB_NUM_LONGIDX_GLOBAL):
-#         wxdb_ds[ lat_idx, :, year_idx, week_idx, vt_idx ] = val_array[:]
-
-
-# write 1 years worth of data at one latitude, all longitudtes
-def write_wxdb_lat( lat_idx:int, year:int, wk_long_var_array:numpy.array ):
+# write 1 years worth of data for all locations. can be a full 52 weeks or less
+def write_wxdb_lat( year:int, all_array:numpy.array ):
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
     year_idx = year - WXDB_START_YEAR
-    num_wk = len(wk_long_var_array)
-    wxdb_ds[ lat_idx, :, year_idx, :num_wk ] = wk_long_var_array[[1],[2],:]
+    num_wk = len(all_array[0,0])
+    print( f'debug: num_wk {num_wk}' )
+    wxdb_ds[ :, :, year_idx, :num_wk ] = all_array[:,:,:num_wk]
 
 
 # write 1 years worth of data at one location, however many weeks are present
 # Assumes vars are in correct order.
-def write_wxdb( lat_idx:int, long_idx:int, year:int, wk_long_var_array:numpy.array ):
+def write_wxdb( lat_idx:int, long_idx:int, year:int, var_array:numpy.array ):
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
     year_idx = year - WXDB_START_YEAR
-    num_wk = len(wk_long_var_array)
-    wxdb_ds[ lat_idx, long_idx, year_idx, :num_wk ] = wk_long_var_array[:,long_idx,:]
+    num_wk = len(var_array)
+    wxdb_ds[ lat_idx, long_idx, year_idx, :num_wk ] = var_array[:,long_idx,:]
 

@@ -30,7 +30,7 @@ WEEKS_PER_YEAR = 52
 NUM_LONGIDX_GLOBAL = 1440
 NUM_LATIDX_GLOBAL  = 721
 
-APP_VERSION = "0.9.1"
+APP_VERSION = "0.9.3"
 current_time = datetime.datetime.now()
 
 # what data processing to do for the whole globe (as opposed to specific locations)
@@ -519,30 +519,25 @@ def update_wxdb( flag_args:dict, out_path:str, start_year:int, end_year:int ):
                     ods_vars[nc_varname] = nc_var
                     #print( f'debug: added {nc_varname} to ods_vars' )
 
-            # create week x longitude x variable array for grabbing netcdf data
-            wlv_array = numpy.zeros( (num_weeks, NUM_LONGIDX_GLOBAL, num_wx_vars), dtype=numpy.uint8 )
-            #for each location...
-            for lat_i in range( NUM_LATIDX_GLOBAL ):
-                # gather the 1 year worth of data
-                if show_progress:
-                    print( f'\rSave WXDB {year} lat {lat_i+1},{NUM_LATIDX_GLOBAL}                 ', end='', flush=False )
+            if show_progress:
+                print( f'\rSave WXDB {year}                                     ', end='', flush=False )
 
-                # for each variable, get all weeks of data for year for all longitudes
-                var_idx = 0
-                for var_name in wxvtable:
-                    wlv_array[:,:,var_idx] = ods_vars[var_name][start_week:num_weeks, lat_i, :]
-                    var_idx += 1
+            # create array for grabbing netcdf data
+            grab_data_array = numpy.zeros( (NUM_LATIDX_GLOBAL, NUM_LONGIDX_GLOBAL, num_weeks, num_wx_vars), dtype=numpy.uint8 )
+            # for each variable, get all weeks of data for year for all locations
+            var_idx = 0
+            for var_name in wxvtable:
+                #print( f'debug: transpose {var_idx}' )
+                # get [week,lat,long,variable]
+                # store as [lat,long,week,variable]
+                tmpa = ods_vars[var_name][start_week:num_weeks, :, :]
+                tmpb = numpy.transpose( tmpa, (1,2,0) )
+                grab_data_array[:,:,:,var_idx] = tmpb[:]
+                var_idx += 1
 
-                write_wxdb_lat( lat_i, year, wlv_array )
-                # for long_i in range( NUM_LONGIDX_GLOBAL ):
-                #     if show_progress:
-                #         print( f'\rSave WXDB {year} lat {lat_i+1},long {long_i+1}                 ', end='', flush=False )
-                #
-                #     # write data for location, year
-                #     write_wxdb( lat_i, long_i, year, wlv_array )
-
-                # flush to disk once in a while incase we Ctrl-C or something
-                flush_wxdb()
+            # write the years worth of data to disk
+            print( 'debug: write wxdb' )
+            write_wxdb_lat( year, grab_data_array )
 
             # clear the progress output line from screen
             if show_progress: print( f'\rWXDB Output done {year}.                                 ', flush=True )
