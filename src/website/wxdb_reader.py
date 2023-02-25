@@ -1,7 +1,8 @@
 # open and read a wxdb file
+#
 # !! This is basically copy paste code from cdstotile/wxdb.py because i'm not sure
 # how to have python imports from different folders! :) Lets find a way to fix it
-# so we dont have to duplicate code.
+# so we dont have to duplicate code!!
 #
 
 import math
@@ -29,29 +30,29 @@ wxdb_ds = None
 
 
 def get_latitude_index( lat_deg_n:float ) -> int:
-        lat_idx = math.floor((90.0 - lat_deg_n) * 4)
+        lat_idx = int( math.floor((90.0 - lat_deg_n) * 4) )
         return lat_idx
 
 
 def get_longitude_index( long_deg_e:float ) -> int:
-        long_idx = math.floor((long_deg_e + 180.0) * 4)
+        long_deg_eabs = long_deg_e if long_deg_e >= 0 else 360.0 + long_deg_e
+        long_idx = int( math.floor(long_deg_eabs * 4) )
         return long_idx
 
 
 # Get the 'data_settings' object used in the creation of this wxdb
 def read_src_datasettings_json() -> dict:
-    #return wxdb_ds.attrs['WXDB_SRC_DATAS_JSON']
-    return '{"data_specs": {"start_year": 1950, "Name": "Seldovia"}, "compression": {"temperature": {"min": -60, "scale": 0.5, "type": "linear", "units": "C"}, "temperature_range": {"min": 0, "scale": 0.1, "type": "linear", "units": "C"}, "temperature_range_sensitive": {"min": 0, "scale": 0.03, "type": "linear", "units": "C"}, "wind_speed_HiFi": {"min": 0, "scale": 0.1, "type": "linear", "units": "m/s"}, "wind_speed_LoFi": {"min": 0, "scale": 0.4, "type": "linear", "units": "m/s"}, "direction": {"min": 0, "scale": 1.5, "type": "linear", "units": "degrees"}, "proportion": {"min": 0, "scale": 0.00394, "type": "linear", "units": ""}, "precipitation": {"min": 0, "scale": 0.003, "type": "parabolic", "units": "m"}, "precipitation_sensitive": {"min": 0, "scale": 0.001, "type": "parabolic", "units": "m"}, "precipitation_very_sensitive": {"min": 0, "scale": 0.0005, "type": "parabolic", "units": "m"}, "water_temperature": {"min": -10, "scale": 0.2, "type": "linear", "units": "C"}, "water_flux": {"scale": 0.005, "type": "signed_parabolic", "units": "m"}, "water_flux_sensitive": {"scale": 0.0005, "type": "signed_parabolic", "units": "m"}, "water_flux_very_sensitive": {"scale": 0.0001, "type": "signed_parabolic", "units": "m"}, "cloud_ceiling": {"min": 0, "scale": 30, "type": "linear", "units": "m"}, "wave_height": {"min": 0, "scale": 0.1, "type": "linear", "units": "m"}, "wave_period": {"min": 0, "scale": 0.1, "type": "linear", "units": "s"} } }'
+    return wxdb_ds.attrs['WXDB_SRC_DATAS_JSON']
+    #return '{"data_specs": {"start_year": 1950, "Name": "Seldovia"}, "compression": {"temperature": {"min": -60, "scale": 0.5, "type": "linear", "units": "C"}, "temperature_range": {"min": 0, "scale": 0.1, "type": "linear", "units": "C"}, "temperature_range_sensitive": {"min": 0, "scale": 0.03, "type": "linear", "units": "C"}, "wind_speed_HiFi": {"min": 0, "scale": 0.1, "type": "linear", "units": "m/s"}, "wind_speed_LoFi": {"min": 0, "scale": 0.4, "type": "linear", "units": "m/s"}, "direction": {"min": 0, "scale": 1.5, "type": "linear", "units": "degrees"}, "proportion": {"min": 0, "scale": 0.00394, "type": "linear", "units": ""}, "precipitation": {"min": 0, "scale": 0.003, "type": "parabolic", "units": "m"}, "precipitation_sensitive": {"min": 0, "scale": 0.001, "type": "parabolic", "units": "m"}, "precipitation_very_sensitive": {"min": 0, "scale": 0.0005, "type": "parabolic", "units": "m"}, "water_temperature": {"min": -10, "scale": 0.2, "type": "linear", "units": "C"}, "water_flux": {"scale": 0.005, "type": "signed_parabolic", "units": "m"}, "water_flux_sensitive": {"scale": 0.0005, "type": "signed_parabolic", "units": "m"}, "water_flux_very_sensitive": {"scale": 0.0001, "type": "signed_parabolic", "units": "m"}, "cloud_ceiling": {"min": 0, "scale": 30, "type": "linear", "units": "m"}, "wave_height": {"min": 0, "scale": 0.1, "type": "linear", "units": "m"}, "wave_period": {"min": 0, "scale": 0.1, "type": "linear", "units": "s"} } }'
 
 
 # open the wxdb file for read only
 # returns: the variable table
 def open_wxdb_ro( filename:str ) -> list:
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
-    # open for read write
+    # open for read
     wxdb_wxfile = h5py.File(filename, 'r', libver='latest')
     wxdb_ds = wxdb_wxfile[ WXDB_DATASET ]
-
     assert wxdb_ds.attrs['WXDB_FILE_ID']    == WXDB_FILE_ID
     assert wxdb_ds.attrs['WXDB_START_YEAR'] == WXDB_START_YEAR
     assert wxdb_ds.attrs['WXDB_END_YEAR']   == WXDB_END_YEAR
@@ -73,6 +74,8 @@ def read_wxdb( lat_n:float, long_e:float ) -> numpy.array:
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
     lat_idx = get_latitude_index(lat_n)
     long_idx = get_longitude_index(long_e)
+    print( f'debug: lat_idx {lat_idx}, long_idx {long_idx}' )
+    print( long_idx )
     ldata = wxdb_ds[ lat_idx, long_idx ]
     # debug:
     #ldata = numpy.copy( ldata )

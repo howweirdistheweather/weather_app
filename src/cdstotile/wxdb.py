@@ -1,11 +1,13 @@
 # create & update final data output for HWITW
 #
 
+import copy
 import json
 import numpy
 import h5py
 from data_settings import data_settings
 from data_groups import data_groups, all_variables
+from location_settings import site_settings
 
 WXDB_START_YEAR = 1950
 WXDB_END_YEAR   = 2030
@@ -41,7 +43,8 @@ def get_src_datasettings() -> dict:
     return data_s
 
 
-# determine the full list of variables we want to store
+# determine the full list of variables we want to store, as they are named
+# in our processed netcdf files.
 def get_src_vartable() -> list:
     vartable = []
     var_count = 0
@@ -55,12 +58,13 @@ def get_src_vartable() -> list:
 
 
 def get_latitude_index( lat_deg_n:float ) -> int:
-        lat_idx = math.floor((90.0 - lat_deg_n) * 4)
+        lat_idx = int( math.floor((90.0 - lat_deg_n) * 4) )
         return lat_idx
 
 
 def get_longitude_index( long_deg_e:float ) -> int:
-        long_idx = math.floor((long_deg_e + 180.0) * 4)
+        long_deg_eabs = long_deg_e if long_deg_e >= 0 else 360.0 + long_deg_e
+        long_idx = int( math.floor(long_deg_eabs * 4) )
         return long_idx
 
 
@@ -97,7 +101,6 @@ def open_wxdb( filename:str ) -> list:
     # open for read write
     wxdb_wxfile = h5py.File(filename, 'r+', libver='latest')
     wxdb_ds = wxdb_wxfile[ WXDB_DATASET ]
-
     assert wxdb_ds.attrs['WXDB_FILE_ID']    == WXDB_FILE_ID
     assert wxdb_ds.attrs['WXDB_START_YEAR'] == WXDB_START_YEAR
     assert wxdb_ds.attrs['WXDB_END_YEAR']   == WXDB_END_YEAR
@@ -112,10 +115,9 @@ def open_wxdb( filename:str ) -> list:
 # returns: the variable table
 def open_wxdb_ro( filename:str ) -> list:
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
-    # open for read write
+    # open for read
     wxdb_wxfile = h5py.File(filename, 'r', libver='latest')
     wxdb_ds = wxdb_wxfile[ WXDB_DATASET ]
-
     assert wxdb_ds.attrs['WXDB_FILE_ID']    == WXDB_FILE_ID
     assert wxdb_ds.attrs['WXDB_START_YEAR'] == WXDB_START_YEAR
     assert wxdb_ds.attrs['WXDB_END_YEAR']   == WXDB_END_YEAR
