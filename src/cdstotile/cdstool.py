@@ -27,7 +27,8 @@ from parsl.executors.threads import ThreadPoolExecutor
 DAYS_PER_YEAR = 365
 
 # download era5 or era5 back extention data to netcdf files
-def download_dataset( start_year, end_year, area_lat_long, cds_variables, force_download=False ):
+def download_dataset( output_path:str, start_year:int, end_year:int,
+                      area_lat_long, cds_variables, force_download=False ):
     
     assert start_year <= end_year
     years = list( range( start_year, end_year + 1 ) )
@@ -54,7 +55,10 @@ def download_dataset( start_year, end_year, area_lat_long, cds_variables, force_
             
         for var_name in cds_variables:
             for day in range( 1, end_day + 1 ):
-                lfut.append( download_cds_var(ds_name, dir_name, year, day, area_lat_long, var_name, force_download) )
+                lfut.append(
+                    download_cds_var( output_path, ds_name, dir_name, year, day,
+                                      area_lat_long, var_name, force_download)
+                )
 
     # Wait for the results
     [i.result() for i in lfut]
@@ -62,7 +66,8 @@ def download_dataset( start_year, end_year, area_lat_long, cds_variables, force_
     pass
 
 @python_app
-def download_cds_var(cds_ds_name, dir_name, year, day_of_year, area_lat_long, cds_var_name, force_download=False):
+def download_cds_var( output_path:str, cds_ds_name, dir_name, year, day_of_year,
+                      area_lat_long, cds_var_name, force_download=False):
 
     import math
     import datetime
@@ -80,7 +85,7 @@ def download_cds_var(cds_ds_name, dir_name, year, day_of_year, area_lat_long, cd
     
     # file naming scheme
     doy_str = str( day_of_year ).zfill( 3 )
-    pathname = f'./{dir_name}/{year}/{cds_var_name}/'
+    pathname = f'{output_path}/{dir_name}/{year}/{cds_var_name}/'
     filename = f'global-{year}-{doy_str}-{cds_var_name}.nc'
     fullname = pathname + filename
 
@@ -109,7 +114,17 @@ def download_cds_var(cds_ds_name, dir_name, year, day_of_year, area_lat_long, cd
         'variable': [cds_var_name],
         'month': req_date.month,
         'day': req_date.day,
-        'time': 'all'
+        #'time': 'all'
+        'time': [
+            '00:00', '01:00', '02:00',
+            '03:00', '04:00', '05:00',
+            '06:00', '07:00', '08:00',
+            '09:00', '10:00', '11:00',
+            '12:00', '13:00', '14:00',
+            '15:00', '16:00', '17:00',
+            '18:00', '19:00', '20:00',
+            '21:00', '22:00', '23:00',
+        ],
     }
 
     tempfullname = fullname + f'.tempdl'
@@ -118,141 +133,7 @@ def download_cds_var(cds_ds_name, dir_name, year, day_of_year, area_lat_long, cd
     ## rename completed download
     os.rename( tempfullname, fullname )
     pass
-# 
-# # request a month of data from cdsapi
-# def cds_get_month( cds, cds_ds_name:str, cds_var_name:str, year:int, month:int, dest_file_name:str ):
-#     
-#     request_dict = {
-#         'product_type': 'reanalysis',
-#         'format': 'netcdf',
-#         'year': year,
-#         'variable': [cds_var_name],
-#         'month': month,
-#         'day': [str(i) for i in range( 1, 32 )],
-#         'time': 'all'
-#     }
-#     temp_month_fullname = dest_file_name + f'.tempdl-{month}'
-#     print(f'{dest_file_name}-{month} requested.')
-#     #print( f'debug: {request_dict}' )
-#     r = cds.retrieve( cds_ds_name, request_dict, temp_month_fullname )
-#     remove_expver( temp_month_fullname )
-#     # concat completed download
-#     concat_month( dest_file_name, temp_month_fullname )
-# 
-# # request a partial month of data
-# def cds_get_partmonth( cds, cds_ds_name:str, cds_var_name:str, year:int, month:int, end_day:int, dest_file_name:str ):
-#     
-#     start_day = 1
-#     request_dict = {
-#         'product_type': 'reanalysis',
-#         'format': 'netcdf',
-#         'year': year,
-#         'variable': [cds_var_name],
-#         'month': month,
-#         'day': [str(i) for i in range( 1, end_day+1 )],
-#         'time': 'all'
-#     }
-#     temp_month_fullname = dest_file_name + f'.tempdl-{month}'
-#     print(f'{dest_file_name}-{month} partial requested.')
-#     #print( f'debug: {request_dict}' )
-#     r = cds.retrieve( cds_ds_name, request_dict, temp_month_fullname )    
-#     remove_expver( temp_month_fullname )
-#     # concat completed download
-#     concat_month( dest_file_name, temp_month_fullname )
-#     
-# 
-# # get the last datetime present in a netcdf
-# def nc_last_datetime( filename:str ):
-#      # open for read
-#     try:
-#         nds = netCDF4.Dataset( filename, 'r' )
-# 
-#     except OSError:
-#         print( f'{filename} could not be opened!' )
-#         exit(-1)
-# 
-#     tvar = nds.variables['time']
-#     last_hour = tvar[-1]
-#     ldt = netCDF4.num2date( last_hour, tvar.units, tvar.calendar, only_use_cftime_datetimes=False )
-#     nds.close()
-#     return ldt
-# 
-# def nc_first_datetime( filename:str ):
-#      # open for read
-#     try:
-#         nds = netCDF4.Dataset( filename, 'r' )
-# 
-#     except OSError:
-#         print( f'{filename} could not be opened!' )
-#         exit(-1)
-# 
-#     tvar = nds.variables['time']
-#     last_hour = tvar[0]
-#     ldt = netCDF4.num2date( last_hour, tvar.units, tvar.calendar, only_use_cftime_datetimes=False )
-#     nds.close()
-#     return ldt
-# 
-# # get the first hour present in a netcdf
-# def nc_first_hour( filename:str ):
-#      # open for read
-#     try:
-#         nds = netCDF4.Dataset( filename, 'r' )
-# 
-#     except OSError:
-#         print( f'{filename} could not be opened!' )
-#         exit(-1)
-# 
-#     tvar = nds.variables['time']
-#     first_hour = tvar[0]
-#     fdt = netCDF4.num2date( last_hour, tvar.units, tvar.calendar, only_use_cftime_datetimes=False )
-#     nds.close()
-#     return fdt
-# 
-# # trim a netcdf of any values at time >= first_
-# def nc_trim_hours( filename:str, first_dt ):
-# 
-#     tname = filename + '.temptrim'
-#     ds = xarray.open_dataset( filename, chunks={'time':52} )
-#     end0_dt = first_dt - datetime.timedelta( minutes=1 )
-#     dss = ds.sel( time=slice('1900-01-01', end0_dt))
-#     if dss.sizes['time'] >= ds.sizes['time']:
-#         return  # nothing to trim
-#     
-#     dss.to_netcdf( tname )#, encoding={'time':{'units': "hours since 1900-01-01 00:00:00.0"}} )
-#     ds.close()
-#     dss.close()
-#     os.rename( tname, filename )
-# 
-# # concatenate a netcdf onto another netcdf using xarray.open_mfdataset
-# def concat_month( destfilename:str, srcfilename:str ):
-# 
-#     import xarray
-#     
-#     already_exists = os.path.isfile( destfilename )
-#     if not already_exists:
-#         # for the first month, just rename src file as dest
-#         os.rename( srcfilename, destfilename )
-#         return
-# 
-#     # trim dest so it doesn't overlap with src. xarray doesn't like that.
-#     src_dt = nc_first_datetime( srcfilename )
-#     nc_trim_hours( destfilename, src_dt )
-# 
-#     # concatenate src onto dest
-#     temp_filename = destfilename + '.concat'
-# 
-#     ds = xarray.open_mfdataset(
-#         [destfilename, srcfilename],
-#         combine ='by_coords',
-#         chunks={'time': 52} )
-#     # Export netcdf file, have to force xarray to keep our time unit thus the encoding parameter.
-#     ds.to_netcdf( temp_filename, encoding={'time':{'units': "hours since 1900-01-01 00:00:00.0"}} )
-#     ds.close()
-#     # fix name of finished dest file
-#     os.rename( temp_filename, destfilename )
-#     # remove the src file
-#     os.remove( srcfilename )
-#     pass
+
 
 # clean up downloaded files
 def clean_dataset( dir_name:str ):
@@ -280,18 +161,25 @@ def main():
     current_time = datetime.datetime.now()
     start_year = 1950
     end_year = current_time.year
-    force_download = False;
+    force_download = False
+    output_path = '.'
 
     # hello
     print( f'** HWITW Copernicus data download tool v{app_version} **\n')
 
     # Initialize parser
     parser = argparse.ArgumentParser()
-    parser.add_argument( "-f", "--forcedownload", action='store_true', help = "Force download overwriting existing files" )
+    parser.add_argument( "-f",
+                        "--forcedownload",
+                         action='store_true',
+                         help = "Force download overwriting existing files" )
     parser.add_argument( "-s", "--startyear", help = "Set start year" )
     parser.add_argument( "-e", "--endyear", help = "Set end year" )
-    parser.add_argument( "-c", "--cleanonly", action='store_true', help = "Dont downoad, just clean data already downloaded" )
-    #parser.add_argument( "-l", "--era5t", action='store_true', help = "Force download this year and last year" )
+    parser.add_argument( "-c",
+                         "--cleanonly",
+                         action='store_true',
+                         help = "Dont downoad, just clean data already downloaded" )
+    parser.add_argument( "-o", "--output", help = "Set output path" )
     args = parser.parse_args()
 
     force_download = args.forcedownload
@@ -303,11 +191,8 @@ def main():
     if args.endyear:
         end_year = int(args.endyear)
 
-    '''if args.latest:
-        start_year = current_time.year - 1
-        end_year = current_time.year
-        force_download = True
-    '''
+    if args.output:
+        output_path = args.output
 
     # 0.25 degree resolution. N positive, W negative
     #inp_lat = 59.64 # homer ak
@@ -336,7 +221,8 @@ def main():
 
     if not clean_only:
         # download netcdfs from CDS
-        download_dataset( start_year, end_year, area0, variables, force_download )
+        download_dataset( output_path, start_year, end_year, area0, variables, force_download )
+
     # clean up any expver data that might be present in downloaded files
     clean_dataset( 'cds_era5' )
     print( 'done.' )
