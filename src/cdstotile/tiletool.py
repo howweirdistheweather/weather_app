@@ -455,7 +455,7 @@ def update_wxdb( flag_args:dict, out_path:str, start_year:int, end_year:int ):
 
     print( f'\rOutput WXDB', flush=True )
 
-    wxvtable = open_wxdb( 'hwitw.wxdb' )
+    wxvtable = open_wxdb( out_path + '/hwitw.wxdb' )
     try:
         num_wx_vars = len(wxvtable)
         print( f'debug: num_wx_vars {num_wx_vars}' )
