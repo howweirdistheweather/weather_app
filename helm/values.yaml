@@ -14,9 +14,16 @@ cdstool:
   url: https://cds.climate.copernicus.eu/api/v2
   key: 81982:5b07ba78-4ed8-49aa-b5b2-aed2d392809b
 
+env:
+  CDS_DOWNLOAD_DIR: /var/data/hwitw/input
+  DATA_OUTPUT_DIR: /var/data/hwitw/output
+  # CDS_START_YEAR defaults to current year if not set in environment
+  # CDS_START_YEAR: 1950
+
 persistence:
+  enabled: true
   claimName: hwitw-hwitw-pvc
-  mountPath: /var/data/HWITW
+  mountPath: /var/data/hwitw
 
 imagePullSecrets: []
 nameOverride: ""
