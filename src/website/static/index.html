@@ -56,10 +56,12 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 	    left: 97%;
 	    transform: translate(-97%);
 	}
-	.center_verticlee {
-		position: fixed;
-	    transform: translate(-50%);
+
+	.center_vertical {
+		overflow: auto; 
+		display: inline-block;
 	}
+
 	.weight_slider {
 		margin: 0 auto;
 		width: 256px;
@@ -134,6 +136,18 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 	  font-size: 12px;
 	}
 	
+	.footer {
+		margin-left: 1em;
+		clear: left;
+		font-size: x-small;
+	}
+
+	.citation {
+		margin: 1em 5em auto 3em;
+		color: #999;
+		border-left: 2px solid #999;
+		padding-left: 1em; 
+	}
   </style>
 </head>
 <body>
@@ -162,7 +176,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
   <button type="button" id=load_measurement_button style="display: inline-block;">load</button></div-->
   <hr>
 
-	<div id=gr_choices class="center_verticle" style="overflow: auto; display: inline-block;">
+	<div id=gr_choices class="center_vertical">
 		<div id=measurements></div>
 		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="measurement_button">add new measurement</button></div>
 		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="delete_measurement_button">delete measurement</button></div>
@@ -195,7 +209,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 		</div>
 	
     </div>
-	<!--div id=gr_choices2 class="center_verticle" style="overflow: auto; display: none; float: right; margin-left: 10px;">
+	<!--div id=gr_choices2 class="center_vertical" style="overflow: auto; display: none; float: right; margin-left: 10px;">
 		<div id=measurements2></div>
 		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="measurement_button2">add new measurement</button></div>
 		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="delete_measurement_button2">delete measurement</button></div>
@@ -208,6 +222,12 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 		  </div>
 	    </div>
 	</div-->
+	<div class="footer">
+		<hr>
+		<p>ERA5 data from <a href="https://doi.org/10.24381/cds.adbb2d47">Hersbach, H. et al. (2018)</a> were downloaded from the Copernicus Climate Change Service (C3S) Climate Data Store.</p>
+		<p>The results contain modified Copernicus Climate Change Service information 2023. Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains.</p>
+		<div class="citation">Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J., Nicolas, J., Peubey, C., Radu, R., Rozum, I., Schepers, D., Simmons, A., Soci, C., Dee, D., Thépaut, J-N. (2018): ERA5 hourly data on single levels from 1959 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS). (Accessed on 2023-02-27), <a href="https://doi.org/10.24381/cds.adbb2d47">doi:10.24381/cds.adbb2d47</a></div>
+	</div>
 
   <link href="nouislider/nouislider.css" rel="stylesheet">
   <script src="nouislider/nouislider.js"></script>
