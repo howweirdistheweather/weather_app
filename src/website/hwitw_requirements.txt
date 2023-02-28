@@ -1,5 +1,6 @@
 gunicorn
 flask
+h5py
 #numpy
 #pandas
 #seaborn
