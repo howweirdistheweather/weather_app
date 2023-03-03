@@ -58,6 +58,12 @@ helm upgrade -n hwitw hwitw ./helm
 
 You may want to modify the values passed to the application to set appropriate mount points for persistent storage and other relevant configuration variables. See the `values.yaml` file for details.
 
+To manually start a job from the cronjob to update the CDS data through today, create a job with:
+
+```sh
+kubectl create job --from=cronjob.batch/hwitw-cdstool-cronjob cdstool-job
+```
+
 ## Docker image builds and publication to GHCR
 
 An open source versions of the `docker` commandline tool is `nerdctl`, which works pretty much as

@@ -35,7 +35,7 @@ spec:
                 readOnly: false
               #command: ['sh', '-c', 'echo "TRON Liftoff!" > {{ .Values.persistence.mountPath }}/testfile.txt && cat {{ .Values.persistence.mountPath }}/testfile.txt']
               #command: ['sh', '-c', 'cd {{ .Values.persistence.mountPath }} && python /cdstotile/cdstool.py --startyear 2023']
-              command: ['sh', '-c', '/cdstotile/hwitw_update.sh']
+              command: ['sh', '-c', 'cd {{ .Values.persistence.mountPath }} && /cdstotile/hwitw_update.sh']
           volumes:
           - name: config
             secret:
