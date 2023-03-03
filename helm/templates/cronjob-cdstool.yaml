@@ -18,6 +18,8 @@ spec:
               env:
               - name: CDSAPI_RC
                 value: "/cdsapirc/cdsapirc"
+              - name: CDS_TOOL_DIR
+                value: "{{ .Values.env.CDS_TOOL_DIR }}"
               - name: CDS_DOWNLOAD_DIR
                 value: "{{ .Values.env.CDS_DOWNLOAD_DIR }}"
               - name: DATA_OUTPUT_DIR

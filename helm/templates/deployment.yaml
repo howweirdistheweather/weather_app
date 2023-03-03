@@ -49,6 +49,15 @@ spec:
           - name: hwitw-data
             mountPath: {{ .Values.persistence.mountPath }}
             readOnly: true
+          env:
+          - name: CDS_TOOL_DIR
+            value: "{{ .Values.env.CDS_TOOL_DIR }}"
+          - name: CDS_DOWNLOAD_DIR
+            value: "{{ .Values.env.CDS_DOWNLOAD_DIR }}"
+          - name: DATA_OUTPUT_DIR
+            value: "{{ .Values.env.DATA_OUTPUT_DIR }}"
+          - name: CDS_START_YEAR
+            value: "{{ .Values.env.CDS_START_YEAR }}"
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:

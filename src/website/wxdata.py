@@ -22,10 +22,15 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 import json
 import numpy
+import os
 import wxdb_reader as wxdb
 from collections import defaultdict
 
-WXDB_FILE = './hwitw.wxdb'
+def get_data_path():
+    output_dir = os.getenv(key='DATA_OUTPUT_DIR', default=".")
+    wxdb_file = 'hwitw.wxdb'
+    path = os.path.join(output_dir, wxdb_file)
+    return(path)
 
 
 def wxdata_to_dict( var_table:list, ldata:numpy.array ) -> dict:
@@ -40,7 +45,7 @@ def wxdata_to_dict( var_table:list, ldata:numpy.array ) -> dict:
 
 
 def get_wxvar_list():
-    wxvt = wxdb.open_wxdb( WXDB_FILE )
+    wxvt = wxdb.open_wxdb( get_data_path() )
     wxdb.close_wxdb()
     return wxvt
 
@@ -55,7 +60,7 @@ def get_wxvar( lat_n:float, long_e:float ):
     #     infile.close()
     # return wxvar_json
 
-    wxvt = wxdb.open_wxdb_ro( WXDB_FILE )
+    wxvt = wxdb.open_wxdb_ro( get_data_path() )
     try:
         loc_data = wxdb.read_wxdb( lat_n, long_e )
         ld_dict = wxdata_to_dict( wxvt, loc_data )
