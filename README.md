@@ -50,6 +50,12 @@ Then install the application from helm with:
 helm install -n hwitw hwitw ./helm
 ```
 
+or, once it is deployed, upgrade it with:
+
+```sh
+helm upgrade -n hwitw hwitw ./helm
+```
+
 You may want to modify the values passed to the application to set appropriate mount points for persistent storage and other relevant configuration variables. See the `values.yaml` file for details.
 
 ## Docker image builds and publication to GHCR
@@ -61,14 +67,14 @@ runtime.
 - build the image, setting the appropriate version tag
 
 ```sh
-nerdctl build -t ghcr.io/nceas/hwitw:0.7.0 -f helm/Dockerfile ./src
+nerdctl build -t ghcr.io/nceas/hwitw:0.8.0 -f helm/Dockerfile ./src
 ```
 
 - Alternatively, tag it to be recognized in the GHCR (if it wasn't already tagged this way)
   - note that on Rancher Desktop, one also may need to set the k8s.io namespace for kubernetes to see the image
 
 ```sh
-nerdctl -n k8s.io tag hwitw:0.7.0 ghcr.io/nceas/hwitw:0.7.0
+nerdctl -n k8s.io tag hwitw:0.8.0 ghcr.io/nceas/hwitw:0.8.0
 ```
 
 - login to GHCR (requires a PAT from GITHUB with repository write permissions)
@@ -80,5 +86,5 @@ echo $GITHUB_PAT | nerdctl login ghcr.io -u mbjones --password-stdin
 - And push the image to ghcr.io:
 
 ```sh
-nerdctl -n k8s.io push ghcr.io/nceas/hwitw:0.7.0
+nerdctl -n k8s.io push ghcr.io/nceas/hwitw:0.8.0
 ```
