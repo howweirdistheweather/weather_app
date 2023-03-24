@@ -31,6 +31,7 @@ wxdb_ds = None
 
 def get_latitude_index( lat_deg_n:float ) -> int:
         lat_idx = int( math.floor((90.0 - lat_deg_n) * 4) )
+        lat_idx += 1
         return lat_idx
 
 
@@ -75,7 +76,6 @@ def read_wxdb( lat_n:float, long_e:float ) -> numpy.array:
     lat_idx = get_latitude_index(lat_n)
     long_idx = get_longitude_index(long_e)
     print( f'debug: lat_idx {lat_idx}, long_idx {long_idx}' )
-    print( long_idx )
     ldata = wxdb_ds[ lat_idx, long_idx ]
     # debug:
     #ldata = numpy.copy( ldata )

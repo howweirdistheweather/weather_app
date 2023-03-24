@@ -59,6 +59,7 @@ def get_src_vartable() -> list:
 
 def get_latitude_index( lat_deg_n:float ) -> int:
         lat_idx = int( math.floor((90.0 - lat_deg_n) * 4) )
+        lat_idx += 1
         return lat_idx
 
 
