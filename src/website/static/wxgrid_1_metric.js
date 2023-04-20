@@ -132,6 +132,7 @@ var is_active = true
 var color_lists = [['#dadaeb','#9e9ac8','#54278f'],['#ffffb2','#fecc5c','#e31a1c'],['#1871bc','#f7e3f7','#ef8a62'],['#bdd7e7','#6baed6','#1871bc'],['#bae4b3','#74c476','#006d2c'],['#ffc','#b2aa93','#110800'],['#e9a3c9','#f7f7f7','#a1d76a']]
 var color_num = 0
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.004]};
+//var wxgrid_url = http://localhost:5001/wxapp/getwxvar?lat=1000&lon=1000
 var wxgrid_url = `/wxapp/getwxvar`;
 var urlParams = new URLSearchParams(window.location.search);
 var lat = urlParams.get('lat');
@@ -276,9 +277,17 @@ seasonal_adjust.onchange =
 			}
 			LoadWXGrid();
 			for (let num=0; num<=measurement_index; num++){
-				click_coords[num] = {}
-				click_coords[num][mins[num]*2+13] = 0
-				click_coords[num][maxes[num]*2+17] = histo_hights[num]
+				if (['dir_modal','dir_net'].includes(method_types[num])){
+					click_coords[num] = {}
+					click_coords[num][mins[num]*2+13] = 0
+					click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
+					click_coords[num][maxes[num]*2+17] = 0
+				}
+				else {
+					click_coords[num] = {}
+					click_coords[num][mins[num]*2+13] = 0
+					click_coords[num][maxes[num]*2+17] = histo_hights[num]
+				}
 				if (select != null && select[1] == num){
 					select = null
 					if (select_draw != null){
@@ -464,9 +473,17 @@ function makeNewMeasurmeant(curent_id_num) {
 				return
 			}
     		LoadWXGrid();
-			click_coords[curent_id_num] = {}
-			click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
-			click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
+			if (['dir_modal','dir_net'].includes(method_types[curent_id_num])){
+				click_coords[curent_id_num] = {}
+				click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
+				click_coords[curent_id_num][maxes[curent_id_num]+mins[curent_id_num]+17] = histo_hights[curent_id_num]
+				click_coords[curent_id_num][maxes[curent_id_num]*2+17] = 0
+			}
+			else {
+				click_coords[curent_id_num] = {}
+				click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
+				click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
+			}
 			if (select != null && select[1] == measurement_index){
 				select = null
 				if (select_draw != null){
@@ -486,9 +503,17 @@ function makeNewMeasurmeant(curent_id_num) {
 			LoadMethodDropdown(curent_id_num);
 		};
 	reset_sliders(curent_id_num)
-	click_coords[curent_id_num] = {}
-	click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
-	click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
+	if (compresion[mesurment][func] == 'direction'){
+		click_coords[curent_id_num] = {}
+		click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
+		click_coords[curent_id_num][maxes[curent_id_num]+mins[curent_id_num]+17] = histo_hights[curent_id_num]
+		click_coords[curent_id_num][maxes[curent_id_num]*2+17] = 0
+	}
+	else {
+		click_coords[curent_id_num] = {}
+		click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
+		click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
+	}
 	DrawLines(curent_id_num)
 //	for (i = 0; i <= curent_id_num; i++){
 //		DrawLines(i)
@@ -783,9 +808,18 @@ function LoadMethodDropdown(num) {
 		method_types.push(dropdown.value);
 	}
 	LoadWXGrid();
-	click_coords[num] = {}
-	click_coords[num][mins[num]*2+13] = 0
-	click_coords[num][maxes[num]*2+17] = histo_hights[num]
+	if (['dir_modal','dir_net'].includes(method_types[num])){
+		click_coords[num] = {}
+		click_coords[num][mins[num]*2+13] = 0
+		click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
+		click_coords[num][maxes[num]*2+17] = 0
+		console.log('awerf')
+	}
+	else {
+		click_coords[num] = {}
+		click_coords[num][mins[num]*2+13] = 0
+		click_coords[num][maxes[num]*2+17] = histo_hights[num]
+	}
 	if (select != null && select[1] == num){
 		select = null
 		if (select_draw != null){
