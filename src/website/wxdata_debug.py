@@ -35,7 +35,7 @@ def get_wxvar( lat_n:float, long_e:float ):
     #     infile.close()
     # return wxvar_json
 
-    if -90 <= lat_n <= 90 and -180 <= long_e <= 180:
+    if -91 <= lat_n <= 91 and -181 <= long_e <= 181:
         wxvt = wxdb.open_wxdb_ro( WXDB_FILE )
         try:
             loc_data = wxdb.read_wxdb( lat_n, long_e )

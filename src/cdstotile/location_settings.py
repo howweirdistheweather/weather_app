@@ -65,7 +65,7 @@ site_settings = {
     "Puerto_Maldonado":{
         "name":"Puerto_Maldonado",
         "end_year":2021,
-        "inp_lat": -12.583,
+        "inp_lat": -12.583, #lat=-12.583&lon=-69.195
         "inp_long":-69.195,
         "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover'],
         "output_raw_years":[],
@@ -73,7 +73,7 @@ site_settings = {
     "Phoenix":{
         "name":"Phoenix",
         "end_year":2021,
-        "inp_lat":33.4,
+        "inp_lat":33.4, #lat=33.4&lon=-112.1
         "inp_long":-112.1,
         "available_groups":['temperature_and_humidity','wind','precipitation','cloud_cover'],
         "output_raw_years":[],
@@ -153,7 +153,7 @@ site_settings = {
     "Dubai":{
         "name":"Dubia",
         "end_year":2022,
-        "inp_lat":25.2,
+        "inp_lat":25.2, #lat=25.2&lon=55.3
         "inp_long":55.3,
         "available_groups":['temperature_and_humidity', 'wind', 'precipitation', 'cloud_cover', 'runoff', 'drought'],
         "output_raw_years":[2021]
