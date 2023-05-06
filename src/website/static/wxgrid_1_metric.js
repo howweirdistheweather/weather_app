@@ -14,6 +14,36 @@
 //OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // initialize as an array LoadWXGrid( st_dropdown.value, reading_dropdown.value, reading_dropdown2.value)of zeros. an empty grid.
+const dictionary = ['apple', 'banana', 'orange', 'grape', 'cherry', 'melon', 'strawberry', 'kiwi', 'mango', 'peach'];
+const svg = document.getElementById('mySvg');
+const tooltip = document.getElementById('tooltip');
+
+function showTooltip(evt, word) {
+	tooltip.textContent = word;
+	tooltip.style.left = `${evt.pageX}px`;
+	tooltip.style.top = `${evt.pageY}px`;
+	tooltip.style.display = 'block';
+}
+
+function hideTooltip() {
+	tooltip.style.display = 'none';
+}
+
+function createRandomCircle() {
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  const randomWord = dictionary[Math.floor(Math.random() * dictionary.length)];
+
+  circle.setAttribute('cx', Math.random() * 800); // Adjust for your SVG size
+  circle.setAttribute('cy', Math.random() * 600); // Adjust for your SVG size
+  circle.setAttribute('r', 20); // Circle radius
+  circle.setAttribute('fill', 'blue'); // Circle color
+
+  circle.addEventListener('mousemove', (evt) => showTooltip(evt, 'iouh'));
+  circle.addEventListener('mouseout', hideTooltip);
+
+  return circle;
+}
+
 var wx_grdata = {"":Array(60).fill().map(() => Array(52).fill(0))}; //Array.from(Array(50), () => new Array(52));   // init empty/zero grid
 var o = [1,5,6,4,5,2,3]
 o.splice(5,1)
@@ -87,6 +117,7 @@ var states = []
 var line_opacidy = 0.1
 var state_index = null
 var maxes = []
+var doPDO = false
 var is_seasonaly_adjusted = false
 var select = null
 var select_draw = null
@@ -124,8 +155,8 @@ var seasonal_data = []
 var fade = null
 var short_names = {}
 var prevs = []
-var PDO = [-2.24, -1.12, -1.55, -0.64, -0.4, -2.07, -1.81, 0.29, 0.86, 0.27, 0.04, -0.57, -1.1, -0.24, -0.89, -0.14, -0.44, -0.74, -0.15, -0.34, -0.4, -1.32, -1.14, -1.14, -0.3, -1.41, -0.15, 0.05, 0.07, 0.11, 0.31, 0.84, -0.26, 1.25, 0.6, 0.03, 1.01, 1.14, -0.04, -0.5, -0.83, -0.88, 0.76, 1.04, -0.49, 0.44, 0.68, 1.32, -0.48, -1.84, -1.13, -1.13, -0.44, 0.38, -0.22, -0.19, -0.35, -0.7, -1.66, -1.03, -1.06, -1.81, -1.73, -1.17, 0.55, 0.92, 0.67, -0.1, -0.36, -0.15, -1.14, -1.88]
-var ENSO = [-1.31, 0.45, 0.03, 0.65, -0.45, -1.16, -0.97, 0.6, 0.58, 0.09, -0.13, -0.06, -0.34, 0.44, -0.55, 0.88, 0.46, -0.29, -0.05, 0.72, -0.3, -1.04, 0.96, -0.67, -1.0, -1.24, -0.04, 0.86, 0.03, 0.26, 0.31, -0.17, 0.97, 1.22, -0.32, -0.43, 0.3, 1.37, -0.87, -0.82, 0.18, 0.61, 1.16, 0.88, 0.5, -0.18, -0.61, 1.17, 0.32, -1.24, -0.85, -0.39, 0.35, 0.17, 0.14, -0.02, 0.02, -0.6, -1.09, -0.03, -0.89, -1.34, -0.32, -0.41, -0.02, 1.28, 0.45, -0.5, -0.29, 0.34, -0.59, -1.2]
+var PDO = [-2.24, -1.12, -1.55, -0.64, -0.4, -2.07, -1.81, 0.29, 0.86, 0.27, 0.04, -0.57, -1.1, -0.24, -0.89, -0.14, -0.44, -0.74, -0.15, -0.34, -0.4, -1.32, -1.14, -1.14, -0.3, -1.41, -0.15, 0.05, 0.07, 0.11, 0.31, 0.84, -0.26, 1.25, 0.6, 0.03, 1.01, 1.14, -0.04, -0.5, -0.83, -0.88, 0.76, 1.04, -0.49, 0.44, 0.68, 1.32, -0.48, -1.84, -1.13, -1.13, -0.44, 0.38, -0.22, -0.19, -0.35, -0.7, -1.66, -1.03, -1.06, -1.81, -1.73, -1.17, 0.55, 0.92, 0.67, -0.1, -0.36, -0.15, -1.14, -1.88, -2.12] //https://www.ncei.noaa.gov/pub/data/cmb/ersst/v5/index/ersst.v5.pdo.dat
+var ENSO = [-1.31, 0.45, 0.03, 0.65, -0.45, -1.16, -0.97, 0.6, 0.58, 0.09, -0.13, -0.06, -0.34, 0.44, -0.55, 0.88, 0.46, -0.29, -0.05, 0.72, -0.3, -1.04, 0.96, -0.67, -1.0, -1.24, -0.04, 0.86, 0.03, 0.26, 0.31, -0.17, 0.97, 1.22, -0.32, -0.43, 0.3, 1.37, -0.87, -0.82, 0.18, 0.61, 1.16, 0.88, 0.5, -0.18, -0.61, 1.17, 0.32, -1.24, -0.85, -0.39, 0.35, 0.17, 0.14, -0.02, 0.02, -0.6, -1.09, -0.03, -0.89, -1.34, -0.32, -0.41, -0.02, 1.28, 0.45, -0.5, -0.29, 0.34, -0.59, -1.2, -0.94] //https://origin.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php
 var start_year = 0
 var is_setting = false // dir_net
 var is_active = true
@@ -296,6 +327,17 @@ seasonal_adjust.onchange =
 					select_draw = null
 				}
 				DrawLines(num)
+			}
+			RenderGrid()
+		};
+var do_PDO = document.getElementById("do_PDO")
+do_PDO.onchange =
+		function () {
+			if (do_PDO.checked){
+				doPDO = true
+			}
+			else {
+				doPDO = false
 			}
 			RenderGrid()
 		};
@@ -702,6 +744,101 @@ function reset_slider(i,num){
 		});
 }
 
+function handleSlider2(num,weight_val) {
+	if (!is_setting && weight_sliders.length > 1) {
+		is_setting = true
+		var total_weght = 0
+		for (var i = 0; i < weight_sliders.length; i++) {
+			if (i != num){
+				total_weght += weight_vals[i]
+			}
+		}
+		weights = []
+		for (var i = 0; i < weight_sliders.length; i++) {
+			is_setting = true
+			redoSlider(i,num,total_weght,null,weights)
+		}
+		const total_sliders = weights.reduce((a, b) => a + b, 0);
+		for (var i = 0; i < weight_sliders.length; i++) {
+			is_setting = true
+			i_setex = weight_vals[i]
+			document.getElementById("weight_slider_holder"+i).remove()
+			document.getElementById("weight_stext_div"+i).remove()
+			makeNewElement("measurement"+i,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+i});
+			makeNewElement("weight_slider_holder"+i,"div",{"class":"weight_slider","id":"weight_slider"+i});
+			makeNewElement("measurement"+i,"div",{"style":"padding-bottom: 10px;","id":"weight_stext_div"+i});
+			makeNewElement("weight_stext_div"+i,"div",{"class":"weight_setex","id":"weight_stext"+i});
+
+			weight_setexes[i] = document.getElementById( 'weight_stext'+i);
+			weight_sliders[i] = document.getElementById('weight_slider'+i);
+			noUiSlider.create( weight_sliders[i], {
+			    start: [weights[i]/total_sliders],
+			    connect: false,
+			    range: {
+			        'min': 0,
+			        'max': 100
+			    },     
+			});
+			weight_sliders[i].noUiSlider.on('update', function (values, handle) {
+			    var weight_val = values[0] / 100;
+			    // update text and redraw wx grid
+				weight_vals[i] = weight_val
+			    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
+				handleSlider(i,weight_val)
+				});
+			is_setting = false
+		}
+		RenderGrid()
+	}
+	else if (!is_setting && weight_sliders.length == 1){
+		is_setting = true
+		redoSlider(0,null,0,100,null)
+	}
+	prevs[num] = weight_val
+}
+function redoSlider2(i,num,total_weght,set_num,weights) {
+	if (i != num) {
+//		console.log(total_weght)
+		if (total_weght != 0){
+			wegth_i = weight_vals[i]/total_weght
+		}
+		else {
+			wegth_i = 1/(weight_sliders.length)
+		}
+		i_setex = weight_vals[i]
+		if (set_num != null){
+			document.getElementById("weight_slider_holder"+i).remove()
+			document.getElementById("weight_stext_div"+i).remove()
+			makeNewElement("measurement"+i,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+i});
+			makeNewElement("weight_slider_holder"+i,"div",{"class":"weight_slider","id":"weight_slider"+i});
+			makeNewElement("measurement"+i,"div",{"style":"padding-bottom: 10px;","id":"weight_stext_div"+i});
+			makeNewElement("weight_stext_div"+i,"div",{"class":"weight_setex","id":"weight_stext"+i});
+
+			weight_setexes[i] = document.getElementById( 'weight_stext'+i);
+			weight_sliders[i] = document.getElementById('weight_slider'+i);
+			noUiSlider.create( weight_sliders[i], {
+			    start: [set_num],
+			    connect: false,
+			    range: {
+			        'min': 0,
+			        'max': 100
+			    },     
+			});
+			weight_sliders[i].noUiSlider.on('update', function (values, handle) {
+			    var weight_val = values[0] / 100;
+			    // update text and redraw wx grid
+				weight_vals[i] = weight_val
+			    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
+				handleSlider(i,weight_val)
+				});
+		}
+		else {
+			weights.push((i_setex+wegth_i*(prevs[num]-weight_vals[num]))*100)
+		}
+		
+	}
+	is_setting = false
+}
 function handleSlider(num,weight_val) {
 	if (!is_setting && weight_sliders.length > 1) {
 		is_setting = true
@@ -1890,65 +2027,71 @@ function DrawYears(compresed_data,num_years){
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
+	move = 0
+	if (doPDO){
+		move = 22
+	}
 	console.log(compresed_data.length)
 	for (var i = 0; i < compresed_data.length; i++) {
 		
-        draw.rect( color_plot[2][i]*3, 9 ).move( 22, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+        draw.rect( color_plot[2][i]*3, 9 ).move( move, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
             'fill':color_lists[color_num][2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( color_plot[1][i]*3, 9 ).move( color_plot[2][i]*3 + 22, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+        draw.rect( color_plot[1][i]*3, 9 ).move( color_plot[2][i]*3 + move, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
             'fill':color_lists[color_num][1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3 + 22, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+        draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3 + move, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
             'fill':color_lists[color_num][0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-		if ((i < PDO.length) && (PDO[i] > 0.75)) {
-	        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
-	            'fill':color_lists[2][2],
-	            'shape-rendering':'crispEdges',
-	            'stroke-width': 0 
-	        });
-		}
-		else if ((i < PDO.length) && (PDO[i] > -0.75)) {
-	        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
-	            'fill':color_lists[2][1],
-	            'shape-rendering':'crispEdges',
-	            'stroke-width': 0 
-	        });
-		}
-		else if (i < PDO.length) {
-	        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
-	            'fill':color_lists[2][0],
-	            'shape-rendering':'crispEdges',
-	            'stroke-width': 0 
-	        });
-		}
-		if ((i < ENSO.length) && (ENSO[i] > 0.75)) {
-	        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
-	            'fill':color_lists[2][2],
-	            'shape-rendering':'crispEdges',
-	            'stroke-width': 0 
-	        });
-		}
-		else if ((i < ENSO.length) && (ENSO[i] > -0.75)) {
-	        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
-	            'fill':color_lists[2][1],
-	            'shape-rendering':'crispEdges',
-	            'stroke-width': 0 
-	        });
-		}
-		else if (i < ENSO.length) {
-	        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
-	            'fill':color_lists[2][0],
-	            'shape-rendering':'crispEdges',
-	            'stroke-width': 0 
-	        });
+		if (doPDO){
+			if ((i < PDO.length) && (PDO[i] > 0.75)) {
+		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		            'fill':color_lists[2][2],
+		            'shape-rendering':'crispEdges',
+		            'stroke-width': 0, 
+		        });
+			}
+			else if ((i < PDO.length) && (PDO[i] > -0.75)) {
+		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		            'fill':color_lists[2][1],
+		            'shape-rendering':'crispEdges',
+		            'stroke-width': 0 , 
+		        });
+			}
+			else if (i < PDO.length) {
+		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		            'fill':color_lists[2][0],
+		            'shape-rendering':'crispEdges',
+		            'stroke-width': 0 , 
+		        });
+			}
+			if ((i < ENSO.length) && (ENSO[i] > 0.75)) {
+		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		            'fill':color_lists[2][2],
+		            'shape-rendering':'crispEdges',
+		            'stroke-width': 0 
+		        });
+			}
+			else if ((i < ENSO.length) && (ENSO[i] > -0.75)) {
+		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		            'fill':color_lists[2][1],
+		            'shape-rendering':'crispEdges',
+		            'stroke-width': 0 
+		        });
+			}
+			else if (i < ENSO.length) {
+		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		            'fill':color_lists[2][0],
+		            'shape-rendering':'crispEdges',
+		            'stroke-width': 0 
+		        });
+			}
 		}
 	}
 	for (var i = 0; i < 4; i++) {
@@ -1965,17 +2108,20 @@ function DrawYears(compresed_data,num_years){
             'stroke-width': 0 
         });
 	}
-	var PDOoffset = compresed_data.length-PDO.length
-	var ENSOoffset = compresed_data.length-ENSO.length
-    let btextPDO = draw.text( `- PDO` ).font('size',10).font('family','Arial');
-    let bwPDO = btextPDO.length();   
-	let bhPDO = btextPDO.bbox().height; // bbox is double for some reason.     
-    btextPDO.center(4.5,compresed_data.length/2+9*PDOoffset-2).rotate(270);
+	if (doPDO){
+		var PDOoffset = compresed_data.length-PDO.length
+		var ENSOoffset = compresed_data.length-ENSO.length
 	
-    let btextENSO = draw.text( `- ENSO` ).font('size',10).font('family','Arial');
-    let bwENSO = btextENSO.length();   
-	let bhENSO = btextENSO.bbox().height; // bbox is double for some reason.     
-    btextENSO.center(15.5 ,compresed_data.length/2+9*ENSOoffset-5.5).rotate(270);
+	    let btextPDO = draw.text( `- PDO` ).font('size',10).font('family','Arial');
+	    let bwPDO = btextPDO.length();   
+		let bhPDO = btextPDO.bbox().height; // bbox is double for some reason.     
+	    btextPDO.center(4.5,compresed_data.length/2+9*PDOoffset-2).rotate(270);
+	
+	    let btextENSO = draw.text( `- ENSO` ).font('size',10).font('family','Arial');
+	    let bwENSO = btextENSO.length();   
+		let bhENSO = btextENSO.bbox().height; // bbox is double for some reason.     
+	    btextENSO.center(15.5 ,compresed_data.length/2+9*ENSOoffset-5.5).rotate(270);
+	}
 	year_draw = draw
 //	year_histogram = color_plot
 }

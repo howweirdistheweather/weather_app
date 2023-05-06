@@ -125,6 +125,15 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 	  text-decoration: none;
 	  cursor: pointer;
 	}
+	.tooltip {
+	  position: absolute;
+	  background-color: #333;
+	  color: #fff;
+	  padding: 5px;
+	  border-radius: 4px;
+	  font-size: 12px;
+	}
+	
   </style>
 </head>
 <body>
@@ -146,8 +155,8 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
   <div id=location style="display: inline-block;"></div> <!--  margin-left: 100px;-->
   <div></div>
   <input type="checkbox" id="enable_line_editing" style="display: inline-block;" name="enable_line_editing" value="1"> Enable line editing
-  
   <input type="checkbox" id="seasonal_adjust" style="display: inline-block; margin-left: 10px" name="seasonal_adjust" value="1"> Seasonaly adjusted metrics
+  <input type="checkbox" id="do_PDO" style="display: inline-block;" name="enable_line_editing" value="1"> Display PDO and ENSO
   <!--select id=type_selector><option value="1">one metric</option><option value="2">two metrics</option></select>
   <button type="button" id=save_measurement_button style="display: inline-block;">save</button></div>
   <button type="button" id=load_measurement_button style="display: inline-block;">load</button></div-->
@@ -168,7 +177,9 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 	</div>
     <div id=outer0 style=" display: inline-block; overflow: auto; margin-left: 10px">
 	    <div id=gr_sesonalitys style="display: inline-block;"></div>
-		<div id=gr_years style="float: right; display: inline-block; margin-left: 15px;"></div>
+		<div id=gr_years style="float: right; display: inline-block; margin-left: 15px;">
+		   <div id="tooltip" class="tooltip" style="display: none;"></div>
+		</div>
 	    <div>
       
 	    <!--div id=mouseover_box style="z-index: 1; width: 46.82%; height: 100%; background-color: rgba(0,0,0,0); left: 19.78%; padding-top: 9px; position: fixed;">
