@@ -306,7 +306,10 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
 
         # keep Week value correct in ods
         wk_var = ods.variables[ 'Week' ]
-        wk_var[week_i] = week_i + 1
+	if wk_var.size-1 < week_i:
+		wk_var.append(week_i + 1)
+	else:
+		wk_var[week_i] = week_i + 1
 
         # for each Dataset needed by the data_group
         week_data = []
