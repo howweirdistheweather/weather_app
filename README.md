@@ -35,7 +35,7 @@ To deploy, you must create a secret with the [CDS API key](https://cds.climate.c
 ```sh
 url: https://cds.climate.copernicus.eu/api/v2
 key: 827815:710bb811-1cc7-51fc-4c41-ea6652529bc9
-verify: 0
+verify: 1
 ```
 
 Create the secret in your cluster with kubectl, giving it a name that is prefixed with your planned release name (here we'll use `hwitw` as the release name):
