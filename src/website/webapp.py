@@ -22,7 +22,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 from flask import Flask, render_template, request, Response, send_from_directory, redirect
 import html
 import json
-import wxdata_debug as wxdata
+import wxdata as wxdata
 from flask_cors import CORS
 
 app = Flask(__name__)

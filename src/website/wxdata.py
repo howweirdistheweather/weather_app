@@ -17,9 +17,6 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 # get weather data for the webapp
 #
-
-
-
 import json
 import numpy
 import os
@@ -60,13 +57,19 @@ def get_wxvar( lat_n:float, long_e:float ):
     #     infile.close()
     # return wxvar_json
 
-    wxvt = wxdb.open_wxdb_ro( get_data_path() )
-    try:
-        loc_data = wxdb.read_wxdb( lat_n, long_e )
-        ld_dict = wxdata_to_dict( wxvt, loc_data )
-        site_name = f'location {lat_n}, {long_e}'
-        ld_dict['data_specs'].update( [('Name',site_name)] )
-        wxvar_json = json.dumps( ld_dict )
-    finally:
-        wxdb.close_wxdb()
+    if -91 <= lat_n <= 91 and -181 <= long_e <= 181:
+        wxvt = wxdb.open_wxdb_ro( get_data_path() )
+        try:
+            loc_data = wxdb.read_wxdb( lat_n, long_e )
+            ld_dict = wxdata_to_dict( wxvt, loc_data )
+            site_name = f'location {lat_n}, {long_e}'
+            ld_dict['data_specs'].update( [('Name',site_name)] )
+            wxvar_json = json.dumps( ld_dict )
+        finally:
+            wxdb.close_wxdb()
+    else: #Debug case if nonsense lat/lon passed
+        print(f'DEBUG: {lat_n}, {long_e}')
+        with open('Seldovia.json', 'r') as infile:
+            wxvar_json = infile.read()
+            infile.close()
     return wxvar_json
