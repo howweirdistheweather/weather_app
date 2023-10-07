@@ -73,14 +73,14 @@ runtime.
 - build the image, setting the appropriate version tag
 
 ```sh
-docker build -t ghcr.io/nceas/hwitw:0.9.4 -f helm/Dockerfile ./src
+docker build -t ghcr.io/nceas/hwitw:0.9.5 -f helm/Dockerfile ./src
 ```
 
 - Alternatively, tag it to be recognized in the GHCR (if it wasn't already tagged this way)
   - note that on Rancher Desktop, one also may need to set the k8s.io namespace for kubernetes to see the image
 
 ```sh
-docker tag hwitw:0.9.4 ghcr.io/nceas/hwitw:0.9.4
+docker tag hwitw:0.9.5 ghcr.io/nceas/hwitw:0.9.5
 ```
 
 - login to GHCR (requires a PAT from GITHUB with repository write permissions)
@@ -92,5 +92,5 @@ echo $GITHUB_PAT | docker login ghcr.io -u mbjones --password-stdin
 - And push the image to ghcr.io:
 
 ```sh
-docker push ghcr.io/nceas/hwitw:0.9.4
+docker push ghcr.io/nceas/hwitw:0.9.5
 ```
