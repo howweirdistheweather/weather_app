@@ -15,7 +15,9 @@ env:
   CDS_DOWNLOAD_DIR: /var/data/hwitw/input
   DATA_OUTPUT_DIR: /var/data/hwitw/output
   # CDS_START_YEAR defaults to current year if not set in environment
-  CDS_START_YEAR: 2022
+  #CDS_START_YEAR: 2023
+  # CDS_END_YEAR defaults to current year if not set in environment
+  #CDS_END_YEAR: 2023
 
 persistence:
   enabled: true

@@ -1,11 +1,11 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "hwitw.fullname" . }}-cdstool
+  name: {{ include "hwitw.fullname" . }}-tiletool
   labels:
     {{- include "hwitw.labels" . | nindent 4 }}
 spec:
-  schedule: "18 18 * * 5"
+  schedule: "23 18 * * 5"
   jobTemplate:
     spec:
       template:
@@ -37,7 +37,7 @@ spec:
                 readOnly: false
               #command: ['sh', '-c', 'echo "TRON Liftoff!" > {{ .Values.persistence.mountPath }}/testfile.txt && cat {{ .Values.persistence.mountPath }}/testfile.txt']
               #command: ['sh', '-c', 'cd {{ .Values.persistence.mountPath }} && python /cdstotile/cdstool.py --startyear 2023']
-              command: ['sh', '-c', 'cd {{ .Values.persistence.mountPath }} && /cdstotile/hwitw_update.sh cdstool']
+              command: ['sh', '-c', 'cd {{ .Values.persistence.mountPath }} && /cdstotile/hwitw_update.sh tiletool']
           volumes:
           - name: config
             secret:

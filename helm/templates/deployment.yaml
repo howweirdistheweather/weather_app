@@ -58,6 +58,8 @@ spec:
             value: "{{ .Values.env.DATA_OUTPUT_DIR }}"
           - name: CDS_START_YEAR
             value: "{{ .Values.env.CDS_START_YEAR }}"
+          - name: CDS_END_YEAR
+            value: "{{ .Values.env.CDS_END_YEAR }}"
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:

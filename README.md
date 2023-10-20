@@ -61,7 +61,8 @@ You may want to modify the values passed to the application to set appropriate m
 To manually start a job from the cronjob to update the CDS data through today, create a job with:
 
 ```sh
-kubectl create job --from=cronjob.batch/hwitw-cdstool-cronjob cdstool-job
+kubectl create job --from=cronjob.batch/hwitw-cdstool cdstool
+kubectl create job --from=cronjob.batch/hwitw-tiletool tiletool
 ```
 
 ## Docker image builds and publication to GHCR
@@ -73,14 +74,14 @@ runtime.
 - build the image, setting the appropriate version tag
 
 ```sh
-docker build -t ghcr.io/nceas/hwitw:0.9.5 -f helm/Dockerfile ./src
+docker build -t ghcr.io/nceas/hwitw:0.9.6 -f helm/Dockerfile ./src
 ```
 
 - Alternatively, tag it to be recognized in the GHCR (if it wasn't already tagged this way)
   - note that on Rancher Desktop, one also may need to set the k8s.io namespace for kubernetes to see the image
 
 ```sh
-docker tag hwitw:0.9.5 ghcr.io/nceas/hwitw:0.9.5
+docker tag hwitw:0.9.6 ghcr.io/nceas/hwitw:0.9.6
 ```
 
 - login to GHCR (requires a PAT from GITHUB with repository write permissions)
@@ -92,5 +93,5 @@ echo $GITHUB_PAT | docker login ghcr.io -u mbjones --password-stdin
 - And push the image to ghcr.io:
 
 ```sh
-docker push ghcr.io/nceas/hwitw:0.9.5
+docker push ghcr.io/nceas/hwitw:0.9.6
 ```
