@@ -69,11 +69,11 @@ document.onkeydown = function() {
 		horizontalArrowHandler(1)
 	}
 	if (key == 13) {
-		select = null
-		if (select_draw != null){
-			select_draw.remove()
+		for (i in selects){
+			select_draws[i].remove();
 		}
-		select_draw = null
+		selects = []
+		select_draws = []
 	}
 	if (document.getElementById("myModal").style.display == "block"){
 //		update_txt()
@@ -98,6 +98,9 @@ function download(filename, text) {
 	document.body.removeChild(element);
 }
 //download('test.json', "Hello world!");
+const c = [1,3]
+c.splice(1,1)
+console.log(c)
 var lines = []
 var year_draw = null
 var season_draw = null
@@ -119,8 +122,8 @@ var state_index = null
 var maxes = []
 var doPDO = false
 var is_seasonaly_adjusted = false
-var select = null
-var select_draw = null
+var selects = []
+var select_draws = []
 var draws = []
 var compresed_data = []
 var is_valid = 1
@@ -167,8 +170,13 @@ const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "prec
 var wxgrid_url = `/wxapp/getwxvar`;
 var urlParams = new URLSearchParams(window.location.search);
 var lat = urlParams.get('lat');
-console.log(lat)
+if (lat == null){
+	lat = 59.44
+}
 var lon = urlParams.get('lon');
+if (lon == null){
+	lon = -151.7
+}
 var url = wxgrid_url+`?lat=${lat}&lon=${lon}`
 fetch(url , {   method:'GET',
                         headers: {'Authorization': 'Basic ' + btoa(cred_str)} 
@@ -284,11 +292,11 @@ enable_line_editing.onchange =
 				line_opacidy = 1
 			}
 			else {
-				select = null
-				if (select_draw != null){
-					select_draw.remove()
+				selects = []
+				for (i in select_draws){
+					select_draws[i].remove()
 				}
-				select_draw = null
+				select_draws = []
 				line_opacidy = 0.1
 			}
 			for (let i=0; i<=measurement_index; i++){
@@ -307,6 +315,11 @@ seasonal_adjust.onchange =
 				all_data = base_data
 			}
 			LoadWXGrid();
+			selects = []
+			for (select_draw of select_draws){
+				select_draw.remove()
+			}
+			select_draws = []
 			for (let num=0; num<=measurement_index; num++){
 				if (['dir_modal','dir_net'].includes(method_types[num])){
 					click_coords[num] = {}
@@ -318,13 +331,6 @@ seasonal_adjust.onchange =
 					click_coords[num] = {}
 					click_coords[num][mins[num]*2+13] = 0
 					click_coords[num][maxes[num]*2+17] = histo_hights[num]
-				}
-				if (select != null && select[1] == num){
-					select = null
-					if (select_draw != null){
-						select_draw.remove()
-					}
-					select_draw = null
 				}
 				DrawLines(num)
 			}
@@ -526,16 +532,16 @@ function makeNewMeasurmeant(curent_id_num) {
 				click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
 				click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
 			}
-			if (select != null && select[1] == measurement_index){
-				select = null
-				if (select_draw != null){
-					select_draw.remove()
+			for (i in selects){
+				if (selects[i][1] == measurement_index){
+					selects.splice(i);
+					select_draws[i].remove();
+					select_draws.splice(i);
 				}
-				select_draw = null
 			}
+			
 			DrawLines(curent_id_num)
 			RenderGrid()
-			//updateStates()
 		};
 	reading_dropdowns[curent_id_num].onchange =
 		function () {
@@ -675,12 +681,12 @@ function deleteMeasurementHandeler() {
 }
 
 function deleteMeasurement() {
-	if (select != null && select[1] == measurement_index){
-		select = null
-		if (select_draw != null){
-			select_draw.remove()
+	for (i in selects){
+		if (selects[i][1] == measurement_index){
+			selects.splice(i);
+			select_draws[i].remove();
+			select_draws.splice(i);
 		}
-		select_draw = null
 	}
 	var measurement = document.getElementById("measurement"+measurement_index)
 	var histo = document.getElementById("histo"+measurement_index)
@@ -957,12 +963,12 @@ function LoadMethodDropdown(num) {
 		click_coords[num][mins[num]*2+13] = 0
 		click_coords[num][maxes[num]*2+17] = histo_hights[num]
 	}
-	if (select != null && select[1] == num){
-		select = null
-		if (select_draw != null){
-			select_draw.remove()
+	for (i in selects){
+		if (selects[i][1] == num){
+			selects.splice(i);
+			select_draws[i].remove();
+			select_draws.splice(i);
 		}
-		select_draw = null
 	}
 	DrawLines(num)
 	RenderGrid()
@@ -1276,13 +1282,15 @@ function DrawHistograms(compresed_data,inc_data){
 		maxes[num] = max_num
 		histo_hights[num] = 125*0.5
 		DrawLines(num)
-		if (select != null && select[1] == num) {
-			val = select[0]
-		    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
-		        'fill':'#d55',
-		        'shape-rendering':'crispEdges',
-		        'stroke-width': 0 
-		    });
+		for (i in selects){
+			if (selects[i][1] == num){
+				val = selects[i][0]
+			    select_draws[i] = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+			        'fill':'#d55',
+			        'shape-rendering':'crispEdges',
+			        'stroke-width': 0 
+			    });
+			}
 		}
 	}       
 }
@@ -1378,48 +1386,40 @@ function RegisterClick(num,event) {
 		return
 	}
 	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
-	if (select != null)	{
-		if (Math.abs(click_x-select[0]) < 4 && Math.abs(click_y-click_coords[num][select[0]]) < 4) {
-			select = null
-			if (select_draw != null){
-				select_draw.remove()
-			}
-			select_draw = null
+	for (i in selects){
+		if (Math.abs(click_x-selects[i][0]) < 4 && Math.abs(click_y-click_coords[num][selects[i][0]]) < 4) {
+			selects.splice(i)
+			select_draws[i].remove()
+			select_draws.splice(i)
 			return
 		}
 	}
 	for (val of x_vals) {
 		if (Math.abs(click_x-val) < 4 && Math.abs(click_y-click_coords[num][val]) < 4) {
-			if (select != null)	{
-				select = null
-				if (select_draw != null){
-					select_draw.remove()
+			if (!event.shiftKey || (selects.length && selects[0][1] != num)){
+				for (i in selects){
+					selects.splice(i);
+					select_draws[i].remove();
+					select_draws.splice(i);
 				}
-				select_draw = null
 			}
-			select = [val,num]
+			selects.push([val,num])
 			var draw = draws[num];
-	        select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+	        select_draws.push(draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
 	            'fill':'#d55',
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
-	        });
+	        }));
 			
 			return
 		}
 	}
-	if (select != null){
-		select = null
-		if (select_draw != null){
-			select_draw.remove()
+	if (selects.length != 0){
+		for (i in selects){
+			selects.splice(i);
+			select_draws[i].remove();
+			select_draws.splice(i);
 		}
-		if (select[1] == num){
-			click_coords[num][select[0]] = click_y
-			select_draw = null
-			DrawLines(num)
-			RenderGrid()
-		}
-		return
 	}
 	click_coords[num][click_x] = click_y
 	DrawLines(num)
@@ -1785,113 +1785,124 @@ function RegisterGridClick(event,click_x,click_y,num) {
 }
 	
 function HandleDelete() {
-	if (select == null){
+	if (selects.length == 0){
 		return
 	}
-	num = select[1]
-	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
-	click_dict = click_coords[num]
-	select_draw.remove()
-	select_draw = null
-	if (select[0] == x_vals[0]){
-		click_coords[num][x_vals[0]] = click_coords[num][x_vals[1]]
-		DrawLines(num)
-		select = null
-		RenderGrid()
-		return
+	for (i in selects){
+		select = selects[i]
+		select_draw = select_draws[i]
+		num = select[1]
+		var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
+		click_dict = click_coords[num]
+		select_draw.remove()
+		if (select[0] == x_vals[0]){
+			click_coords[num][x_vals[0]] = click_coords[num][x_vals[1]]
+			DrawLines(num)
+			select_draws = []
+			selects = []
+			RenderGrid()
+			return
+		}
+		else if (select[0] == x_vals[x_vals.length-1]){
+			click_coords[num][x_vals[x_vals.length-1]] = click_coords[num][x_vals[x_vals.length-2]]
+			DrawLines(num)
+			select_draws = []
+			selects = []
+			RenderGrid()
+			return
+		}
+		delete click_dict[select[0]]
 	}
-	else if (select[0] == x_vals[x_vals.length-1]){
-		click_coords[num][x_vals[x_vals.length-1]] = click_coords[num][x_vals[x_vals.length-2]]
-		DrawLines(num)
-		select = null
-		RenderGrid()
-		return
-	}
-	delete click_dict[select[0]]
-	select = null
+	select_draws = [];
+	selects = []
 	DrawLines(num)
 	RenderGrid()
 	//updateStates()
 }
 
 function arrowHandler(y_dif) {
-	if (select == null){
+	if (selects.length == 0){
 		return
 	}
 	var shift_mul = 1
 	if (event.shiftKey){
 		shift_mul = 10
 	}
-	num = select[1]
-	val = select[0]
-	click_dict = click_coords[num]
-	click_dict[select[0]] += y_dif*shift_mul
-	if (click_dict[select[0]] > histo_hights[num]){
-		click_dict[select[0]] = histo_hights[num]
+	for (i in selects){
+		var select = selects[i]
+		var select_draw = select_draws[i]
+		var num = select[1]
+		var val = select[0]
+		click_dict = click_coords[num]
+		click_dict[select[0]] += y_dif*shift_mul
+		if (click_dict[select[0]] > histo_hights[num]){
+			click_dict[select[0]] = histo_hights[num]
+		}
+		if (click_dict[select[0]] < 0){
+			click_dict[select[0]] = 0
+		}
+		select_draw.remove()
+		var draw = draws[num];
+	    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+	        'fill':'#d55',
+	        'shape-rendering':'crispEdges',
+	        'stroke-width': 0 
+	    });
 	}
-	if (click_dict[select[0]] < 0){
-		click_dict[select[0]] = 0
-	}
-	select_draw.remove()
-	select_draw = null
-	var draw = draws[num];
-    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
-        'fill':'#d55',
-        'shape-rendering':'crispEdges',
-        'stroke-width': 0 
-    });
 	DrawLines(num)
 	RenderGrid()
 	//updateStates()
 }
 
 function horizontalArrowHandler(x_dif) {
-	if (select == null){
+	if (selects.length == 0){
 		return
 	}
 	var shift_mul = 1
 	if (event.shiftKey){
 		shift_mul = 10
 	}
-	var num = select[1]
-	var val = select[0]
-	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
-	var x_index = x_vals.indexOf(val)
-	console.log("x_index: " + x_index)
-	var new_x = parseInt(val)+x_dif*shift_mul
-	console.log(new_x)
-	console.log(x_vals[x_index-1])
-	console.log(x_vals[x_index+1])
-	if (new_x <= x_vals[x_index-1]){
-		new_x = parseInt(x_vals[x_index-1]) + 1
-	}
-	else if (new_x < parseInt(x_vals[0])){
+	for (i in selects){
+		console.log(select)
+		var select = selects[i]
+		var select_draw = select_draws[i]
+		var num = select[1]
+		var val = select[0]
+		var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
+		var x_index = x_vals.indexOf(val)
+		console.log("x_index: " + x_index)
+		var new_x = parseInt(val)+x_dif*shift_mul
 		console.log(new_x)
-		new_x = parseInt(x_vals[0])
+		console.log(x_vals[x_index-1])
+		console.log(x_vals[x_index+1])
+		if (new_x <= x_vals[x_index-1]){
+			new_x = parseInt(x_vals[x_index-1]) + 1
+		}
+		else if (new_x < parseInt(x_vals[0])){
+			console.log(new_x)
+			new_x = parseInt(x_vals[0])
+		}
+		if (new_x >= x_vals[x_index+1]){
+			new_x = parseInt(x_vals[x_index+1]) - 1
+		}
+		else if (new_x > parseInt(x_vals[x_vals.length-1])){
+			new_x = parseInt(x_vals[x_vals.length-1])
+		}
+		click_dict = click_coords[num]
+		y_val = click_dict[select[0]]
+		if (parseInt(select[0]) != parseInt(x_vals[0]) && parseInt(select[0]) != parseInt(x_vals[x_vals.length-1])){
+			delete click_dict[select[0]]
+		}
+		click_dict[new_x] = y_val
+		selects[i] = [new_x.toString(),num]
+		select_draw.remove()
+		var draw = draws[num];
+	    select_draws[i] = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+	        'fill':'#d55',
+	        'shape-rendering':'crispEdges',
+	        'stroke-width': 0 
+	    });
 	}
-	if (new_x >= x_vals[x_index+1]){
-		new_x = parseInt(x_vals[x_index+1]) - 1
-	}
-	else if (new_x > parseInt(x_vals[x_vals.length-1])){
-		new_x = parseInt(x_vals[x_vals.length-1])
-	}
-	click_dict = click_coords[num]
-	y_val = click_dict[select[0]]
-	if (parseInt(select[0]) != parseInt(x_vals[0]) && parseInt(select[0]) != parseInt(x_vals[x_vals.length-1])){
-		delete click_dict[select[0]]
-	}
-	click_dict[new_x] = y_val
-	console.log(select)
-	select = [new_x.toString(),num]
-	console.log(select)
-	select_draw.remove()
-	select_draw = null
-	var draw = draws[num];
-    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
-        'fill':'#d55',
-        'shape-rendering':'crispEdges',
-        'stroke-width': 0 
-    });
 	DrawLines(num)
 	RenderGrid()
 	//updateStates()
