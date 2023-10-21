@@ -1459,7 +1459,7 @@ function DetectYearClick(event,is_render_call){
 	}
 	num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
 	if (!is_render_call){
-		selected_years.push(Math.floor((event.offsetY-14)/9))
+		selected_years.push(Math.floor((event.offsetY-18)/9))
 	}
 	var year_cover_length = year_covers.length
 	for (let i=0; i < year_cover_length; i++){
@@ -1481,9 +1481,15 @@ function DetectYearClick(event,is_render_call){
 			}
 		}
 	}
+	if (doPDO){
+		let move = 22
+	}
+	else{
+		let move = 0
+	}
 	for (let i=4; i < num_years+4; i++){
 		if (!(selected_years.includes(i))){
-			year_covers.push(year_draw.rect( 52*3, 9 ).move( 0, (i+2)*9).attr({
+			year_covers.push(year_draw.rect( 52*3, 9 ).move( move, (i+2)*9).attr({
 					fill: '#fff'
 				, 'fill-opacity': 0.5
 						, stroke: '#ee0'
