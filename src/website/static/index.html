@@ -202,6 +202,12 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
           <div id=gr_grid style="display: inline-block; padding-top: 9px;" title=""></div>
 	    </div>
     </div>
+	<div style="display: inline-block;">
+		<p>Welcome to How Weird is the Weather! This is the alpha-release of a data exploration tool you can use to compare unusual weather events you've experienced to other similar weather in the past.</p>
+
+		<p>It was built by Hig (Bretwood Higman) of <a href="https://groundtruthalaska.org/">Ground Truth Alaska</a>, John McInnes, and Katmai McKittrick who all live in Seldovia, Alaska, with help from Matt Jones from the <a href="https://arcticdata.io/">Arctic Data Center</a>, and David Yerrington.</p>
+
+		<p><em>Technical Summary</em> The raw data that this site provides access to is <a href="https://www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5">ERA5</a> hourly weather reanalysis data, updated daily with an approximately 5-day latency, and extending back to 1950. The data is pre-processed into a collection of weekly statistics, with the fidelity of each statistic limited to 1 byte, making it possible to quickly view data for any of about 1 million 1/4 degree x 1/4 degree areas around the world. The interactive tools act on one of these datasets, allowing you to develop a metric that highlights some particular weather conditions and then see that metric applied to the entire timespan.</p>
     <div id=click_data style="display: inline-block; overflow: auto; align-elements: center;">
 		<div id=heder style="text-align: center; font-size: 20px; font-weight: bold;" ></div>
 	    <div id=histos style="display: inline-block; padding-bottom: 20px; align-items: vertical;"></div>
