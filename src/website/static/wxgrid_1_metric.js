@@ -1642,9 +1642,11 @@ function DetectGridClick(event,is_render_call){
 		var txt = ""
 		for (var i=0; i < reading_options.length; i++){
 			method_options = Object.keys(all_data[reading_options[i]]) 
-			//makeNewElement("tables","table",{"id":"table"+(i+1),"style":"display: inline-block; text-align: center; margin-left: 10px float: top;" },null);
-			//makeNewElement("table"+(i+1),"tr",{"id":"measurementy"+(i+1)},null);
-			//makeNewElement("measurementy"+(i+1),"th",{"id":"th"+(i+1)},reading_options[i].split('_').join(' '));
+			if (save_clicks_x.length == 1){
+				makeNewElement("tables","table",{"id":"table"+(i+1),"style":"display: inline-block; text-align: center; margin-left: 10px float: top;" },null);
+				makeNewElement("table"+(i+1),"tr",{"id":"measurementy"+(i+1)},null);
+				makeNewElement("measurementy"+(i+1),"th",{"id":"th"+(i+1)},reading_options[i].split('_').join(' '));
+			}
 			for (var j=0; j < method_options.length; j++){
 				relev_data = all_data[reading_options[i]][method_options[j]]
 				var mul = 1
@@ -1688,8 +1690,10 @@ function DetectGridClick(event,is_render_call){
 						st_txt = '+'
 					}
 				}
-				//makeNewElement("table"+(i+1),"tr",{"id":"methody"+(i+1)+','+j},null);
-				//makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ st_txt+parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
+				if (save_clicks_x.length == 1){
+					makeNewElement("table"+(i+1),"tr",{"id":"methody"+(i+1)+','+j},null);
+					makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ st_txt+parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
+				}
 			}
 		}
 	}
@@ -1777,7 +1781,9 @@ function RegisterGridClick(event,click_x,click_y,num) {
 	if (unit_sets[unit_num] == "american"){
 		txt2 = (month+1)+'/'+(display_day+1)+'/'+year
 	}
-	//document.getElementById( "heder" ).innerHTML = "details from the week "+txt+"-"+txt2;
+	if (save_clicks_x.length == 1){
+		document.getElementById( "heder" ).innerHTML = "details from the week "+txt+"-"+txt2;
+	}
 //	document.getElementById( 'txt' ).innerHTML = txt;
 	
 }
