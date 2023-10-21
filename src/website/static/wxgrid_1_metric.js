@@ -1483,7 +1483,7 @@ function DetectYearClick(event,is_render_call){
 	}
 	for (let i=4; i < num_years+4; i++){
 		if (!(selected_years.includes(i))){
-			year_covers.push(year_draw.rect( 52*3, 9 ).move( 22, (i+2)*9-4).attr({
+			year_covers.push(year_draw.rect( 52*3, 9 ).move( 0, (i+2)*9).attr({
 					fill: '#fff'
 				, 'fill-opacity': 0.5
 						, stroke: '#ee0'
@@ -1642,12 +1642,10 @@ function DetectGridClick(event,is_render_call){
 		var txt = ""
 		for (var i=0; i < reading_options.length; i++){
 			method_options = Object.keys(all_data[reading_options[i]]) 
-			makeNewElement("tables","table",{"id":"table"+(i+1),"style":"display: inline-block; text-align: center; margin-left: 10px float: top;" },null);
-			makeNewElement("table"+(i+1),"tr",{"id":"measurementy"+(i+1)},null);
-			makeNewElement("measurementy"+(i+1),"th",{"id":"th"+(i+1)},reading_options[i].split('_').join(' '));
+			//makeNewElement("tables","table",{"id":"table"+(i+1),"style":"display: inline-block; text-align: center; margin-left: 10px float: top;" },null);
+			//makeNewElement("table"+(i+1),"tr",{"id":"measurementy"+(i+1)},null);
+			//makeNewElement("measurementy"+(i+1),"th",{"id":"th"+(i+1)},reading_options[i].split('_').join(' '));
 			for (var j=0; j < method_options.length; j++){
-	//			console.log(all_data[reading_options[i]])
-	//			console.log(method_options[j])
 				relev_data = all_data[reading_options[i]][method_options[j]]
 				var mul = 1
 				var expon = 1
@@ -1690,8 +1688,8 @@ function DetectGridClick(event,is_render_call){
 						st_txt = '+'
 					}
 				}
-				makeNewElement("table"+(i+1),"tr",{"id":"methody"+(i+1)+','+j},null);
-				makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ st_txt+parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
+				//makeNewElement("table"+(i+1),"tr",{"id":"methody"+(i+1)+','+j},null);
+				//makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ st_txt+parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
 			}
 		}
 	}
@@ -1779,7 +1777,7 @@ function RegisterGridClick(event,click_x,click_y,num) {
 	if (unit_sets[unit_num] == "american"){
 		txt2 = (month+1)+'/'+(display_day+1)+'/'+year
 	}
-	document.getElementById( "heder" ).innerHTML = "details frome the week "+txt+"-"+txt2;
+	//document.getElementById( "heder" ).innerHTML = "details from the week "+txt+"-"+txt2;
 //	document.getElementById( 'txt' ).innerHTML = txt;
 	
 }
@@ -2335,7 +2333,6 @@ function RenderGrid(){
 	if (selected_years.length){
 		DetectYearClick(null,true)
 	}
-	console.log(selected_seasons)
 	if (selected_seasons.length){
 		DetectSeasonClick(null,true)
 	}
