@@ -221,8 +221,32 @@ fetch(url , {   method:'GET',
 						}
 					}
 				}
-				seasonal_data = doSesonalCompression(base_data)
-				all_data = base_data
+				cropped_data = {}
+				for (mesurment of Object.keys(base_data)){
+					cropped_data[mesurment] = {}
+					for (func of Object.keys(base_data[mesurment])){
+						cropped_data[mesurment][func] = []
+						track_data = []
+						for (var i = 0; i < base_data[mesurment][func].length; i++){
+							temp_list = []
+							has_found = false
+							for (var j = 0; j < base_data[mesurment][func][i].length; j++){
+								if (base_data[mesurment][func][i][j] != null){
+									has_found = true
+								} 
+								temp_list.push(base_data[mesurment][func][i][j])
+							}
+							track_data.push(temp_list)
+							if (has_found){
+								cropped_data[mesurment][func].push(...track_data)
+								track_data = []
+							}
+						}
+					}
+				}
+				console.log(cropped_data)
+				seasonal_data = doSesonalCompression(cropped_data)
+				all_data = cropped_data
 				unitNamesHandaler()
 				unitMulHandaler()
 				makeNewMeasurmeant(0)
@@ -2251,13 +2275,14 @@ function RenderGrid(){
         'shape-rendering':'crispEdges'
     });
 	grid_draw = draw
+	console.log(num_years)
     for ( k=0; k<num_years; k++ )
     {
         sy = k * boxspace + off_y;
         // draw year label every 3 rows, vertically centered on the row, to the left of the grid
         syear = num_years + start_year - k;  
 		var opacity = "bb"      
-        if ( !((syear-1)%5) ) {
+        if ( !((syear-1)%5) || k == 0) {
 			if (!((syear-1)%10)){
 				opacity = "ff" 
 			}
