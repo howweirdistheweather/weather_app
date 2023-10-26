@@ -101,6 +101,7 @@ function download(filename, text) {
 const c = [1,3]
 c.splice(1,1)
 console.log(c)
+var is_trend = false
 var lines = []
 var year_draw = null
 var season_draw = null
@@ -131,6 +132,7 @@ var wx_grdata_min = 0.0;
 var wx_grdata_max = 1.0;
 var wx_range_val0 = 0.33;
 var wx_range_val1 = 0.66;
+var sensetivity = 1
 var save_clicks_x = []
 var save_clicks_y = []
 var weight_val = 0.01
@@ -359,6 +361,38 @@ seasonal_adjust.onchange =
 				DrawLines(num)
 			}
 			RenderGrid()
+		};
+		
+var trend = document.getElementById("trend")
+trend.onchange =
+		function () {
+			if (trend.checked){
+				makeNewElement("sensetivity_slider_holder","div",{"style":"text-align: center; padding-bottom: 5px; color: cornflowerblue;", "id":"sensetivity_setex"},null);
+				makeNewElement("sensetivity_slider_holder","div",{"class":"sensetivity_slider","id":"sensetivity_slider"},null);
+				noUiSlider.create( document.getElementById('sensetivity_slider'), {
+				    start: [5],
+				    connect: false,
+				    range: {
+				        'min': 1,
+				        'max': 9
+				    },     
+				});
+				document.getElementById('sensetivity_slider').noUiSlider.on('update', function (values, handle) {
+				    sensetivity = Math.round(values[0])
+					if (!is_active) {
+						return
+					}
+				    document.getElementById('sensetivity_setex').textContent = (Math.round(values[0]));
+					RenderGrid();
+					});
+				is_trend = true
+			}
+			else {
+				document.getElementById('sensetivity_slider').remove()
+				document.getElementById('sensetivity_setex').remove()
+				is_trend = false
+			}
+			RenderGrid();
 		};
 var do_PDO = document.getElementById("do_PDO")
 do_PDO.onchange =
@@ -2196,7 +2230,78 @@ function updateStates(){
 	state_index ++
 	states.push(state_dict)
 }
-// Renders SVG weather grid/heatmap thing
+
+function getSizes(data,base_size,div){
+	trend_list = []
+	trend_type = null
+	sizes = []
+	console.log(data[70][20])
+	for (var i = 0; i < data.length; i++){
+		sizes.push([])
+		for (var j = 0; j < data[i].length; j++){
+			let val = data[i][j]
+			let val_type = -1
+            if ( val/255 < wx_range_val0 ){
+                val_type = 0;
+	        }
+            else if ( val/255 < wx_range_val1 ){
+                val_type = 1;
+            }
+            else {
+                val_type = 2;
+            }
+			if (val == null){
+				let step = base_size*div
+				let t_len = trend_list.length
+				for (var k = 0; k < t_len; k++){
+					if (k < t_len/2){
+						sizes[trend_list[k]].push(Math.min(step*(k+1),base_size))
+					}
+					else {
+						sizes[trend_list[k]].push(Math.min(step*(t_len-k),base_size))
+					}
+				}
+				trend_type = -1
+				trend_list = []
+				trend_list.push(i)
+			}
+			else if (trend_type == null || trend_type == val_type){
+				trend_list.push(i)
+				trend_type = val_type
+			}
+			else {
+				let step = base_size*div
+				let t_len = trend_list.length
+				console.log(t_len)
+				for (var k = 0; k < t_len; k++){
+					if (k < t_len/2){
+						sizes[trend_list[k]].push(Math.min(step*(k+1),base_size))
+					}
+					else {
+						sizes[trend_list[k]].push(Math.min(step*(t_len-k),base_size))
+						console.log(k,'b')
+					}
+				}
+				trend_type = val_type
+				trend_list = []
+				trend_list.push(i)
+			}
+		}
+	}
+	let step = base_size*div
+	let t_len = trend_list.length
+	for (var k = 0; k < t_len; k++){
+		if (k < t_len/2){
+			sizes[trend_list[k]].push(Math.min(step*(k+1),base_size))
+		}
+		else {
+			sizes[trend_list[k]].push(Math.min(step*(t_len-k),base_size))
+		}
+	}
+	console.log(sizes)
+	return sizes;
+}
+
 function RenderGrid(){
     if ( wx_grdata == null )
         return;
@@ -2208,7 +2313,7 @@ function RenderGrid(){
     var off_x = year_label_width;         // grid offset
     var off_y = 1;
     var boxsize = 9;        // size of a grid unit
-    var boxspace = 9;      // total space from unit to unit
+    var boxspace = boxsize;      // total space from unit to unit
 
     var num_weeks = 52;	
 	var wx_data = [];
@@ -2258,9 +2363,15 @@ function RenderGrid(){
 	}
 	compresed_data = wx_data
 	DrawHistograms(wx_data)
-    // var color0 = '#edf8b1';
-    // var color1 = '#7fcdbb';
-    // var color2 = '#2c7fb8';
+	var bsizes = []
+	if (is_trend){
+		bsizes = getSizes(compresed_data,boxsize,1/(sensetivity+1))
+	}
+	else {
+		bsizes = Array(num_years).fill().map(() => 
+               Array(num_weeks).fill(boxsize));
+	}
+	console.log(bsizes)
     var color0 = color_lists[color_num][0];
     var color1 = color_lists[color_num][1];
     var color2 = color_lists[color_num][2];
@@ -2275,7 +2386,6 @@ function RenderGrid(){
         'shape-rendering':'crispEdges'
     });
 	grid_draw = draw
-	console.log(num_years)
     for ( k=0; k<num_years; k++ )
     {
         sy = k * boxspace + off_y;
@@ -2303,7 +2413,8 @@ function RenderGrid(){
             // get measurement, years are reversed order, & calculate fill color
             var fillcol = 0;
 	        let shape_rend = 'crispEdges';	// render the contigous blocks with crispedges
-            var bsize = boxsize
+            var bsize = bsizes[num_years-1-k][p]
+			var mb = (boxsize-bsize)/2
             var mx = wx_data[num_years-1-k][p];
             if ( mx == null )
                 fillcol = '#FFFFFF';    // nulls are this color
@@ -2317,17 +2428,15 @@ function RenderGrid(){
 		        }
                 else if ( mx < wx_range_val1 ){
                     fillcol = color1;
-                    bsize = boxspace;   // bigger square
                 }
                 else {
                     fillcol = color2;
-                    bsize = boxspace;   // bigger square
                 }
             }
 
             // draw rect
             sx = p * boxspace + off_x;
-            var rect = draw.rect( bsize, bsize ).move( sx, sy ).attr({
+            var rect = draw.rect( bsize, bsize ).move( sx+mb, sy+mb ).attr({
                 'fill':fillcol,
                 'shape-rendering':shape_rend,
                 'stroke-width': 0 

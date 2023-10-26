@@ -67,6 +67,11 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 		width: 256px;
 		height: 20px;
 	}
+	.sensetivity_slider {
+		margin: 0 auto;
+		width: 128px;
+		height: 20px;
+	}
 	.weight_setex {
 		display: inline-block;
 		margin-left: 10px;
@@ -170,7 +175,9 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
   <div></div>
   <input type="checkbox" id="enable_line_editing" style="display: inline-block;" name="enable_line_editing" value="1"> Enable line editing
   <input type="checkbox" id="seasonal_adjust" style="display: inline-block; margin-left: 10px" name="seasonal_adjust" value="1"> Seasonaly adjusted metrics
-  <input type="checkbox" id="do_PDO" style="display: inline-block;" name="enable_line_editing" value="1"> Display PDO and ENSO
+  <input type="checkbox" id="trend" style="display: inline-block; margin-left: 10px" name="enable_line_editing" value="1"> Dispaly trends
+  <div id=sensetivity_slider_holder style="display: inline-block; margin-left: 20px;"></div>
+  <input type="checkbox" id="do_PDO" style="display: inline-block; margin-left: 20px" name="enable_line_editing" value="1"> Display PDO and ENSO
   <!--select id=type_selector><option value="1">one metric</option><option value="2">two metrics</option></select>
   <button type="button" id=save_measurement_button style="display: inline-block;">save</button></div>
   <button type="button" id=load_measurement_button style="display: inline-block;">load</button></div-->
