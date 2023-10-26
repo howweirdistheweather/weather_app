@@ -1528,14 +1528,14 @@ function DetectYearClick(event,is_render_call){
 		for (let i=0; i < 52; i++){
 			var is_selected = false
 			for (var j=0; j < save_clicks_x.length; j++){
-				if (getCellCoords(i*9+36,event.offsetY-compresed_data.length/2-14)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(i*9+36,event.offsetY-compresed_data.length/2-14)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+				if (getCellCoords(i*9+36,event.offsetY-compresed_data.length/2-15)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(i*9+36,event.offsetY-compresed_data.length/2-15)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
 					is_selected = true
 					break
 				}
 			}
 			if (!is_selected){
 				save_clicks_x.push(i*9+36)
-				save_clicks_y.push(event.offsetY-compresed_data.length/2-14)
+				save_clicks_y.push(event.offsetY-compresed_data.length/2-15)
 			}
 		}
 	}
@@ -1547,7 +1547,7 @@ function DetectYearClick(event,is_render_call){
 	}
 	for (let i=4; i < num_years+4; i++){
 		if (!(selected_years.includes(i))){
-			year_covers.push(year_draw.rect( 52*3, 9 ).move( move, (i+2)*9).attr({
+			year_covers.push(year_draw.rect( 52*3, 9 ).move( move, (i+2)*9-3).attr({
 					fill: '#fff'
 				, 'fill-opacity': 0.5
 						, stroke: '#ee0'
