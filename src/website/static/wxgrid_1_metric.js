@@ -1517,7 +1517,7 @@ function DetectYearClick(event,is_render_call){
 	}
 	num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
 	if (!is_render_call){
-		selected_years.push(Math.floor((event.offsetY-18)/9))
+		selected_years.push(Math.floor((event.offsetY-17)/9))
 	}
 	var year_cover_length = year_covers.length
 	for (let i=0; i < year_cover_length; i++){
@@ -1586,14 +1586,14 @@ function DetectSeasonClick(event,is_render_call){
 		for (let i=0; i < num_years; i++){
 			var is_selected = false
 			for (var j=0; j < save_clicks_x.length; j++){
-				if (getCellCoords(event.offsetX,i*9+1)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(event.offsetX,i*9+1)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+				if (getCellCoords(event.offsetX-1,i*9+1)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(event.offsetX-1,i*9+1)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
 					is_selected = true
 					break
 				}
 			}
 			if (!is_selected){
 				save_clicks_y.push(i*9+1)
-				save_clicks_x.push(event.offsetX)
+				save_clicks_x.push(event.offsetX-1)
 			}
 		}
 	}
@@ -1621,7 +1621,7 @@ function DetectGridClick(event,is_render_call){
 			num = Math.max(save_clicks_x.length)
 			var is_selected_cell = false;
 			for (var i=0; i < num; i++){
-				if (getCellCoords(click_x,click_y)[0] == getCellCoords(save_clicks_x[i],save_clicks_y[i])[0] && getCellCoords(click_x,click_y)[1] == getCellCoords(save_clicks_x[i],save_clicks_y[i])[1]){
+				if (getCellCoords(click_x-1,click_y-2)[0] == getCellCoords(save_clicks_x[i],save_clicks_y[i])[0] && getCellCoords(click_x-1,click_y-2)[1] == getCellCoords(save_clicks_x[i],save_clicks_y[i])[1]){
 					is_selected_cell = true
 					break
 				}
@@ -1637,13 +1637,13 @@ function DetectGridClick(event,is_render_call){
 				}
 			}
 			else {
-				save_clicks_x[num] = click_x
-				save_clicks_y[num] = click_y
+				save_clicks_x[num] = click_x-1
+				save_clicks_y[num] = click_y-2
 			}
 		}
 		else {
-			save_clicks_x = [click_x]
-			save_clicks_y = [click_y]
+			save_clicks_x = [click_x-1]
+			save_clicks_y = [click_y-2]
 			selected_years = []
 			selected_seasons = []
 			var year_cover_length = year_covers.length
@@ -1779,13 +1779,14 @@ function RegisterGridClick(event,click_x,click_y,num) {
     else {
         fillcol = color_lists[color_num][2];
     }
-	outlines.push(grid_draw.rect( 9, 8 ).move( Math.floor((click_x)/9)*9-1, Math.floor((click_y)/9)*9+2).attr({
+	console.log(Math.floor(-1.1))
+	outlines.push(grid_draw.rect( 9, 8 ).move( Math.floor((click_x+1)/9)*9-1, Math.ceil(click_y/9-1)*9+2).attr({
 			fill: fillcol
 		, 'fill-opacity': 1
 			, stroke: '#ee0'
 		, 'stroke-width': 0 
         }));
-	covers.push(grid_draw.rect( 9, 8 ).move( Math.floor(click_x/9)*9-1, Math.floor(click_y/9)*9+2).attr({
+	covers.push(grid_draw.rect( 9, 8 ).move( Math.floor((click_x+1)/9)*9-1, Math.ceil(click_y/9-1)*9+2).attr({
 			fill: fillcol
 		, 'fill-opacity': 0
 			, stroke: '#000'
