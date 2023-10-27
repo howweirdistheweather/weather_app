@@ -49,21 +49,64 @@ var wx_grdata = {"":Array(60).fill().map(() => Array(52).fill(0))}; //Array.from
 var histo_hights = []
 document.onkeydown = function() {
     var key = event.keyCode || event.charCode;
-
+	console.log(key)
     if ( key == 8 || key == 46 ) {
         HandleDelete()
+		prev_states.push(state_dict)
+		saveState()
+		redo_states = []
+		is_shifting = false
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
 	}
 	if (key == 38) {
 		arrowHandler(1)
+		if (!is_shifting){
+			prev_states.push(state_dict)
+		}
+		saveState()
+		redo_states = []
+		is_shifting = true
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
 	}
 	if (key == 40) {
 		arrowHandler(-1)
+		if (!is_shifting){
+			prev_states.push(state_dict)
+		}
+		saveState()
+		redo_states = []
+		is_shifting = true
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
 	}
 	if (key == 37) {
 		horizontalArrowHandler(-1)
+		if (!is_shifting){
+			prev_states.push(state_dict)
+		}
+		saveState()
+		redo_states = []
+		is_shifting = true
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
 	}
 	if (key == 39) {
 		horizontalArrowHandler(1)
+		if (!is_shifting){
+			prev_states.push(state_dict)
+		}
+		saveState()
+		redo_states = []
+		is_shifting = true
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
 	}
 	if (key == 13) {
 		for (i in selects){
@@ -71,6 +114,30 @@ document.onkeydown = function() {
 		}
 		selects = []
 		select_draws = []
+	}
+	if (key == 90 && event.metaKey){
+		if (event.shiftKey && redo_states.length > 0){
+			saveState()
+			prev_states.push(state_dict)
+			state_dict = redo_states[prev_states.length-1]
+			loadState()
+			redo_states.splice(-1)
+			is_shifting = false
+			is_weigth_sliding = false
+			is_range_sliding = false
+			is_sensetivity_sliding = false
+		}
+		else if (!event.shiftKey && prev_states.length > 0){
+			saveState()
+			redo_states.push(state_dict)
+			state_dict = prev_states[prev_states.length-1]
+			loadState()
+			prev_states.splice(-1)
+			is_shifting = false
+			is_weigth_sliding = false
+			is_range_sliding = false
+			is_sensetivity_sliding = false
+		}
 	}
 	if (document.getElementById("myModal").style.display == "block"){
 //		update_txt()
@@ -94,7 +161,14 @@ function download(filename, text) {
 
 	document.body.removeChild(element);
 }
-//download('test.json', "Hello world!");
+var state_dict = {}
+var prev_states = []
+var redo_states = []
+var is_shifting = false
+var is_weigth_sliding = false
+var is_range_sliding = false
+var is_sensetivity_sliding = false
+
 var is_trend = false
 var lines = []
 var year_draw = null
@@ -111,7 +185,7 @@ var year_covers = []
 var selected_seasons = []
 var season_covers = []
 var covers = []
-var state_dict = {}
+
 var line_opacidy = 0.1
 var state_index = null
 var maxes = []
@@ -327,6 +401,13 @@ seasonal_adjust.onchange =
 			is_seasonaly_adjusted = seasonal_adjust.checked
 			updateSeasonality()
 			RenderGrid()
+			prev_states.push(state_dict)
+			saveState()
+			redo_states = []
+			is_shifting = false
+			is_weigth_sliding = false
+			is_range_sliding = false
+			is_sensetivity_sliding = false
 		};
 function updateSeasonality(){
 	if (is_seasonaly_adjusted){
@@ -374,6 +455,13 @@ trend.onchange =
 			is_trend = trend.checked
 			updateTrends(5)
 			RenderGrid();
+			prev_states.push(state_dict)
+			saveState()
+			redo_states = []
+			is_shifting = false
+			is_weigth_sliding = false
+			is_range_sliding = false
+			is_sensetivity_sliding = false
 		};
 function updateTrends(st_sensetivity){
 	if (is_trend){
@@ -532,15 +620,15 @@ function loadState(){
 		deleteMeasurement()
 	}
 	t_measurement_index = state_dict['measurement_index']
-	t_weight_vals = state_dict['weight_vals']
+	t_weight_vals = state_dict['weight_vals'].slice()
 	measurement_index = 0
 	makeNewMeasurmeant(0,t_weight_vals[0],true)
 	for (var i = 0; i < t_measurement_index; i++){
 		newMeasurementHandeler(null,t_weight_vals[i],true)
 	}
-	weight_vals = state_dict['weight_vals']
-	mins = state_dict['mins']
-	maxes = state_dict['maxes']
+	weight_vals = state_dict['weight_vals'].slice()
+	mins = state_dict['mins'].slice()
+	maxes = state_dict['maxes'].slice()
 	sensetivity = state_dict['sensetivity']
 	t_is_trend = is_trend
 	is_trend = state_dict['is_trend']
@@ -555,7 +643,7 @@ function loadState(){
 	is_seasonaly_adjusted = state_dict['is_seasonaly_adjusted']
 	updateSeasonality()
 	document.getElementById("seasonal_adjust").checked = is_seasonaly_adjusted;
-	compresed_data = state_dict['compresed_data']
+	compresed_data = state_dict['compresed_data'].slice()
 	is_valid = state_dict['is_valid']
 	let t_wx_grdata_min = state_dict['wx_grdata_min']
 	let t_wx_grdata_max = state_dict['wx_grdata_max']
@@ -563,10 +651,10 @@ function loadState(){
 	wx_range_val1 = state_dict['wx_range_val1']
 	close_btns = state_dict['close_btns']
 	generateSlider(wx_range_val0*100,wx_range_val1*100)
-	let t_reading_types = state_dict['reading_types']
-	let t_method_types = state_dict['method_types']
-	reading_types = state_dict['reading_types']
-	method_types = state_dict['method_types']
+	let t_reading_types = state_dict['reading_types'].slice()
+	let t_method_types = state_dict['method_types'].slice()
+	reading_types = state_dict['reading_types'].slice()
+	method_types = state_dict['method_types'].slice()
 	for (var i = 0; i < measurement_index+1; i++){
 		let r_index = Object.keys(all_data).indexOf(t_reading_types[i]) 
 		let m_index = Object.keys(all_data[t_reading_types[i]]).indexOf(t_method_types[i]) 
@@ -634,6 +722,13 @@ function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
 	invert_btns.push(document.getElementById('invert_buttion'+curent_id_num));
 	invert_btns[curent_id_num].addEventListener("click", function() {
 		invertHandeler(curent_id_num,true)
+		prev_states.push(state_dict)
+		saveState()
+		redo_states = []
+		is_shifting = false
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
 	});
 
 	makeNewElement("measurement"+curent_id_num,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+curent_id_num},null);
@@ -690,6 +785,13 @@ function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
 			
 			DrawLines(curent_id_num)
 			RenderGrid()
+			prev_states.push(state_dict)
+			saveState()
+			redo_states = []
+			is_shifting = false
+			is_weigth_sliding = false
+			is_range_sliding = false
+			is_sensetivity_sliding = false
 		};
 	reading_dropdowns[curent_id_num].onchange =
 		function () {
@@ -697,6 +799,13 @@ function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
 				return
 			}
 			LoadMethodDropdown(curent_id_num,0);
+			prev_states.push(state_dict)
+			saveState()
+			redo_states = []
+			is_shifting = false
+			is_weigth_sliding = false
+			is_range_sliding = false
+			is_sensetivity_sliding = false
 		};
 	reset_sliders(curent_id_num,is_load_call)
 	if (compresion[mesurment][func] == 'direction'){
@@ -739,6 +848,13 @@ invert_all_button.addEventListener("click", function () {
 		invertHandeler(i,false)
 	}
 	RenderGrid()
+	prev_states.push(state_dict)
+	saveState()
+	redo_states = []
+	is_shifting = false
+	is_weigth_sliding = false
+	is_range_sliding = false
+	is_sensetivity_sliding = false
 });
 
 function save_handler() {
@@ -812,15 +928,27 @@ function detectMove() {
 
 
 function newMeasurementHandeler(event,val,is_load_call) {
+	let can_save = false
+	
 	if (val == undefined){
 		v = 0.5
 		is_load_call = false
+		can_save = true
 	}
 	if ( measurement_index >= 4 || !is_active ){
 		return;
 	}
 	measurement_index ++
 	makeNewMeasurmeant(measurement_index,val,is_load_call)
+	if (can_save){
+		prev_states.push(state_dict)
+		saveState()
+		redo_states = []
+		is_shifting = false
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
+	}
 }
 function deleteMeasurementHandeler() {
 	if (measurement_index > 0 || !is_active) {
@@ -828,6 +956,13 @@ function deleteMeasurementHandeler() {
 		DrawLines(measurement_index)
 		LoadWXGrid()
 		reset_sliders(measurement_index,false)
+		prev_states.push(state_dict)
+		saveState()
+		redo_states = []
+		is_shifting = false
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
 	}
 	
 }
@@ -1498,6 +1633,12 @@ function AddClickHandler(num) {
 			return
 		}
 		RegisterClick(num,event)
+		prev_states.push(state_dict)
+		saveState()
+		is_shifting = false
+		is_weigth_sliding = false
+		is_range_sliding = false
+		is_sensetivity_sliding = false
 	});
 }
 function DetectHistoClick(num,event) {
