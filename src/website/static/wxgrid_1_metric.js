@@ -179,7 +179,6 @@ var unit_num = 0
 var histo_data = []
 var invert_btns = []
 var file_names = []
-var mins = []
 var selected_years = []
 var year_covers = []
 var selected_seasons = []
@@ -188,7 +187,10 @@ var covers = []
 
 var line_opacidy = 0.1
 var state_index = null
-var maxes = []
+var maxes = [];
+var mins = [];
+var prev_maxes = [];
+var prev_mins = [];
 var doPDO = false
 var is_seasonaly_adjusted = false
 var selects = []
@@ -662,6 +664,8 @@ function loadState(){
 	}
 	click_coords = []
 	t_click_coords = state_dict['click_coords']
+	prev_wx_grdata_min = wx_grdata_min
+	prev_wx_grdata_max = wx_grdata_max
 	let mul = (wx_grdata_max-wx_grdata_min)/(t_wx_grdata_max-t_wx_grdata_min)
 	for (var i = 0; i < t_click_coords.length; i++){
 		click_coords.push({})
@@ -696,6 +700,8 @@ function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
 	draws.push(null)
 	maxes.push[0]
 	mins.push[0]
+	prev_maxes.push[0]
+	prev_mins.push[0]
 	makeNewElement("histos","div",{"style":"text-align: center;","id":"histo"+curent_id_num},null);
 	makeNewElement("measurements","div",{"style":"text-align: center;","id":"measurement"+curent_id_num},null);
 	
@@ -832,7 +838,9 @@ function ClearWXGridData() {
 		wx_grdata[dropdown.value] = Array(60).fill().map(() => Array(52).fill(0))
 	}
     wx_grdata_min = 0.0;
-    wx_grdata_max = 1.0;    
+    wx_grdata_max = 1.0;
+	prev_wx_grdata_min = wx_grdata_min
+	prev_wx_grdata_max = wx_grdata_max   
 }
 
 
@@ -989,6 +997,8 @@ function deleteMeasurement() {
 	draws.splice(-1)
 	maxes.splice(-1)
 	mins.splice(-1)
+	prev_maxes.splice(-1)
+	prev_mins.splice(-1)
 	invert_btns.splice(-1)
 	histo_data.splice(-1)
 	measurement.remove()
@@ -1573,6 +1583,8 @@ function DrawHistograms(compresed_data,inc_data){
 		histo_data[num] = {'histo_plot':histo_plot,'min_num':min_num,'max_num':max_num,'expon':expon,'mul':mul,'color_plot':color_plot}
 //		console.log(min_num*2+15)
 //		console.log(max_num*2+15)
+		prev_maxes = maxes.slice()
+		prev_mins = mins.slice()
 		mins[num] = min_num
 		maxes[num] = max_num
 		histo_hights[num] = 125*0.5
@@ -2251,7 +2263,7 @@ function invertHandeler(num, will_render) {
 	}
 }
 
-function DrawSesonalitys(compresed_data,months){
+function DrawSesonalitys(compresed_data,months,off_x){
 	var color_plot = [new Array(52).fill(0),new Array(52).fill(0),new Array(52).fill(0)]
 	color_plot_str = JSON.stringify(color_plot)
 	for (var year = 0; year < compresed_data.length; year ++){
@@ -2274,6 +2286,21 @@ function DrawSesonalitys(compresed_data,months){
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
+    let months_txt = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec' ];
+    for ( i=0; i < months.length; i++ ) {
+        let btext = draw.text( `${months[i]}-` ).font('size',12).font('family','Arial');
+        let bw = btext.length();        
+        let bh = btext.bbox().height/2; // bbox is double for some reason.
+        let bx = month_to_week( i ) * 9 + off_x;
+        btext.center(bx,bw/2).rotate(90);
+		// if (i != 0) {
+// 	        draw.rect( 1, num_years*9-1 ).move( bx-1.5, 1  ).attr({
+// 	            'fill':'#ffffff37',
+// 	            'shape-rendering':'crispEdges',
+// 	            'stroke-width': 0
+// 	        });
+// 		}
+    }
 	for (var i = 0; i < 52; i++) {
 		
 		var fillcol = '#ffffff'
@@ -2672,7 +2699,7 @@ function RenderGrid(){
 	        });
 		}
     }
-	DrawSesonalitys(wx_data,months)
+	DrawSesonalitys(wx_data,months,off_x)
 	DrawYears(wx_data,num_years)
 	DetectGridClick(null,true)
 	if (selected_years.length){
