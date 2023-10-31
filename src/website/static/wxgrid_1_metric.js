@@ -319,7 +319,7 @@ fetch(url , {   method:'GET',
 				all_data = cropped_data
 				unitNamesHandaler()
 				unitMulHandaler()
-				makeNewMeasurmeant(0,0.5,false)
+				makeNewMeasurmeant(0,false)
 				saveState()
             }
         );
@@ -616,18 +616,23 @@ function saveState(){
 }
 
 function loadState(){
-	console.log(weight_vals)
+	console.log(reading_dropdowns)
 	t_measurement_index = measurement_index
-	for (var i = 0; i < t_measurement_index+1; i++){
-		deleteMeasurement()
-	}
-	t_measurement_index = state_dict['measurement_index']
+	n_measurement_index = state_dict['measurement_index']
 	t_weight_vals = state_dict['weight_vals'].slice()
-	measurement_index = 0
-	makeNewMeasurmeant(0,t_weight_vals[0],true)
-	for (var i = 0; i < t_measurement_index; i++){
-		newMeasurementHandeler(null,t_weight_vals[i],true)
+	measurement_index = t_measurement_index
+	if (n_measurement_index < t_measurement_index){
+		for (var i = n_measurement_index; i < t_measurement_index; i++){
+			deleteMeasurement()
+		}
 	}
+	else {
+		for (var i = n_measurement_index; i > t_measurement_index; i--){
+			newMeasurementHandeler(null,true)
+		}
+	}
+	console.log(reading_dropdowns)
+	reset_sliders(measurement_index,true)
 	weight_vals = state_dict['weight_vals'].slice()
 	mins = state_dict['mins'].slice()
 	maxes = state_dict['maxes'].slice()
@@ -663,17 +668,11 @@ function loadState(){
 		LoadReadingDropdown(i,r_index,m_index)
 	}
 	click_coords = []
-	t_click_coords = state_dict['click_coords']
-	prev_wx_grdata_min = wx_grdata_min
-	prev_wx_grdata_max = wx_grdata_max
-	let mul = (wx_grdata_max-wx_grdata_min)/(t_wx_grdata_max-t_wx_grdata_min)
+	let t_click_coords = state_dict['click_coords']
 	for (var i = 0; i < t_click_coords.length; i++){
-		click_coords.push({})
-		for (var j = 0; j < Object.keys(t_click_coords[i]).length; j++){
-			key = Object.keys(t_click_coords[i])[j]
-			click_coords[i][(key-t_wx_grdata_min)*mul+wx_grdata_min] = t_click_coords[i][key] //need to test
-		}
+	    click_coords.push({...t_click_coords[i]})
 	}
+	console.log(click_coords)
 	for (var i = 0; i < measurement_index+1; i++){
 		DrawLines(i)
 	}
@@ -692,8 +691,9 @@ function makeNewElement(id, type, atributes, txt) {
 		content.innerHTML = txt
 	}
 }
-function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
+function makeNewMeasurmeant(curent_id_num,is_load_call) {
 //	console.log(curent_id_num)
+	console.log(is_load_call)
 	click_coords.push({})
 	histo_hights.push(0)
 	lines.push([])
@@ -717,12 +717,16 @@ function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
 	AddClickHandler(curent_id_num)
 	
 	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-reading_dropdown"+curent_id_num},null);
+	console.log(reading_dropdowns)
 	reading_dropdowns.push(document.getElementById('gr-reading_dropdown'+curent_id_num));
+	console.log(reading_dropdowns)
 	
 	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-method_dropdown"+curent_id_num},null);
 	method_dropdowns.push(document.getElementById('gr-method_dropdown'+curent_id_num));
 	
-	LoadReadingDropdown(curent_id_num,0,0);
+	if (!is_load_call){
+		LoadReadingDropdown(curent_id_num,0,0);
+	}
 	
 	makeNewElement("measurement"+curent_id_num,"button",{"id":"invert_buttion"+curent_id_num,"style":"font-size: 12px; height: 19px; background-color: #fff; border-width: thin; border-radius: 2px;"},"invert");
 	invert_btns.push(document.getElementById('invert_buttion'+curent_id_num));
@@ -743,11 +747,11 @@ function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
 	makeNewElement("weight_stext_div"+curent_id_num,"div",{"class":"weight_setex","id":"weight_stext"+curent_id_num},null);
 	
 	weight_setexes.push(document.getElementById( 'weight_stext'+curent_id_num ));
-	prevs.push(v)
+	prevs.push(100)
 	weight_sliders.push(document.getElementById('weight_slider'+curent_id_num));
 	weight_vals.push(0)
 	noUiSlider.create( weight_sliders[curent_id_num], {
-	    start: [v*100],
+	    start: [100],
 	    connect: false,
 	    range: {
 	        'min': 1,
@@ -813,7 +817,9 @@ function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
 			is_range_sliding = false
 			is_sensetivity_sliding = false
 		};
-	reset_sliders(curent_id_num,is_load_call)
+	if (!is_load_call){
+		reset_sliders(curent_id_num,is_load_call)
+	}
 	if (compresion[mesurment][func] == 'direction'){
 		click_coords[curent_id_num] = {}
 		click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
@@ -825,7 +831,9 @@ function makeNewMeasurmeant(curent_id_num,v,is_load_call) {
 		click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
 		click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
 	}
-	DrawLines(curent_id_num)
+	if (!is_load_call){
+		DrawLines(curent_id_num)
+	}
 //	for (i = 0; i <= curent_id_num; i++){
 //		DrawLines(i)
 //	}
@@ -937,9 +945,9 @@ function detectMove() {
 
 function newMeasurementHandeler(event,val,is_load_call) {
 	let can_save = false
-	
+	console.log(is_load_call)
 	if (val == undefined){
-		v = 0.5
+		let v = 0.5
 		is_load_call = false
 		can_save = true
 	}
@@ -947,7 +955,7 @@ function newMeasurementHandeler(event,val,is_load_call) {
 		return;
 	}
 	measurement_index ++
-	makeNewMeasurmeant(measurement_index,val,is_load_call)
+	makeNewMeasurmeant(measurement_index,is_load_call)
 	if (can_save){
 		prev_states.push(state_dict)
 		saveState()
@@ -1015,7 +1023,9 @@ function reset_sliders(num,is_load_call){
 		reset_slider(i,num,is_load_call)
 	}
 	is_setting = false
-	RenderGrid()
+	if (!is_load_call){
+		RenderGrid()
+	}
 }
 
 function reset_slider(i,num,is_load_call){
@@ -2075,10 +2085,11 @@ function RegisterGridClick(event,click_x,click_y,num) {
 		display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
 		month = 11
 	}
+	let months_txt = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec' ];
 	var year = coords[1]+parseInt(start_year) 
-	txt = (display_day+1)+'/'+(month+1)+'/'+year
+	txt = (display_day+1)+'/'+months_txt[month+1]+'/'+year
 	if (unit_sets[unit_num] == "american"){
-		txt = (month+1)+'/'+(display_day+1)+'/'+year
+		txt = months_txt[month+1]+'/'+(display_day+1)+'/'+year
 	}
 	day = [coords[0]]*7+6
 	var display_day = null
@@ -2094,9 +2105,9 @@ function RegisterGridClick(event,click_x,click_y,num) {
 		display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
 		month = 11
 	}
-	txt2 = (display_day+1)+'/'+(month+1)+'/'+year
+	txt2 = (display_day+1)+'/'+months_txt[month+1]+'/'+year
 	if (unit_sets[unit_num] == "american"){
-		txt2 = (month+1)+'/'+(display_day+1)+'/'+year
+		txt2 = months_txt[month+1]+'/'+(display_day+1)+'/'+year
 	}
 	if (save_clicks_x.length == 1){
 		document.getElementById( "heder" ).innerHTML = "details from the week "+txt+"-"+txt2;
@@ -2431,7 +2442,7 @@ function DrawYears(compresed_data,num_years){
 		}
 	}
 	for (var i = 0; i < 4; i++) {
-        draw.rect( 2, (compresed_data.length+1)*9.5+10 ).move( i*31+53, 0  ).attr({
+        draw.rect( 2, (compresed_data.length+1)*9.5+10 ).move( i*31+31+move, 0  ).attr({
             'fill':'#ffffff66',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
@@ -2625,7 +2636,7 @@ function RenderGrid(){
             var stext = draw.text( `${syear-1}` ).font('size',12).font('family','Arial');
             syear_width = stext.length()+6;
             syear_height = stext.bbox().height/2; // bbox is double for some reason.
-            stext.move( off_x - syear_width, sy - (syear_height/2) );
+            stext.move( off_x - syear_width, sy - 2 );
         }
 
         for ( p=0; p<num_weeks; p++ )
