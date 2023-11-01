@@ -1985,11 +1985,12 @@ function DetectGridClick(event,is_render_call){
 		var txt = ""
 		for (var i=0; i < reading_options.length; i++){
 			method_options = Object.keys(all_data[reading_options[i]]) 
-			if (save_clicks_x.length == 1){
+			if (1 == 1){
 				makeNewElement("tables","table",{"id":"table"+(i+1),"style":"display: inline-block; text-align: center; margin-left: 10px float: top;" },null);
 				makeNewElement("table"+(i+1),"tr",{"id":"measurementy"+(i+1)},null);
 				makeNewElement("measurementy"+(i+1),"th",{"id":"th"+(i+1)},reading_options[i].split('_').join(' '));
 			}
+			var value_list = []
 			for (var j=0; j < method_options.length; j++){
 				relev_data = all_data[reading_options[i]][method_options[j]]
 				var mul = 1
@@ -1998,7 +1999,7 @@ function DetectGridClick(event,is_render_call){
 					expon = 2
 				}
 				var compressed_value = null
-				var value_list = []
+				value_list.push([])
 				for (var num=0; num < save_clicks_x.length; num++){
 					var coords = getCellCoords(save_clicks_x[num],save_clicks_y[num])
 					if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
@@ -2011,21 +2012,57 @@ function DetectGridClick(event,is_render_call){
 							value = parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2))
 						}
 						if (!value) {
-							value_list.push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
+							value_list[j].push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
 						}
 						else {
-							value_list.push(value);
+							value_list[j].push(value);
 						}
 					}
 				}
-				if ([method_options[j]] == 'min'){
-					compressed_value = Math.min(...value_list)
+			}
+			let dir_net_index = method_options.indexOf('dir_net')
+			let speed_net_index = method_options.indexOf('speed_net')
+			for (var j=0; j < method_options.length; j++){
+				if (method_options[j] == 'min'){
+					compressed_value = Math.min(...value_list[j])
 				}
-				else if ([method_options[j]] == 'max'){
-					compressed_value = Math.max(...value_list)
+				else if (['max','speed_max'].includes(method_options[j])){
+					compressed_value = Math.max(...value_list[j])
+				}
+				else if (['total','total_rain','total_snow','total_wet_snow','total_freezing_rain','total_ice_pellets'].includes(method_options[j])){
+					compressed_value = value_list[j].reduce((a, b) => a + b, 0)
+				}
+				else if (['dir_modal'].includes(method_options[j])){
+					if (value_list[j].length == 1){
+						compressed_value = value_list[j][0]
+					}
+					else {
+						compressed_value = null
+					}
+				}
+				else if (['dir_net','speed_net'].includes(method_options[j])){
+					var x = 0
+					var y = 0
+					for (var k=0; k < value_list[j].length; k++){
+						let ang = value_list[dir_net_index][k]*Math.PI/180
+						let dist = value_list[speed_net_index][k]
+						x += Math.cos(ang)*dist
+						y += Math.sin(ang)*dist
+					}
+					let new_dist = Math.sqrt(x**2+y**2)
+					if (method_options[j] == 'speed_net'){
+						compressed_value = new_dist
+					}
+					else{
+						compressed_value = Math.acos(x/new_dist)
+						if (Math.sign(y) == -1){
+							compressed_value = compressed_value + Math.PI
+						}
+						compressed_value *= 180/Math.PI
+					}
 				}
 				else {
-					compressed_value = value_list.reduce((a, b) => a + b, 0)/value_list.length
+					compressed_value = value_list[j].reduce((a, b) => a + b, 0)/value_list[j].length
 				}
 				var st_txt = ''
 				if (is_seasonaly_adjusted){
@@ -2033,9 +2070,15 @@ function DetectGridClick(event,is_render_call){
 						st_txt = '+'
 					}
 				}
-				if (save_clicks_x.length == 1){
+				if (1 == 1){
+					if (compressed_value == null){
+						txt = 'N/A'
+					}
+					else {
+						txt = st_txt+parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]
+					}
 					makeNewElement("table"+(i+1),"tr",{"id":"methody"+(i+1)+','+j},null);
-					makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ st_txt+parseFloat(compressed_value).toFixed(2)+unit_names[unit_sets[unit_num]][reading_options[i]][method_options[j]]);
+					makeNewElement("methody"+(i+1)+','+j,"td",{"id":"td"+(i+1)+','+j},short_names[reading_options[i]][method_options[j]]+': '+ txt);
 				}
 			}
 		}
