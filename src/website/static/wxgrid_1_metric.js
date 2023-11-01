@@ -776,14 +776,18 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
     		LoadWXGrid();
 			if (['dir_modal','dir_net'].includes(method_types[curent_id_num])){
 				click_coords[curent_id_num] = {}
+				click_coords[curent_id_num][13] = 0
 				click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
 				click_coords[curent_id_num][maxes[curent_id_num]+mins[curent_id_num]+17] = histo_hights[curent_id_num]
 				click_coords[curent_id_num][maxes[curent_id_num]*2+17] = 0
+				click_coords[curent_id_num][268] = 0
 			}
 			else {
 				click_coords[curent_id_num] = {}
+				click_coords[curent_id_num][13] = 0
 				click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
 				click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
+				click_coords[curent_id_num][268] = histo_hights[curent_id_num]
 			}
 			for (i in selects){
 				if (selects[i][1] == measurement_index){
@@ -822,14 +826,18 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 	}
 	if (compresion[mesurment][func] == 'direction'){
 		click_coords[curent_id_num] = {}
+		click_coords[curent_id_num][13] = 0
 		click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
 		click_coords[curent_id_num][maxes[curent_id_num]+mins[curent_id_num]+17] = histo_hights[curent_id_num]
 		click_coords[curent_id_num][maxes[curent_id_num]*2+17] = 0
+		click_coords[curent_id_num][267] = 0
 	}
 	else {
 		click_coords[curent_id_num] = {}
+		click_coords[curent_id_num][13] = 0
 		click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
 		click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
+		click_coords[curent_id_num][267] = histo_hights[curent_id_num]
 	}
 	if (!is_load_call){
 		DrawLines(curent_id_num)
@@ -1265,14 +1273,19 @@ function LoadMethodDropdown(num,i) {
 	LoadWXGrid();
 	if (['dir_modal','dir_net'].includes(method_types[num])){
 		click_coords[num] = {}
+		click_coords[num][13] = 0
 		click_coords[num][mins[num]*2+13] = 0
 		click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
 		click_coords[num][maxes[num]*2+17] = 0
+		click_coords[num][268] = 0
 	}
 	else {
 		click_coords[num] = {}
+		click_coords[num][13] = 0
 		click_coords[num][mins[num]*2+13] = 0
 		click_coords[num][maxes[num]*2+17] = histo_hights[num]
+		click_coords[num][268] = histo_hights[num]
+		console.log(click_coords[num])
 	}
 	for (i in selects){
 		if (selects[i][1] == num){
@@ -1704,8 +1717,11 @@ function DetectHistoClick(num,event) {
 function RegisterClick(num,event) {
 	click_x = event.offsetX
 	click_y = histo_hights[num]-event.offsetY
-	if (click_y < 0 || click_x < mins[num]*2+13 || click_x > maxes[num]*2+17 ||  click_y > 71){
+	if (click_y < -1 || click_x < 13 || click_x > 268 ||  click_y > 71){
 		return
+	}
+	if (click_y < 0){
+		click_y = 0
 	}
 	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
 	for (i in selects){
