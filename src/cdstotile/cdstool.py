@@ -153,12 +153,15 @@ def download_cds_var( output_path:str, cds_ds_name, dir_name, year, day_of_year,
 
 
 # clean up downloaded files
-def clean_dataset( dir_name:str ):
-    print( f'cleaning dataset {dir_name}...' )
-    # look for any .nc files and remove expver from them
-    pathname = './' + dir_name + '/**/*.nc'
-    for fname in glob.iglob( pathname, recursive=True ):
-        remove_expver( fname )
+def clean_dataset( nc_path:str, dir_name:str, start_year:int, end_year:int ):
+    for year in range(start_year,end_year+1):
+        print( f'cleaning dataset {dir_name} {year}...' )
+        # look for any .nc files and remove expver from them
+        #pathname = nc_path + '/' + dir_name + '/**/*.nc'
+        pathname = nc_path + '/' + dir_name + f'/{year}/**/*.nc'
+        print( f'debug: ' + pathname )
+        for fname in glob.iglob( pathname, recursive=True ):
+            remove_expver( fname )
     pass
 
 def main():
@@ -241,7 +244,7 @@ def main():
         download_dataset( output_path, start_year, end_year, area0, variables, force_download )
 
     # clean up any expver data that might be present in downloaded files
-    clean_dataset( 'cds_era5' )
+    clean_dataset( output_path, 'cds_era5', start_year, end_year )
     print( 'done.' )
 
 

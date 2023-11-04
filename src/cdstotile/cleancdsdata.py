@@ -23,7 +23,6 @@ import xarray
 
 
 def remove_expver( filename:str ):
-    #print( 'debug: remove_expver' )
     temp_filename = filename + '.rexpver'
     #ERA5 = xarray.open_mfdataset( filename, combine='by_coords', chunks={'time': 52} )
     ERA5 = xarray.open_dataset( filename, chunks={'time': 52} )
@@ -31,6 +30,7 @@ def remove_expver( filename:str ):
     if 'expver' not in ERA5.dims.keys():
         return
 
+    print( 'debug: remove_expver ' + filename )
     # our files should have just 1 variable. get its name.
     the_var = list(ERA5.data_vars.keys())[0]
     ERA5_combine = ERA5.sel(expver=1).combine_first(ERA5.sel(expver=5))
