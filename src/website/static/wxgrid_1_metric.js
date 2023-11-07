@@ -184,6 +184,7 @@ var year_covers = []
 var selected_seasons = []
 var season_covers = []
 var covers = []
+var bsizes = []
 
 var line_opacidy = 0.1
 var state_index = null
@@ -2300,13 +2301,14 @@ function RegisterGridClick(event,click_x,click_y,num) {
     else {
         fillcol = color_lists[color_num][2];
     }
-	outlines.push(grid_draw.rect( 9, 8 ).move( Math.floor((click_x+1)/9)*9-1, Math.ceil(click_y/9-1)*9+2).attr({
+	size = bsizes[coords[1]][coords[0]]
+	outlines.push(grid_draw.rect( size-1, size-1 ).move( Math.floor((click_x+1)/9)*9-0.5+(9-size)/2, Math.ceil(click_y/9-1)*9+1.5+(9-size)/2).attr({
 			fill: fillcol
 		, 'fill-opacity': 1
 			, stroke: '#ee0'
 		, 'stroke-width': 0 
         }));
-	covers.push(grid_draw.rect( 9, 8 ).move( Math.floor((click_x+1)/9)*9-1, Math.ceil(click_y/9-1)*9+2).attr({
+	covers.push(grid_draw.rect( size-1, size-1 ).move( Math.floor((click_x+1)/9)*9-0.5+(9-size)/2, Math.ceil(click_y/9-1)*9+1.5+(9-size)/2).attr({
 			fill: fillcol
 		, 'fill-opacity': 0
 			, stroke: '#000'
@@ -2862,7 +2864,7 @@ function RenderGrid(){
 	}
 	compresed_data = wx_data
 	DrawHistograms(wx_data)
-	var bsizes = []
+	bsizes = []
 	if (is_trend){
 		bsizes = getSizes(compresed_data,boxsize,1/(sensetivity+1))
 	}
