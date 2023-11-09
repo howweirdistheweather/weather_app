@@ -265,6 +265,7 @@ fetch(url , {   method:'GET',
             function(data) {
                 // parse JSON and determine some stuff
                 start_data = data;//JSON.parse( data.response );
+				console.log(start_data)
 				start_year = start_data["data_specs"]["start_year"];
 				document.getElementById( 'location' ).innerHTML = start_data["data_specs"]["Name"];
 				compresion_types = start_data["compression"];
@@ -506,6 +507,8 @@ do_PDO.onchange =
 			}
 			RenderGrid()
 		};
+var download = document.getElementById("download");
+download.addEventListener("click",downloadData);
 var unit_selector = document.getElementById("unit_selector")
 unit_selector.onchange =
 		function () {
@@ -681,6 +684,115 @@ function loadState(){
 		DrawLines(i)
 	}
 	RenderGrid()
+}
+
+function downloadData(){
+	console.log(seasonal_data)
+	let d_reading_options = Object.keys(all_data)
+	let d_method_options = []
+	for (var i = 0; i < d_reading_options.length; i++){
+		d_method_options.push(Object.keys(all_data[d_reading_options[i]]))
+	}
+	let num_years = all_data[d_reading_options[0]][d_method_options[0][0]].length
+	let data_len = num_years*52
+	download_data = []
+	for (var i = 0; i < data_len+1; i++){
+		download_data.push([])
+	}
+	download_data[0].push('')
+	for (var i = 0; i < num_years; i++){
+		for (var j = 0; j < 52; j++){
+			
+			month_lenghths = [31,28,31,30,31,30,31,31,30,31,30,31]
+			var day = j*7
+			var display_day = null
+			var month = null
+			for (k=0; k<month_lenghths.length; k++){
+				if (day < month_lenghths.slice(0,k).reduce((a, b) => a + b, 0)){
+					month = k-1
+					display_day = day - month_lenghths.slice(0,k-1).reduce((a, b) => a + b, 0)
+					break;
+				}
+			}
+			if (month == null){
+				display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
+				month = 11
+			}
+			let months_txt = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+			var year = i+parseInt(start_year) 
+			txt = (display_day+1)+'/'+months_txt[month]+'/'+year
+			if (unit_sets[unit_num] == "american"){
+				txt = months_txt[month]+'/'+(display_day+1)+'/'+year
+			}
+			day = j*7+6
+			var display_day = null
+			var month = null
+			for (k=0; k<month_lenghths.length; k++){
+				if (day < month_lenghths.slice(0,k).reduce((a, b) => a + b, 0)){
+					month = k-1
+					display_day = day - month_lenghths.slice(0,k-1).reduce((a, b) => a + b, 0)
+					break;
+				}
+			}
+			if (month == null){
+				display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
+				month = 11
+			}
+			txt2 = (display_day+1)+'/'+months_txt[month]+'/'+year
+			if (unit_sets[unit_num] == "american"){
+				txt2 = months_txt[month]+'/'+(display_day+1)+'/'+year
+			}
+			download_data[i*52+j+1].push(txt+"-"+txt2);
+		}
+	}
+	for (var m_opt = 0; m_opt < d_reading_options.length; m_opt++){
+		for (var d_opt = 0; d_opt < d_method_options[m_opt].length; d_opt++){
+			for (var s_adj = 0; s_adj < 2; s_adj++){
+				download_data[0].push(['','Seasonaly adjusted '][s_adj]+short_names[d_reading_options[m_opt]][d_method_options[m_opt][d_opt]]+' '+d_reading_options[m_opt])
+				for (var i = 0; i < num_years; i++){
+					for (var j = 0; j < 52; j++){
+						let data = []
+						if (s_adj == 1) {
+							data = seasonal_data
+						}
+						else {
+							data = cropped_data
+						}
+						let r_opt_t = d_reading_options[m_opt]
+						let m_opt_t = d_method_options[m_opt][d_opt]
+						var mul = 1
+						var expon = 1
+						if (compresion[r_opt_t][m_opt_t]["type"] == "parabolic") {
+							expon = 2
+						}
+						if (data[r_opt_t][m_opt_t][i][j] == null){
+							txt = null
+						}
+						else {
+							let value = parseFloat(((((data[r_opt_t][m_opt_t][i][j]*compresion[r_opt_t][m_opt_t]["scale"])**expon)*unit_muls[unit_sets[unit_num]][r_opt_t][m_opt_t][0])*mul-(((127*compresion[r_opt_t][m_opt_t]["scale"])**expon)*unit_muls[unit_sets[unit_num]][r_opt_t][m_opt_t][0])*mul).toFixed(2))
+							var st_txt = ''
+							if (s_adj == 1){
+								if (value > 0){
+									st_txt = '+'
+								}
+							}
+							txt = st_txt+parseFloat(value).toFixed(2)+unit_names[unit_sets[unit_num]][r_opt_t][m_opt_t]
+						}
+						download_data[i*52+j+1].push(txt)
+					}
+				}
+			}
+		}
+	}
+	let csvContent = "data:text/csv;charset=utf-8,"
+	    	+ download_data.map(e => e.join(",")).join("\n");
+	var encodedUri = encodeURI(csvContent);
+	var link = document.createElement("a");
+	link.setAttribute("href", encodedUri);
+	link.setAttribute("download", "HWITW_data.csv");
+	document.body.appendChild(link); // Required for FF
+
+	link.click(); // This will download the data file named "my_data.csv".
 }
 
 function makeNewElement(id, type, atributes, txt) {
@@ -2345,11 +2457,11 @@ function RegisterGridClick(event,click_x,click_y,num) {
 		display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
 		month = 11
 	}
-	let months_txt = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec' ];
+	let months_txt = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 	var year = coords[1]+parseInt(start_year) 
-	txt = (display_day+1)+'/'+months_txt[month+1]+'/'+year
+	txt = (display_day+1)+'/'+months_txt[month]+'/'+year
 	if (unit_sets[unit_num] == "american"){
-		txt = months_txt[month+1]+'/'+(display_day+1)+'/'+year
+		txt = months_txt[month]+'/'+(display_day+1)+'/'+year
 	}
 	day = [coords[0]]*7+6
 	var display_day = null
@@ -2365,9 +2477,9 @@ function RegisterGridClick(event,click_x,click_y,num) {
 		display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
 		month = 11
 	}
-	txt2 = (display_day+1)+'/'+months_txt[month+1]+'/'+year
+	txt2 = (display_day+1)+'/'+months_txt[month]+'/'+year
 	if (unit_sets[unit_num] == "american"){
-		txt2 = months_txt[month+1]+'/'+(display_day+1)+'/'+year
+		txt2 = months_txt[month]+'/'+(display_day+1)+'/'+year
 	}
 	if (save_clicks_x.length == 1){
 		document.getElementById( "heder" ).innerHTML = "details from the week "+txt+"-"+txt2;
@@ -2736,7 +2848,7 @@ function DrawYears(compresed_data,num_years){
 //	year_histogram = color_plot
 }
 
-function getSizes(data,base_size,div){
+function getSizesBup(data,base_size,div){
 	trend_list = []
 	trend_type = null
 	sizes = []
@@ -2798,6 +2910,73 @@ function getSizes(data,base_size,div){
 		}
 		else {
 			sizes[trend_list[k]].push(Math.min(step*(t_len-k),base_size))
+		}
+	}
+	return sizes;
+}
+
+function getSizes(data,base_size,sensetivity){
+	var trend_list = new Array((sensetivity+1)).fill(0);
+	let range = sensetivity*2+1
+	sizes = []
+	for (var i = 0; i < sensetivity; i++){
+		let val = data[0][i]
+		let val_num = 0
+        if ( val/255 < wx_range_val0 ){
+            val_num = 0;
+        }
+        else if ( val/255 < wx_range_val1 ){
+            val_num = 1/2;
+        }
+        else {
+            val_num = 1;
+        }
+		trend_list.push(val_num)
+	}
+	var c_total = trend_list.reduce((a, b) => a + b, 0)
+	var st = sensetivity
+	var ind = 0
+	for (var i = 0; i < data.length; i++){
+		sizes.push([])
+		for (var j = st; j < data[i].length; j++){
+			let val = data[i][j]
+			let val_num = 0
+            if ( val/255 < wx_range_val0 ){
+                val_num = 0;
+	        }
+            else if ( val/255 < wx_range_val1 ){
+                val_num = 1/2;
+            }
+            else {
+                val_num = 1;
+            }
+			c_total -= trend_list.shift()
+			trend_list.push(val_num)
+			c_total += val_num
+			if (trend_list[sensetivity] == 0){
+				sizes[ind].push(0)
+			}
+			else {
+				sizes[ind].push(base_size*c_total/range)
+			}
+			if (sizes[ind].length == 52){
+				ind++
+			}
+		}
+		st = 0
+	}
+	for (var i = 0; i < sensetivity; i++){
+		c_total -= trend_list.shift()
+		trend_list.push(0)
+		c_total += 0
+		if (trend_list[sensetivity] == 0){
+			sizes[ind].push(0)
+		}
+		else {
+			sizes[ind].push(base_size*c_total/range)
+		}
+		if (sizes[ind].length == 52){
+			ind++
 		}
 	}
 	return sizes;
@@ -2866,7 +3045,7 @@ function RenderGrid(){
 	DrawHistograms(wx_data)
 	bsizes = []
 	if (is_trend){
-		bsizes = getSizes(compresed_data,boxsize,1/(sensetivity+1))
+		bsizes = getSizes(compresed_data,boxsize,sensetivity)
 	}
 	else {
 		bsizes = Array(num_years).fill().map(() => 
