@@ -185,6 +185,8 @@ var selected_seasons = []
 var season_covers = []
 var covers = []
 var bsizes = []
+var method_dict = {}
+var reading_options = []
 
 var line_opacidy = 0.1
 var state_index = null
@@ -249,6 +251,7 @@ var lon = urlParams.get('lon');
 if (lon == null){
 	lon = -151.7
 }
+var querrySTR = urlParams.get('state')
 var url = wxgrid_url+`?lat=${lat}&lon=${lon}`
 fetch(url , {   method:'GET',
                         headers: {'Authorization': 'Basic ' + btoa(cred_str)} 
@@ -319,9 +322,14 @@ fetch(url , {   method:'GET',
 				}
 				seasonal_data = doSesonalCompression(cropped_data)
 				all_data = cropped_data
+				reading_options = Object.keys(all_data)
+				for (var i=0; i < reading_options.length; i++){
+					method_dict[reading_options[i]] = Object.keys(all_data[reading_options[i]])
+				}
 				unitNamesHandaler()
 				unitMulHandaler()
 				makeNewMeasurmeant(0,false)
+				loadFromeQuerry(querrySTR)
 				saveState()
             }
         );
@@ -398,6 +406,7 @@ enable_line_editing.onchange =
 			for (let i=0; i<=measurement_index; i++){
 				DrawLines(i)
 			}
+			updateQuerry()
 		};
 var seasonal_adjust = document.getElementById("seasonal_adjust")
 seasonal_adjust.onchange =
@@ -469,10 +478,10 @@ trend.onchange =
 			is_weigth_sliding = false
 			is_range_sliding = false
 			is_sensetivity_sliding = false
+			updateQuerry()
 		};
 function updateTrends(st_sensetivity){
 	if (is_trend){
-		makeNewElement("sensetivity_slider_holder","div",{"style":"text-align: center; padding-bottom: 5px; color: cornflowerblue;", "id":"sensetivity_setex"},null);
 		makeNewElement("sensetivity_slider_holder","div",{"class":"sensetivity_slider","id":"sensetivity_slider"},null);
 		noUiSlider.create( document.getElementById('sensetivity_slider'), {
 		    start: [st_sensetivity],
@@ -487,13 +496,12 @@ function updateTrends(st_sensetivity){
 			if (!is_active) {
 				return
 			}
-		    document.getElementById('sensetivity_setex').textContent = (Math.round(values[0]));
 			RenderGrid();
+			updateQuerry()
 			});
 	}
 	else {
 		document.getElementById('sensetivity_slider').remove()
-		document.getElementById('sensetivity_setex').remove()
 	}
 }
 var do_PDO = document.getElementById("do_PDO")
@@ -517,7 +525,6 @@ unit_selector.onchange =
 		};
 var unit_names = {'metric':{'temperature':{'default':'°C'},'relative_humidity':{'default':'%'},'wind':{'default':' m/s','dir_modal':'°','dir_net':'°'},'precipitation':{'default':'cm'},'cloud_cover':{'default':'%'}},'american':{'temperature':{'default':'°F'},'relative_humidity':{'default':'%'},'wind':{'default':' mph','dir_modal':'°','dir_net':'°'},'precipitation':{'default':' in.'},'cloud_cover':{'default':'%'}}};
 function unitNamesHandaler(){
-	var reading_options = Object.keys(all_data)
 	for (unit_set of unit_sets){  
 		for (var i=0; i < reading_options.length; i++){
 			method_options = Object.keys(all_data[reading_options[i]])
@@ -534,7 +541,6 @@ function unitNamesHandaler(){
 }
 var unit_muls = {'metric':{'temperature':{'default':[1,0,1]},'relative_humidity':{'default':[100,0,0]},'wind':{'default':[1,0,0]},'precipitation':{'default':[100,0,2]},'cloud_cover':{'default':[100,0,0]}},'american':{'temperature':{'default':[9/5,32,1]},'relative_humidity':{'default':[100,0,0]},'wind':{'default':[2.237,0,0],'dir_modal':[1,0,0],'dir_net':[1,0,0]},'precipitation':{'default':[39.37,0,2]},'cloud_cover':{'default':[100,0,0]}}};
 function unitMulHandaler(){
-	var reading_options = Object.keys(all_data)
 	for (unit_set of unit_sets){  
 		for (var i=0; i < reading_options.length; i++){
 			method_options = Object.keys(all_data[reading_options[i]])
@@ -606,7 +612,6 @@ function saveState(){
 		'is_seasonaly_adjusted':is_seasonaly_adjusted,
 		'mins':mins.slice(),
 		'maxes':maxes.slice(),
-		'compresed_data':compresed_data.slice(),
 		'is_valid':is_valid,
 		'wx_grdata_min':wx_grdata_min,
 		'wx_grdata_max':wx_grdata_max,
@@ -614,16 +619,133 @@ function saveState(){
 		'wx_range_val1':wx_range_val1,
 		'click_coords':t_click_coords.slice(),
 		'weight_vals':weight_vals.slice(),
-		'close_btns':close_btns,
 		'measurement_index':measurement_index,
 		'reading_types':reading_types.slice(),
 		'method_types':method_types.slice(),
-		'prevs':prevs.slice()
+		'prevs':prevs.slice(),
+		'doPDO':doPDO,
+		'line_editing':enable_line_editing.checked
 	}
+	updateQuerry()
 }
 
+function getState(){
+	var t_click_coords = []
+	for (var i = 0; i < click_coords.length; i++){
+	    t_click_coords[i] = {...click_coords[i]};
+	}
+	let state = [is_trend,sensetivity,is_seasonaly_adjusted,mins.slice(),maxes.slice(),is_valid,wx_grdata_min,
+		wx_grdata_max,wx_range_val0,wx_range_val1,t_click_coords.slice(),weight_vals.slice(),measurement_index,
+		reading_types.slice(),method_types.slice(),prevs.slice(),doPDO,enable_line_editing.checked]
+	return state
+}
+
+function updateQuerry(){
+	state = getState()
+	let r_types = state_dict['reading_types']
+	let m_types = state_dict['method_types']
+	for (var i = 0; i <= state[12]; i++){
+		state[11][i] = Math.round(state[11][i]*100)/100;
+		state[15][i] = Math.round(state[15][i]*100)/100;
+		r_type = state[13][i]
+		state[13][i] = reading_options.indexOf(r_type)
+		state[14][i] = method_dict[r_type].indexOf(state[14][i])
+	}
+	state[8] = Math.round(state[8]*100)/100;
+	state[9] = Math.round(state[9]*100)/100;
+	//console.log(JSON.stringify(state))
+	//console.log(JSON.stringify(state).length)
+	//console.log(lzw_encode(JSON.stringify(state)).length)
+	let querry = lzw_encode(JSON.stringify(state))
+	var url = new URL(window.location.href);
+	url.searchParams.set("state", querry);
+	window.history.pushState(null, null, url);
+}
+function loadFromeQuerry(querry) {
+	querry = lzw_decode(querry);
+	if (querry == null){
+		return
+	}
+	var state = JSON.parse(querry)
+	for (var i = 0; i <= state[12]; i++){
+		state[13][i] = reading_options[state[13][i]]
+		state[14][i] = method_dict[state[13][i]][state[14][i]]
+	}
+	state_dict = {
+		'is_trend':state[0],
+		'sensetivity':state[1],
+		'is_seasonaly_adjusted':state[2],
+		'mins':state[3],
+		'maxes':state[4],
+		'is_valid':state[5],
+		'wx_grdata_min':state[6],
+		'wx_grdata_max':state[7],
+		'wx_range_val0':state[8],
+		'wx_range_val1':state[9],
+		'click_coords':state[10],
+		'weight_vals':state[11],
+		'measurement_index':state[12],
+		'reading_types':state[13],
+		'method_types':state[14],
+		'prevs':state[15],
+		'doPDO':state[16],
+		'line_editing':state[17]
+	}
+	loadState()
+}
+
+function lzw_encode(s) {
+    var dict = {};
+    var data = (s + "").split("");
+    var out = [];
+    var currChar;
+    var phrase = data[0];
+    var code = 256;
+    for (var i=1; i<data.length; i++) {
+        currChar=data[i];
+        if (dict[phrase + currChar] != null) {
+            phrase += currChar;
+        }
+        else {
+            out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
+            dict[phrase + currChar] = code;
+            code++;
+            phrase=currChar;
+        }
+    }
+    out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
+    for (var i=0; i<out.length; i++) {
+        out[i] = String.fromCharCode(out[i]);
+    }
+    return out.join("");
+}
+
+// Decompress an LZW-encoded string
+function lzw_decode(s) {
+    var dict = {};
+    var data = (s + "").split("");
+    var currChar = data[0];
+    var oldPhrase = currChar;
+    var out = [currChar];
+    var code = 256;
+    var phrase;
+    for (var i=1; i<data.length; i++) {
+        var currCode = data[i].charCodeAt(0);
+        if (currCode < 256) {
+            phrase = data[i];
+        }
+        else {
+           phrase = dict[currCode] ? dict[currCode] : (oldPhrase + currChar);
+        }
+        out.push(phrase);
+        currChar = phrase.charAt(0);
+        dict[code] = oldPhrase + currChar;
+        code++;
+        oldPhrase = phrase;
+    }
+    return out.join("");
+}
 function loadState(){
-	console.log(reading_dropdowns)
 	t_measurement_index = measurement_index
 	n_measurement_index = state_dict['measurement_index']
 	t_weight_vals = state_dict['weight_vals'].slice()
@@ -638,17 +760,17 @@ function loadState(){
 			newMeasurementHandeler(null,true)
 		}
 	}
-	console.log(reading_dropdowns)
 	reset_sliders(measurement_index,true)
 	weight_vals = state_dict['weight_vals'].slice()
 	mins = state_dict['mins'].slice()
 	maxes = state_dict['maxes'].slice()
 	sensetivity = state_dict['sensetivity']
 	t_is_trend = is_trend
+	console.log(is_trend)
 	is_trend = state_dict['is_trend']
+	console.log(is_trend)
 	if (t_is_trend){
 		document.getElementById('sensetivity_slider').remove()
-		document.getElementById('sensetivity_setex').remove()
 	}
 	document.getElementById("trend").checked = is_trend;
 	if (is_trend){
@@ -657,7 +779,15 @@ function loadState(){
 	is_seasonaly_adjusted = state_dict['is_seasonaly_adjusted']
 	updateSeasonality()
 	document.getElementById("seasonal_adjust").checked = is_seasonaly_adjusted;
-	compresed_data = state_dict['compresed_data'].slice()
+	enable_line_editing.checked = state_dict['line_editing'];
+	if (state_dict['line_editing']){
+		line_opacidy = 1
+	}
+	else {
+		line_opacidy = 0.1
+	}
+	doPDO = state_dict['doPDO']
+	do_PDO.checked = doPDO;
 	is_valid = state_dict['is_valid']
 	let t_wx_grdata_min = state_dict['wx_grdata_min']
 	let t_wx_grdata_max = state_dict['wx_grdata_max']
@@ -679,7 +809,6 @@ function loadState(){
 	for (var i = 0; i < t_click_coords.length; i++){
 	    click_coords.push({...t_click_coords[i]})
 	}
-	console.log(click_coords)
 	for (var i = 0; i < measurement_index+1; i++){
 		DrawLines(i)
 	}
@@ -784,6 +913,12 @@ function downloadData(){
 			}
 		}
 	}
+	download_data[0].push('User metric')
+	for (var i = 0; i < num_years; i++){
+		for (var j = 0; j < 52; j++){
+			download_data[i*52+j+1].push(compresed_data[i][j])
+		}
+	}
 	let csvContent = "data:text/csv;charset=utf-8,"
 	    	+ download_data.map(e => e.join(",")).join("\n");
 	var encodedUri = encodeURI(csvContent);
@@ -792,8 +927,13 @@ function downloadData(){
 	link.setAttribute("download", "HWITW_data.csv");
 	document.body.appendChild(link); // Required for FF
 
-	link.click(); // This will download the data file named "my_data.csv".
+	link.click();
 }
+
+function whatIsWeird(){
+	
+}
+
 
 function makeNewElement(id, type, atributes, txt) {
 	var theDiv = document.getElementById(id);
@@ -1184,6 +1324,7 @@ function reset_slider(i,num,is_load_call){
 		weight_vals[i] = weight_val
 	    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
 		handleSlider(i,weight_val)
+		updateQuerry()
 		});
 }
 
@@ -1228,6 +1369,7 @@ function handleSlider2(num,weight_val) {
 				weight_vals[i] = weight_val
 			    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
 				handleSlider(i,weight_val)
+				updateQuerry()
 				});
 			is_setting = false
 		}
@@ -1273,6 +1415,7 @@ function redoSlider2(i,num,total_weght,set_num,weights) {
 				weight_vals[i] = weight_val
 			    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
 				handleSlider(i,weight_val)
+				updateQuerry()
 				});
 		}
 		else {
@@ -1340,6 +1483,7 @@ function redoSlider(i,num,total_weght,set_num) {
 			weight_vals[i] = weight_val
 		    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
 			handleSlider(i,weight_val)
+			updateQuerry()
 			});
 	}
 	is_setting = false
@@ -1347,8 +1491,7 @@ function redoSlider(i,num,total_weght,set_num) {
 
 function LoadReadingDropdown(num,i,j) {
     // get list of reading types
-    reading_dropdowns[num].options.length = 0;
-	reading_options = Object.keys(all_data)                 
+    reading_dropdowns[num].options.length = 0;                
     let option;
     for (var d = 0; d < reading_options.length; d++) {
         option = document.createElement('option');
@@ -1435,6 +1578,7 @@ var wx_stext_val1 = document.getElementById( 'gr_stext1' );
 
 // create the range slider
 generateSlider(33,66)
+
 function generateSlider(v1,v2){
 	var wx_slider = document.getElementById('gr_slider');
 	wx_slider.remove()
@@ -1457,6 +1601,7 @@ function generateSlider(v1,v2){
 	    wx_stext_val0.textContent = wx_range_val0.toFixed(2);
 	    wx_stext_val1.textContent = wx_range_val1.toFixed(2);
 	    RenderGrid();
+		updateQuerry()
 	});
 }
 
@@ -1833,7 +1978,7 @@ function DetectHistoClick(num,event) {
 function RegisterClick(num,event) {
 	click_x = event.offsetX
 	click_y = histo_hights[num]-event.offsetY
-	if (click_y < -1 || click_x < 13 || click_x > 268 ||  click_y > 71){
+	if (click_y < -4 || click_x < 13 || click_x > 268 ||  click_y > 71){
 		return
 	}
 	if (click_y < 0){
@@ -1875,7 +2020,9 @@ function RegisterClick(num,event) {
 			select_draws.splice(i);
 		}
 	}
-	click_coords[num][click_x] = click_y
+	if (Object.keys(click_coords[num]).length < 10){
+		click_coords[num][click_x] = click_y
+	}
 	DrawLines(num)
 	RenderGrid()
 }
@@ -2274,7 +2421,6 @@ function DetectGridClick(event,is_render_call){
 	fade = null
 
 	var can_fade = false
-	var num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
 	for (var i=0; i < save_clicks_x.length; i++){
 		var coords = getCellCoords(save_clicks_x[i],save_clicks_y[i])
 		if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
@@ -2591,6 +2737,9 @@ function horizontalArrowHandler(x_dif) {
 		y_val = click_dict[select[0]]
 		if (parseInt(select[0]) != parseInt(x_vals[0]) && parseInt(select[0]) != parseInt(x_vals[x_vals.length-1])){
 			delete click_dict[select[0]]
+		}
+		else if (Object.keys(click_coords[num]).length >= 10){
+			return
 		}
 		click_dict[new_x] = y_val
 		selects[i] = [new_x.toString(),num]
