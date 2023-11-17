@@ -54,6 +54,8 @@ def open_wxdb_ro( filename:str ) -> list:
     # open for read
     wxdb_wxfile = h5py.File(filename, 'r', libver='latest')
     wxdb_ds = wxdb_wxfile[ WXDB_DATASET ]
+    #print( f'shape {wxdb_ds.shape}' )
+    #print( f'chunks {wxdb_ds.chunks}' )
     assert wxdb_ds.attrs['WXDB_FILE_ID']    == WXDB_FILE_ID
     assert wxdb_ds.attrs['WXDB_START_YEAR'] == WXDB_START_YEAR
     assert wxdb_ds.attrs['WXDB_END_YEAR']   == WXDB_END_YEAR
@@ -70,7 +72,7 @@ def close_wxdb():
 
 
 # read all data for a single location
-# pass latitude degrees north(+), longitude degress east(+)
+# pass latitude degrees north(+), longitude degrees east(+)
 def read_wxdb( lat_n:float, long_e:float ) -> numpy.array:
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
     lat_idx = get_latitude_index(lat_n)
