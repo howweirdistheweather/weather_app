@@ -96,8 +96,13 @@ def create_wxdb( filename:str ):
     print( 'debug: wxdb create_dataset' )
     wxshape = (WXDB_NUM_LATIDX_GLOBAL,WXDB_NUM_LONGIDX_GLOBAL,WXDB_NUM_YEARS,WXDB_NUM_WEEKS,wxdb_num_vars)
     # chunking has a large impact on performance here:
-    # I tuned it for writing - multiple latitudes, single longitude, all weeks, all variables
-    # ..it should still give plenty good enough read performance.
+    # I tuned it for tiletool writing - multiple latitudes, single longitude, all weeks, all variables
+    # ..it does not give good read performance.
+    # After initial creation of wxdb file and processing of data is complete, rechunk
+    # the file using h5repack for best read performance. This will make weekly updating
+    # take longer, but should not be a factor. like:
+    # h5repack --verbose --layout wxdb:CHUNK=10x10x80x52x29 hwitw.wxdb hwitw_repack.wxdb
+    #
     wxchunk = (100,1,1,52,wxdb_num_vars)
     # fill with our special/null value 255
     wxds = wxfile.create_dataset( WXDB_DATASET, wxshape, dtype='uint8', fillvalue=255, chunks=wxchunk )
