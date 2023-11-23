@@ -161,6 +161,7 @@ function download(filename, text) {
 
 	document.body.removeChild(element);
 }
+console.log([1,2]==[1,2])
 var state_dict = {}
 var prev_states = []
 var redo_states = []
@@ -1812,8 +1813,8 @@ function DrawHistograms(compresed_data,inc_data){
 			var compressed_coords_x = []
 			var compressed_coords_y = []
 			for (var i = 0; i < save_clicks_x.length; i++){
-				compressed_coords_x.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[0])
-				compressed_coords_y.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[1])
+				compressed_coords_x.push(save_clicks_x[i])
+				compressed_coords_y.push(save_clicks_y[i])
 			}
 			var new_compressed = []
 			var new_relev = []
@@ -1953,22 +1954,22 @@ function DetectHistoClick(num,event) {
 	var compressed_coords_x = []
 	var compressed_coords_y = []
 	for (var i = 0; i < save_clicks_x.length; i++){
-		compressed_coords_x.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[0])
-		compressed_coords_y.push(getCellCoords(save_clicks_x[i],save_clicks_y[i])[1])
+		compressed_coords_x.push(save_clicks_x[i])
+		compressed_coords_y.push(save_clicks_y[i])
 	}
 	for (let i=0; i<all_data[reading_types[num]][method_types[num]].length; i++){
 		for (let k=0; k<all_data[reading_types[num]][method_types[num]][i].length; k++){
 			if (parseInt(all_data[reading_types[num]][method_types[num]][i][k]/2) == parseInt(click_x/2)){
 				let is_selected = false
 				for (var j=0; j < save_clicks_x.length; j++){
-					if (k == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && i == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+					if (k == save_clicks_x[j] && i == save_clicks_y[j]){
 						is_selected = true
 						break
 					}
 				}
 				if (!is_selected){
-					save_clicks_x.push(k*9+37)
-					save_clicks_y.push((all_data[reading_types[num]][method_types[num]].length-i)*9-2)
+					save_clicks_x.push(k)
+					save_clicks_y.push(i)
 				}
 			}
 		}
@@ -2094,7 +2095,6 @@ function DetectYearClick(event,is_render_call){
 	} 
 	if (!is_render_call){
 		if (event.shiftKey && selected_years.length >= 1){
-			console.log('x')
 			t_year = c_year
 			if (c_year == p_year){
 				
@@ -2104,15 +2104,14 @@ function DetectYearClick(event,is_render_call){
 					for (let i=0; i < 52; i++){
 						var is_selected = false
 						for (var j=0; j < save_clicks_x.length; j++){
-							if (getCellCoords(i*9+36,t_year*9+2-compresed_data.length/2)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0]
-							 && getCellCoords(i*9+36,t_year*9+2-compresed_data.length/2)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+							if (i == save_clicks_x[j] && num_years-t_year+3 == save_clicks_y[j]){
 								is_selected = true
 								break
 							}
 						}
 						if (!is_selected){
-							save_clicks_x.push(i*9+36)
-							save_clicks_y.push(t_year*9+2-compresed_data.length/2)
+							save_clicks_x.push(i)
+							save_clicks_y.push(num_years-t_year+3)
 						}
 					}
 					console.log(t_year)
@@ -2124,15 +2123,14 @@ function DetectYearClick(event,is_render_call){
 					for (let i=0; i < 52; i++){
 						var is_selected = false
 						for (var j=0; j < save_clicks_x.length; j++){
-							if (getCellCoords(i*9+36,t_year*9+2-compresed_data.length/2)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0]
-							 && getCellCoords(i*9+36,t_year*9+2-compresed_data.length/2)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+							if (i == save_clicks_x[j] && num_years-t_year+3 == save_clicks_y[j]){
 								is_selected = true
 								break
 							}
 						}
 						if (!is_selected){
-							save_clicks_x.push(i*9+36)
-							save_clicks_y.push(t_year*9+2-compresed_data.length/2)
+							save_clicks_x.push(i)
+							save_clicks_y.push(num_years-t_year+3)
 						}
 					}
 					t_year--
@@ -2143,14 +2141,14 @@ function DetectYearClick(event,is_render_call){
 			for (let i=0; i < 52; i++){
 				var is_selected = false
 				for (var j=0; j < save_clicks_x.length; j++){
-					if (getCellCoords(i*9+36,event.offsetY-compresed_data.length/2-15)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(i*9+36,event.offsetY-compresed_data.length/2-15)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+					if (i == save_clicks_x[j] && compresed_data.length-Math.floor((event.offsetY+1)/9-1)+5 == save_clicks_y[j]){
 						is_selected = true
 						break
 					}
 				}
 				if (!is_selected){
-					save_clicks_x.push(i*9+36)
-					save_clicks_y.push(event.offsetY-compresed_data.length/2-15)
+					save_clicks_x.push(i)
+					save_clicks_y.push(compresed_data.length-Math.floor((event.offsetY+1)/9)+5)
 				}
 			}
 		}
@@ -2163,7 +2161,7 @@ function DetectYearClick(event,is_render_call){
 	}
 	for (let i=4; i < num_years+4; i++){
 		if (!(selected_years.includes(i))){
-			year_covers.push(year_draw.rect( 52*3, 9 ).move( move, (i+2)*9-3).attr({
+			year_covers.push(year_draw.rect( 52*3, 9 ).move( move, (i+2)*9-2.5).attr({
 					fill: '#fff'
 				, 'fill-opacity': 0.5
 						, stroke: '#ee0'
@@ -2235,14 +2233,14 @@ function DetectSeasonClick(event,is_render_call){
 					for (let i=0; i < num_years; i++){
 						var is_selected = false
 						for (var j=0; j < save_clicks_x.length; j++){
-							if (getCellCoords(t_season*9+35,i*9+1)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(t_season*9+35,i*9+1)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+							if (t_season == save_clicks_x[j] && i == save_clicks_y[j]){
 								is_selected = true
 								break
 							}
 						}
 						if (!is_selected){
-							save_clicks_y.push(i*9+1)
-							save_clicks_x.push(t_season*9+35)
+							save_clicks_y.push(i)
+							save_clicks_x.push(t_season)
 						}
 					}
 					t_season++
@@ -2253,14 +2251,14 @@ function DetectSeasonClick(event,is_render_call){
 					for (let i=0; i < num_years; i++){
 						var is_selected = false
 						for (var j=0; j < save_clicks_x.length; j++){
-							if (getCellCoords(t_season*9+35,i*9+1)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(t_season*9+35,i*9+1)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+							if (t_season == save_clicks_x[j] && i == save_clicks_y[j]){
 								is_selected = true
 								break
 							}
 						}
 						if (!is_selected){
-							save_clicks_y.push(i*9+1)
-							save_clicks_x.push(t_season*9+35)
+							save_clicks_y.push(i)
+							save_clicks_x.push(t_season)
 						}
 					}
 					t_season--
@@ -2271,21 +2269,21 @@ function DetectSeasonClick(event,is_render_call){
 			for (let i=0; i < num_years; i++){
 				var is_selected = false
 				for (var j=0; j < save_clicks_x.length; j++){
-					if (getCellCoords(event.offsetX-1,i*9+1)[0] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[0] && getCellCoords(event.offsetX-1,i*9+1)[1] == getCellCoords(save_clicks_x[j],save_clicks_y[j])[1]){
+					if (Math.floor((event.offsetX-36)/9) == save_clicks_x[j] && i == save_clicks_y[j]){
 						is_selected = true
 						break
 					}
 				}
 				if (!is_selected){
-					save_clicks_y.push(i*9+1)
-					save_clicks_x.push(event.offsetX-1)
+					save_clicks_y.push(i)
+					save_clicks_x.push(Math.floor((event.offsetX-36)/9))
 				}
 			}
 		}
 	}
 	for (let i=0; i < 52; i++){
 		if (!(selected_seasons.includes(i))){
-			season_covers.push(season_draw.rect( 9, num_years*0.5 ).move( i*9+35, 0).attr({
+			season_covers.push(season_draw.rect( 9, num_years*0.5 ).move( i*9+35, 30).attr({
 					fill: '#fff'
 				, 'fill-opacity': 0.5
 						, stroke: '#ee0'
@@ -2303,11 +2301,12 @@ function DetectGridClick(event,is_render_call){
 	if (!is_render_call){
 		let click_x = event.offsetX
 		let click_y = event.offsetY
+		let cell_coords = getCellCoords(click_x-1,click_y-2)
 		let num = save_clicks_x.length
 		if (event.metaKey) {
 			var is_selected_cell = false;
 			for (var i=0; i < num; i++){
-				if (getCellCoords(click_x-1,click_y-2)[0] == getCellCoords(save_clicks_x[i],save_clicks_y[i])[0] && getCellCoords(click_x-1,click_y-2)[1] == getCellCoords(save_clicks_x[i],save_clicks_y[i])[1]){
+				if (cell_coords[0] == save_clicks_x[i] && cell_coords[1] == save_clicks_y[i]){
 					is_selected_cell = true
 					break
 				}
@@ -2324,10 +2323,9 @@ function DetectGridClick(event,is_render_call){
 			}
 		}
 		else if (event.shiftKey && num >= 1){
-			let l = getCellCoords(click_x-1,click_y-2)
-			let c_week = l[0]
-			let c_year = l[1]
-			let l1 = getCellCoords(save_clicks_x[num-1],save_clicks_y[num-1])
+			let c_week = cell_coords[0]
+			let c_year = cell_coords[1]
+			let l1 = [save_clicks_x[num-1],save_clicks_y[num-1]]
 			let p_week = l1[0]
 			let p_year = l1[1]
 			let num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
@@ -2339,14 +2337,14 @@ function DetectGridClick(event,is_render_call){
 				while (t_year < p_year || (t_year == p_year && t_week < p_week)){
 					var is_selected_cell = false;
 					for (var i=0; i < num; i++){
-						if (t_week == getCellCoords(save_clicks_x[i],save_clicks_y[i])[0] && t_year == getCellCoords(save_clicks_x[i],save_clicks_y[i])[1]){
+						if (t_week == save_clicks_x[i] && t_year == save_clicks_y[i]){
 							is_selected_cell = true
 							break
 						}
 					}
 					if (!is_selected_cell){
-						save_clicks_x.push(t_week*9+36)
-						save_clicks_y.push((num_years-t_year-1)*9+1)
+						save_clicks_x.push(t_week)
+						save_clicks_y.push(t_year)
 					}
 					t_week++
 					if (t_week > 51){
@@ -2361,14 +2359,14 @@ function DetectGridClick(event,is_render_call){
 				while (t_year > p_year || (t_year == p_year && t_week > p_week)){
 					var is_selected_cell = false;
 					for (var i=0; i < num; i++){
-						if (t_week == getCellCoords(save_clicks_x[i],save_clicks_y[i])[0] && t_year == getCellCoords(save_clicks_x[i],save_clicks_y[i])[1]){
+						if (t_week == save_clicks_x[i] && t_year == save_clicks_y[i]){
 							is_selected_cell = true
 							break
 						}
 					}
 					if (!is_selected_cell){
-						save_clicks_x.push(t_week*9+36)
-						save_clicks_y.push((num_years-t_year-1)*9+1)
+						save_clicks_x.push(t_week)
+						save_clicks_y.push(t_year)
 					}
 					t_week--
 					if (t_week < 0){
@@ -2380,8 +2378,9 @@ function DetectGridClick(event,is_render_call){
 			
 		}
 		else {
-			save_clicks_x = [click_x-1]
-			save_clicks_y = [click_y-2]
+			save_clicks_x = [cell_coords[0]]
+			save_clicks_y = [cell_coords[1]]
+			console.log(save_clicks_x,save_clicks_y)
 			selected_years = []
 			selected_seasons = []
 			var year_cover_length = year_covers.length
@@ -2422,7 +2421,7 @@ function DetectGridClick(event,is_render_call){
 
 	var can_fade = false
 	for (var i=0; i < save_clicks_x.length; i++){
-		var coords = getCellCoords(save_clicks_x[i],save_clicks_y[i])
+		var coords = [save_clicks_x[i],save_clicks_y[i]]
 		if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
 			can_fade = true
 		}
@@ -2459,18 +2458,18 @@ function DetectGridClick(event,is_render_call){
 				var compressed_value = null
 				value_list.push([])
 				for (var num=0; num < save_clicks_x.length; num++){
-					var coords = getCellCoords(save_clicks_x[num],save_clicks_y[num])
+					var coords = [save_clicks_x[num],save_clicks_y[num]]
 					if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
 						var value = false
 						if (is_seasonaly_adjusted){
 							let st_txt = ''
-							if (parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2)) > 0){
+							if (parseFloat(((((all_data[reading_options[i]][method_options[j]][save_clicks_y[num]][save_clicks_x[num]]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2)) > 0){
 								st_txt = '+'
 							}
-							value = parseFloat(((((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2))
+							value = parseFloat(((((all_data[reading_options[i]][method_options[j]][save_clicks_y[num]][save_clicks_x[num]]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2))
 						}
 						if (!value) {
-							value_list[j].push(((all_data[reading_options[i]][method_options[j]][Math.floor(num_years-save_clicks_y[num]/9)][Math.floor((save_clicks_x[num]-35)/9)]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
+							value_list[j].push(((all_data[reading_options[i]][method_options[j]][save_clicks_y[num]][save_clicks_x[num]]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
 						}
 						else {
 							value_list[j].push(value);
@@ -2544,7 +2543,7 @@ function DetectGridClick(event,is_render_call){
 }
 function RegisterGridClick(event,click_x,click_y,num) {
 	var num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
-	var coords = getCellCoords(click_x,click_y)
+	var coords = [click_x,click_y]
 	if (Math.min(...coords) < 0 || wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] == null){
 		return
 	}
@@ -2560,13 +2559,13 @@ function RegisterGridClick(event,click_x,click_y,num) {
         fillcol = color_lists[color_num][2];
     }
 	size = bsizes[coords[1]][coords[0]]
-	outlines.push(grid_draw.rect( size-1, size-1 ).move( Math.floor((click_x+1)/9)*9-0.5+(9-size)/2, Math.ceil(click_y/9-1)*9+1.5+(9-size)/2).attr({
+	outlines.push(grid_draw.rect( size-1, size-1 ).move( (click_x+4)*9-0.5+(9-size)/2, (num_years-click_y-1)*9+2+(9-size)/2).attr({
 			fill: fillcol
 		, 'fill-opacity': 1
 			, stroke: '#ee0'
 		, 'stroke-width': 0 
         }));
-	covers.push(grid_draw.rect( size-1, size-1 ).move( Math.floor((click_x+1)/9)*9-0.5+(9-size)/2, Math.ceil(click_y/9-1)*9+1.5+(9-size)/2).attr({
+	covers.push(grid_draw.rect( size-1, size-1 ).move( (click_x+4)*9-0.5+(9-size)/2, (num_years-click_y-1)*9+2+(9-size)/2).attr({
 			fill: fillcol
 		, 'fill-opacity': 0
 			, stroke: '#000'
