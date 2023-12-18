@@ -2318,8 +2318,8 @@ function DetectGridClick(event,is_render_call){
 				save_clicks_y.splice(i,1)
 			}
 			else {
-				save_clicks_x[num] = click_x-1
-				save_clicks_y[num] = click_y-2
+				save_clicks_x.push(cell_coords[0])
+				save_clicks_y.push(cell_coords[1])
 			}
 		}
 		else if (event.shiftKey && num >= 1){
