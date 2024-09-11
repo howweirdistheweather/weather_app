@@ -371,12 +371,12 @@ function doSesonalCompression(in_data){
 					}
 					else {
 						out_data[mesurment][func][i][j] = in_data[mesurment][func][i][j]-parseInt(week_totals[0][mesurment][func][j]/week_totals[1][mesurment][func][j])+127
-						if (out_data[mesurment][func][i][j] < 0){
-							out_data[mesurment][func][i][j] = 0
-						}
-						if (out_data[mesurment][func][i][j] > 254){
-							out_data[mesurment][func][i][j] = 254
-						}
+						// if (out_data[mesurment][func][i][j] < 0){
+// 							out_data[mesurment][func][i][j] = 0
+// 						}
+// 						if (out_data[mesurment][func][i][j] > 254){
+// 							out_data[mesurment][func][i][j] = 254
+// 						}
 					}
 				}
 			}
@@ -1645,9 +1645,29 @@ function month_to_week( nmonth ) {
     return week;
 }
 function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,colors,do_text,st_subtract,do_plus){
+	var max_value = Math.max(...histo_plot)
+	for (var i = 0; i < 128; i++) {
+	
+		var fillcol = '#ffffff'
+        draw.rect( 2, color_plot[2][i]*0.5*125/max_value ).move( i*2+15, (125-color_plot[2][i]*125/max_value)*0.5+9 ).attr({
+            'fill':colors[2],
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+        draw.rect( 2, color_plot[1][i]*0.5*125/max_value ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i])*125/max_value)*0.5+9 ).attr({
+            'fill':colors[1],
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+        draw.rect( 2, color_plot[0][i]*0.5*125/max_value ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i])*125/max_value)*0.5+9 ).attr({
+            'fill':colors[0],
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0 
+        });
+	}
 	if (do_text){
 		for (var j = 2; j < histo_plot.length-2; j++){
-			if (histo_plot[j] >= 2){
+			if (histo_plot[j]/max_value >= 0.4){
 				is_mode = true
 				for (var i = 1; i < Math.min(10,j); i++){
 					if (histo_plot[j-i] > histo_plot[j]){
@@ -1665,13 +1685,13 @@ function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,
 						if (parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
 							st_txt = '+'
 						}
-						var mode = draw.text( st_txt+`${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+						var mode = draw.text( st_txt+`${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',9).font('family','Arial');
 					}
 					else {
-						var mode = draw.text( `${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+						var mode = draw.text( `${parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',9).font('family','Arial');
 					}
 					let mode_length = mode.length();
-			        mode.move( j*2 - mode_length/2 + 15,125*0.5+1 ); // center vertically
+			        mode.move( j*2 - mode_length/2 + 15,125*0.5-histo_plot[j]*0.5*125/max_value ); // center vertically
 				}
 			}
 		}
@@ -1680,46 +1700,26 @@ function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,
 			if (parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
 				st_txt = '+'
 			}
-			var min_extrem = draw.text( st_txt+`${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+			var min_extrem = draw.text( st_txt+`${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',9).font('family','Arial');
 		}
 		else {
-			var min_extrem = draw.text( `${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+			var min_extrem = draw.text( `${parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',9).font('family','Arial');
 		}
 	    let min_extrem_length = min_extrem.length();
-	    min_extrem.move( min_num*2 - min_extrem_length/2 + 15,125*0.5+1 ); // center vertically
+	    min_extrem.move( min_num*2 - min_extrem_length/2 + 15,125*0.5+10 ); // center vertically
 
 		if (is_seasonaly_adjusted){
 			let st_txt = ''
 			if (parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
 				st_txt = '+'
 			}
-			var max_extrem = draw.text( st_txt+`${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+			var max_extrem = draw.text( st_txt+`${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',9).font('family','Arial');
 		}
 		else {
-			var max_extrem = draw.text( `${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',8).font('family','Arial');
+			var max_extrem = draw.text( `${parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon+compresion[reading_types[num]][method_types[num]]["min"])*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0]+unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][1])*mul).toFixed(2))}`+unit_names[unit_sets[unit_num]][reading_types[num]][method_types[num]] ).font('size',9).font('family','Arial');
 		}
 	    let max_extrem_length = max_extrem.length();
-	    max_extrem.move( max_num*2 - max_extrem_length/2 + 15,125*0.5+1 ); // center vertically
-	}
-	var max_value = Math.max(...histo_plot)
-	for (var i = 0; i < 128; i++) {
-	
-		var fillcol = '#ffffff'
-        draw.rect( 2, color_plot[2][i]*0.5*125/max_value ).move( i*2+15, (125-color_plot[2][i]*125/max_value)*0.5 ).attr({
-            'fill':colors[2],
-            'shape-rendering':'crispEdges',
-            'stroke-width': 0 
-        });
-        draw.rect( 2, color_plot[1][i]*0.5*125/max_value ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i])*125/max_value)*0.5 ).attr({
-            'fill':colors[1],
-            'shape-rendering':'crispEdges',
-            'stroke-width': 0 
-        });
-        draw.rect( 2, color_plot[0][i]*0.5*125/max_value ).move( i*2+15, (125-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i])*125/max_value)*0.5 ).attr({
-            'fill':colors[0],
-            'shape-rendering':'crispEdges',
-            'stroke-width': 0 
-        });
+	    max_extrem.move( max_num*2 - max_extrem_length/2 + 15,125*0.5+10 ); // center vertically
 	}
 }
 function DrawHistograms(compresed_data,inc_data){
@@ -1771,7 +1771,7 @@ function DrawHistograms(compresed_data,inc_data){
 		var histo_plot = histo_plot_st
 		var color_plot = color_plot_st
 		document.getElementById( 'histogram'+num ).innerHTML = ""; // clear existing
-		var draw = SVG().addTo('#histogram'+num).size( 285, 125*0.5+9 );
+		var draw = SVG().addTo('#histogram'+num).size( 285, 125*0.5+18 );
 		draw.attr({
 		});
 		draws[num] = draw
@@ -1877,7 +1877,7 @@ function DrawHistograms(compresed_data,inc_data){
 		for (i in selects){
 			if (selects[i][1] == num){
 				val = selects[i][0]
-			    select_draws[i] = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+			    select_draws[i] = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)+7 ).attr({
 			        'fill':'#d55',
 			        'shape-rendering':'crispEdges',
 			        'stroke-width': 0 
@@ -1946,7 +1946,7 @@ function DetectHistoClick(num,event) {
 		selected_seasons = []
 	}
 	click_x = event.offsetX
-	click_y = histo_hights[num]-event.offsetY
+	click_y = histo_hights[num]-event.offsetY+9
 	if (click_y < 0 || click_x < mins[num]*2+13 || click_x > maxes[num]*2+17 ||  click_y > 71){
 		return
 	}
@@ -1978,7 +1978,7 @@ function DetectHistoClick(num,event) {
 }
 function RegisterClick(num,event) {
 	click_x = event.offsetX
-	click_y = histo_hights[num]-event.offsetY
+	click_y = histo_hights[num]-event.offsetY+9
 	if (click_y < -4 || click_x < 13 || click_x > 268 ||  click_y > 71){
 		return
 	}
@@ -2005,7 +2005,7 @@ function RegisterClick(num,event) {
 			}
 			selects.push([val,num])
 			var draw = draws[num];
-	        select_draws.push(draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+	        select_draws.push(draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)+7 ).attr({
 	            'fill':'#d55',
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
@@ -2580,7 +2580,7 @@ function RegisterGridClick(event,click_x,click_y,num) {
 			if (highlights[num] == null){
 				highlights[num] = []
 			}
-	        highlights[num].push(draw.rect( 2, histo_data[num]['histo_plot'][histo_index]*0.5*125/max_value ).move( histo_index*2+15,(125-histo_data[num]['histo_plot'][histo_index]*125/max_value)*0.5).attr({
+	        highlights[num].push(draw.rect( 2, histo_data[num]['histo_plot'][histo_index]*0.5*125/max_value ).move( histo_index*2+15,(125-histo_data[num]['histo_plot'][histo_index]*125/max_value)*0.5+9).attr({
 	            'fill':'#eeee00',
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0
@@ -2744,7 +2744,7 @@ function horizontalArrowHandler(x_dif) {
 		selects[i] = [new_x.toString(),num]
 		select_draw.remove()
 		var draw = draws[num];
-	    select_draws[i] = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
+	    select_draws[i] = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)+7 ).attr({
 	        'fill':'#d55',
 	        'shape-rendering':'crispEdges',
 	        'stroke-width': 0 
@@ -2763,13 +2763,13 @@ function DrawLines(num) {
 	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
 	for (var b = 0; b < x_vals.length-1; b ++) {
 		lines[num].push(draw.line(0, histo_hights[num], x_vals[b+1]-x_vals[b], (click_coords[num][x_vals[b+1]]-click_coords[num][x_vals[b]]-histo_hights[num])*(-1))
-		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)).attr({
+		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)+9).attr({
 					fill: '#000'
 			, 'stroke-opacity': line_opacidy
 					, stroke: '#000'
 			, 'stroke-width': 1 
 				}));
-		lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).attr({
+		lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)+7.5).attr({
 					fill: '#000'
 			, 'fill-opacity': line_opacidy
 					, stroke: '#ee0'
@@ -2777,7 +2777,7 @@ function DrawLines(num) {
 				}));
 	}
 	b = x_vals.length-1
-	lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)-1.5).attr({
+	lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)+7.5).attr({
 					fill: '#000'
 			, 'fill-opacity': line_opacidy
 					, stroke: '#ee0'
