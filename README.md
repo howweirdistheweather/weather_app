@@ -95,3 +95,12 @@ echo $GITHUB_PAT | docker login ghcr.io -u mbjones --password-stdin
 ```sh
 docker push ghcr.io/nceas/hwitw:0.9.6
 ```
+
+- Multi-platform builds can be supported using `docker buildx`. First you have to create a builder targeting the patforms of choice, and then you can use it to build an image for those architectures. Here's an example showing a build for arm64 and amd64, and pushing the resulting image to GHCR (you need to be logged in first as described above):
+
+```sh
+docker buildx create --use --platform=linux/arm64,linux/amd64 --name multi-platform-builder
+docker buildx inspect --bootstrap
+docker buildx build --platform linux/arm64/v8,linux/amd64 --push -t ghcr.io/nceas/hwitw:1.0.0 -f helm/Dockerfile ./src
+```
+
