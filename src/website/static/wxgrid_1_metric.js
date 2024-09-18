@@ -169,6 +169,7 @@ var is_shifting = false
 var is_weigth_sliding = false
 var is_range_sliding = false
 var is_sensetivity_sliding = false
+var is_loading = false
 
 var is_trend = false
 var lines = []
@@ -331,7 +332,6 @@ fetch(url , {   method:'GET',
 				unitMulHandaler()
 				makeNewMeasurmeant(0,false)
 				loadFromeQuerry(querrySTR)
-				saveState()
             }
         );
     }
@@ -387,8 +387,11 @@ function doSesonalCompression(in_data){
 var color_selector = document.getElementById("color_selector")
 color_selector.onchange =
 		function () {
-			color_num = parseInt(color_selector.value)
-			RenderGrid()
+			if (!is_loading){
+				color_num = parseInt(color_selector.value)
+				saveState()
+				RenderGrid()
+			}
 		};
 var enable_line_editing = document.getElementById("enable_line_editing")
 enable_line_editing.onchange =
@@ -431,28 +434,31 @@ function updateSeasonality(){
 		all_data = cropped_data
 	}
 	LoadWXGrid();
-	selects = []
-	for (select_draw of select_draws){
-		select_draw.remove()
-	}
-	select_draws = []
-	for (let num=0; num<=measurement_index; num++){
-		if (['dir_modal','dir_net'].includes(method_types[num])){
-			click_coords[num] = {}
-			click_coords[num][13] = 0
-			click_coords[num][mins[num]*2+13] = 0
-			click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
-			click_coords[num][268] = 0
+	if (!is_loading){
+		selects = []
+		for (select_draw of select_draws){
+			select_draw.remove()
 		}
-		else {
-			click_coords[num] = {}
-			click_coords[num][13] = 0
-			click_coords[num][mins[num]*2+13] = 0
-			click_coords[num][maxes[num]*2+17] = histo_hights[num]
-			click_coords[num][268] = histo_hights[num]
+		select_draws = []
+		for (let num=0; num<=measurement_index; num++){
+			if (['dir_modal','dir_net'].includes(method_types[num])){
+				click_coords[num] = {}
+				click_coords[num][13] = 0
+				click_coords[num][mins[num]*2+13] = 0
+				click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
+				click_coords[num][268] = 0
+			}
+			else {
+				click_coords[num] = {}
+				click_coords[num][13] = 0
+				click_coords[num][mins[num]*2+13] = 0
+				click_coords[num][maxes[num]*2+17] = histo_hights[num]
+				click_coords[num][268] = histo_hights[num]
+			}
+			DrawLines(num)
 		}
-		DrawLines(num)
 	}
+	
 }
 //var temp = document.getElementById("temp")
 // temp.onchange =
@@ -497,8 +503,10 @@ function updateTrends(st_sensetivity){
 			if (!is_active) {
 				return
 			}
-			RenderGrid();
-			updateQuerry()
+			if (!is_loading){
+				RenderGrid();
+				updateQuerry()
+			}
 			});
 	}
 	else {
@@ -514,6 +522,7 @@ do_PDO.onchange =
 			else {
 				doPDO = false
 			}
+			saveState()
 			RenderGrid()
 		};
 var download = document.getElementById("download");
@@ -522,6 +531,7 @@ var unit_selector = document.getElementById("unit_selector")
 unit_selector.onchange =
 		function () {
 			unit_num = parseInt(unit_selector.value)
+			saveState()
 			RenderGrid()
 		};
 var unit_names = {'metric':{'temperature':{'default':'°C'},'relative_humidity':{'default':'%'},'wind':{'default':' m/s','dir_modal':'°','dir_net':'°'},'precipitation':{'default':'cm'},'cloud_cover':{'default':'%'}},'american':{'temperature':{'default':'°F'},'relative_humidity':{'default':'%'},'wind':{'default':' mph','dir_modal':'°','dir_net':'°'},'precipitation':{'default':' in.'},'cloud_cover':{'default':'%'}}};
@@ -625,7 +635,9 @@ function saveState(){
 		'method_types':method_types.slice(),
 		'prevs':prevs.slice(),
 		'doPDO':doPDO,
-		'line_editing':enable_line_editing.checked
+		'line_editing':enable_line_editing.checked,
+		'color_num':color_num,
+		'unit_num':unit_num
 	}
 	updateQuerry()
 }
@@ -637,7 +649,7 @@ function getState(){
 	}
 	let state = [is_trend,sensetivity,is_seasonaly_adjusted,mins.slice(),maxes.slice(),is_valid,wx_grdata_min,
 		wx_grdata_max,wx_range_val0,wx_range_val1,t_click_coords.slice(),weight_vals.slice(),measurement_index,
-		reading_types.slice(),method_types.slice(),prevs.slice(),doPDO,enable_line_editing.checked]
+		reading_types.slice(),method_types.slice(),prevs.slice(),doPDO,enable_line_editing.checked,color_num,unit_num]
 	return state
 }
 
@@ -690,7 +702,9 @@ function loadFromeQuerry(querry) {
 		'method_types':state[14],
 		'prevs':state[15],
 		'doPDO':state[16],
-		'line_editing':state[17]
+		'line_editing':state[17],
+		'color_num':state[18],
+		'unit_num':state[19]
 	}
 	loadState()
 }
@@ -747,6 +761,7 @@ function lzw_decode(s) {
     return out.join("");
 }
 function loadState(){
+	is_loading = true
 	t_measurement_index = measurement_index
 	n_measurement_index = state_dict['measurement_index']
 	t_weight_vals = state_dict['weight_vals'].slice()
@@ -767,9 +782,7 @@ function loadState(){
 	maxes = state_dict['maxes'].slice()
 	sensetivity = state_dict['sensetivity']
 	t_is_trend = is_trend
-	console.log(is_trend)
 	is_trend = state_dict['is_trend']
-	console.log(is_trend)
 	if (t_is_trend){
 		document.getElementById('sensetivity_slider').remove()
 	}
@@ -789,6 +802,10 @@ function loadState(){
 	}
 	doPDO = state_dict['doPDO']
 	do_PDO.checked = doPDO;
+	color_num = state_dict['color_num']
+	color_selector.selectedIndex = color_num
+	unit_num = state_dict['unit_num']
+	unit_selector.selectedIndex = unit_num
 	is_valid = state_dict['is_valid']
 	let t_wx_grdata_min = state_dict['wx_grdata_min']
 	let t_wx_grdata_max = state_dict['wx_grdata_max']
@@ -806,6 +823,7 @@ function loadState(){
 		LoadReadingDropdown(i,r_index,m_index)
 	}
 	click_coords = []
+	is_loading = false
 	let t_click_coords = state_dict['click_coords']
 	for (var i = 0; i < t_click_coords.length; i++){
 	    click_coords.push({...t_click_coords[i]})
@@ -813,7 +831,8 @@ function loadState(){
 	for (var i = 0; i < measurement_index+1; i++){
 		DrawLines(i)
 	}
-	RenderGrid()
+	LoadWXGrid()
+	saveState()
 }
 
 function downloadData(){
@@ -1530,32 +1549,35 @@ function LoadMethodDropdown(num,i) {
 	for (dropdown of method_dropdowns) {
 		method_types.push(dropdown.value);
 	}
-	LoadWXGrid();
-	if (['dir_modal','dir_net'].includes(method_types[num])){
-		click_coords[num] = {}
-		click_coords[num][13] = 0
-		click_coords[num][mins[num]*2+13] = 0
-		click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
-		click_coords[num][maxes[num]*2+17] = 0
-		click_coords[num][268] = 0
-	}
-	else {
-		click_coords[num] = {}
-		click_coords[num][13] = 0
-		click_coords[num][mins[num]*2+13] = 0
-		click_coords[num][maxes[num]*2+17] = histo_hights[num]
-		click_coords[num][268] = histo_hights[num]
-		console.log(click_coords[num])
-	}
-	for (i in selects){
-		if (selects[i][1] == num){
-			selects.splice(i);
-			select_draws[i].remove();
-			select_draws.splice(i);
+	if (!is_loading){
+		LoadWXGrid();
+		if (['dir_modal','dir_net'].includes(method_types[num])){
+			click_coords[num] = {}
+			click_coords[num][13] = 0
+			click_coords[num][mins[num]*2+13] = 0
+			click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
+			click_coords[num][maxes[num]*2+17] = 0
+			click_coords[num][268] = 0
 		}
+		else {
+			click_coords[num] = {}
+			click_coords[num][13] = 0
+			click_coords[num][mins[num]*2+13] = 0
+			click_coords[num][maxes[num]*2+17] = histo_hights[num]
+			click_coords[num][268] = histo_hights[num]
+			console.log(click_coords[num])
+		}
+		for (i in selects){
+			if (selects[i][1] == num){
+				selects.splice(i);
+				select_draws[i].remove();
+				select_draws.splice(i);
+			}
+		}
+		DrawLines(num)
+		RenderGrid()
 	}
-	DrawLines(num)
-	RenderGrid()
+	
 	
 }
 function LoadDirectionDropdown(num) {
@@ -2838,17 +2860,17 @@ function DrawSesonalitys(compresed_data,months,off_x){
 	for (var i = 0; i < 52; i++) {
 		
 		var fillcol = '#ffffff'
-        draw.rect( 9, color_plot[2][i]*0.5 ).move( i*9+35, (compresed_data.length-color_plot[2][i])*0.5 ).attr({
+        draw.rect( 9, color_plot[2][i]*0.5 ).move( i*9+35, (compresed_data.length-color_plot[2][i])*0.5).attr({
             'fill':color_lists[color_num][2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 9, color_plot[1][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]))*0.5 ).attr({
+        draw.rect( 9, color_plot[1][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]))*0.5).attr({
             'fill':color_lists[color_num][1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5 ).attr({
+        draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5).attr({
             'fill':color_lists[color_num][0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
