@@ -6,3 +6,4 @@ dask
 python-dateutil
 parsl
 h5py
+pkg_resources
