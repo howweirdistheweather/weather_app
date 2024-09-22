@@ -52,7 +52,7 @@ document.onkeydown = function() {
 	console.log(key)
     if ( key == 8 || key == 46 ) {
         HandleDelete()
-		prev_states.push(state_dict)
+		
 		saveState()
 		redo_states = []
 		is_shifting = false
@@ -63,7 +63,7 @@ document.onkeydown = function() {
 	if (key == 38) {
 		arrowHandler(1)
 		if (!is_shifting){
-			prev_states.push(state_dict)
+			
 		}
 		saveState()
 		redo_states = []
@@ -75,7 +75,7 @@ document.onkeydown = function() {
 	if (key == 40) {
 		arrowHandler(-1)
 		if (!is_shifting){
-			prev_states.push(state_dict)
+			
 		}
 		saveState()
 		redo_states = []
@@ -87,7 +87,7 @@ document.onkeydown = function() {
 	if (key == 37) {
 		horizontalArrowHandler(-1)
 		if (!is_shifting){
-			prev_states.push(state_dict)
+			
 		}
 		saveState()
 		redo_states = []
@@ -99,7 +99,7 @@ document.onkeydown = function() {
 	if (key == 39) {
 		horizontalArrowHandler(1)
 		if (!is_shifting){
-			prev_states.push(state_dict)
+			
 		}
 		saveState()
 		redo_states = []
@@ -116,10 +116,11 @@ document.onkeydown = function() {
 		select_draws = []
 	}
 	if (key == 90 && event.metaKey){
+		is_undoing = true
 		if (event.shiftKey && redo_states.length > 0){
-			saveState()
+			saveState("undo")
 			prev_states.push(state_dict)
-			state_dict = redo_states[prev_states.length-1]
+			state_dict = redo_states[redo_states.length-1]
 			loadState()
 			redo_states.splice(-1)
 			is_shifting = false
@@ -128,7 +129,7 @@ document.onkeydown = function() {
 			is_sensetivity_sliding = false
 		}
 		else if (!event.shiftKey && prev_states.length > 0){
-			saveState()
+			saveState("undo")
 			redo_states.push(state_dict)
 			state_dict = prev_states[prev_states.length-1]
 			loadState()
@@ -138,6 +139,7 @@ document.onkeydown = function() {
 			is_range_sliding = false
 			is_sensetivity_sliding = false
 		}
+		is_undoing = false
 	}
 	if (document.getElementById("myModal").style.display == "block"){
 //		update_txt()
@@ -170,6 +172,8 @@ var is_weigth_sliding = false
 var is_range_sliding = false
 var is_sensetivity_sliding = false
 var is_loading = false
+var is_undoing = false
+var prev_update = "base"
 
 var is_trend = false
 var lines = []
@@ -202,7 +206,6 @@ var selects = []
 var select_draws = []
 var draws = []
 var compresed_data = []
-var is_valid = 1
 var wx_grdata_min = 0.0;
 var wx_grdata_max = 1.0;
 var wx_range_val0 = 0.33;
@@ -410,7 +413,7 @@ enable_line_editing.onchange =
 			for (let i=0; i<=measurement_index; i++){
 				DrawLines(i)
 			}
-			updateQuerry()
+			saveState()
 		};
 var seasonal_adjust = document.getElementById("seasonal_adjust")
 seasonal_adjust.onchange =
@@ -418,7 +421,7 @@ seasonal_adjust.onchange =
 			is_seasonaly_adjusted = seasonal_adjust.checked
 			updateSeasonality()
 			RenderGrid()
-			prev_states.push(state_dict)
+			
 			saveState()
 			redo_states = []
 			is_shifting = false
@@ -475,17 +478,18 @@ function updateSeasonality(){
 var trend = document.getElementById("trend")
 trend.onchange =
 		function () {
+			const was_undoing = is_undoing
+			is_undoing = true
 			is_trend = trend.checked
 			updateTrends(5)
 			RenderGrid();
-			prev_states.push(state_dict)
-			saveState()
 			redo_states = []
 			is_shifting = false
 			is_weigth_sliding = false
 			is_range_sliding = false
 			is_sensetivity_sliding = false
-			updateQuerry()
+			is_undoing = was_undoing
+			saveState()
 		};
 function updateTrends(st_sensetivity){
 	if (is_trend){
@@ -505,7 +509,7 @@ function updateTrends(st_sensetivity){
 			}
 			if (!is_loading){
 				RenderGrid();
-				updateQuerry()
+				saveState("trend")
 			}
 			});
 	}
@@ -612,7 +616,19 @@ function compress(num,inputs){
 	return parseInt((num-inputs[0])/inputs[2])
 }
 
-function saveState(){
+function saveState(update_type="base"){
+	console.log(update_type)
+	console.log((update_type == "base" || prev_update != update_type) && !is_undoing)
+	if (is_undoing && update_type != "undo"){
+		console.log("ewr")
+		updateQuerry()
+		return
+	}
+	if ((update_type == "base" || prev_update != update_type) && !is_undoing && update_type != "no_save"){
+		console.log("rew")
+		prev_states.push(state_dict)
+	}
+	prev_update = update_type
 	var t_click_coords = []
 	for (var i = 0; i < click_coords.length; i++){
 	    t_click_coords[i] = {...click_coords[i]};
@@ -623,7 +639,6 @@ function saveState(){
 		'is_seasonaly_adjusted':is_seasonaly_adjusted,
 		'mins':mins.slice(),
 		'maxes':maxes.slice(),
-		'is_valid':is_valid,
 		'wx_grdata_min':wx_grdata_min,
 		'wx_grdata_max':wx_grdata_max,
 		'wx_range_val0':wx_range_val0,
@@ -647,7 +662,7 @@ function getState(){
 	for (var i = 0; i < click_coords.length; i++){
 	    t_click_coords[i] = {...click_coords[i]};
 	}
-	let state = [is_trend,sensetivity,is_seasonaly_adjusted,mins.slice(),maxes.slice(),is_valid,wx_grdata_min,
+	let state = [is_trend,sensetivity,is_seasonaly_adjusted,mins.slice(),maxes.slice(),wx_grdata_min,
 		wx_grdata_max,wx_range_val0,wx_range_val1,t_click_coords.slice(),weight_vals.slice(),measurement_index,
 		reading_types.slice(),method_types.slice(),prevs.slice(),doPDO,enable_line_editing.checked,color_num,unit_num]
 	return state
@@ -657,15 +672,15 @@ function updateQuerry(){
 	state = getState()
 	let r_types = state_dict['reading_types']
 	let m_types = state_dict['method_types']
-	for (var i = 0; i <= state[12]; i++){
-		state[11][i] = Math.round(state[11][i]*100)/100;
-		state[15][i] = Math.round(state[15][i]*100)/100;
-		r_type = state[13][i]
-		state[13][i] = reading_options.indexOf(r_type)
-		state[14][i] = method_dict[r_type].indexOf(state[14][i])
+	for (var i = 0; i <= state[11]; i++){
+		state[10][i] = Math.round(state[10][i]*100)/100;
+		state[14][i] = Math.round(state[14][i]*100)/100;
+		r_type = state[12][i]
+		state[12][i] = reading_options.indexOf(r_type)
+		state[13][i] = method_dict[r_type].indexOf(state[13][i])
 	}
+	state[7] = Math.round(state[7]*100)/100;
 	state[8] = Math.round(state[8]*100)/100;
-	state[9] = Math.round(state[9]*100)/100;
 	//console.log(JSON.stringify(state))
 	//console.log(JSON.stringify(state).length)
 	//console.log(lzw_encode(JSON.stringify(state)).length)
@@ -680,9 +695,9 @@ function loadFromeQuerry(querry) {
 		return
 	}
 	var state = JSON.parse(querry)
-	for (var i = 0; i <= state[12]; i++){
-		state[13][i] = reading_options[state[13][i]]
-		state[14][i] = method_dict[state[13][i]][state[14][i]]
+	for (var i = 0; i <= state[11]; i++){
+		state[12][i] = reading_options[state[12][i]]
+		state[13][i] = method_dict[state[12][i]][state[13][i]]
 	}
 	state_dict = {
 		'is_trend':state[0],
@@ -690,21 +705,20 @@ function loadFromeQuerry(querry) {
 		'is_seasonaly_adjusted':state[2],
 		'mins':state[3],
 		'maxes':state[4],
-		'is_valid':state[5],
-		'wx_grdata_min':state[6],
-		'wx_grdata_max':state[7],
-		'wx_range_val0':state[8],
-		'wx_range_val1':state[9],
-		'click_coords':state[10],
-		'weight_vals':state[11],
-		'measurement_index':state[12],
-		'reading_types':state[13],
-		'method_types':state[14],
-		'prevs':state[15],
-		'doPDO':state[16],
-		'line_editing':state[17],
-		'color_num':state[18],
-		'unit_num':state[19]
+		'wx_grdata_min':state[5],
+		'wx_grdata_max':state[6],
+		'wx_range_val0':state[7],
+		'wx_range_val1':state[8],
+		'click_coords':state[9],
+		'weight_vals':state[10],
+		'measurement_index':state[11],
+		'reading_types':state[12],
+		'method_types':state[13],
+		'prevs':state[14],
+		'doPDO':state[15],
+		'line_editing':state[16],
+		'color_num':state[17],
+		'unit_num':state[18]
 	}
 	loadState()
 }
@@ -806,7 +820,6 @@ function loadState(){
 	color_selector.selectedIndex = color_num
 	unit_num = state_dict['unit_num']
 	unit_selector.selectedIndex = unit_num
-	is_valid = state_dict['is_valid']
 	let t_wx_grdata_min = state_dict['wx_grdata_min']
 	let t_wx_grdata_max = state_dict['wx_grdata_max']
 	wx_range_val0 = state_dict['wx_range_val0']
@@ -832,7 +845,7 @@ function loadState(){
 		DrawLines(i)
 	}
 	LoadWXGrid()
-	saveState()
+	saveState("no_save")
 }
 
 function downloadData(){
@@ -950,11 +963,6 @@ function downloadData(){
 	link.click();
 }
 
-function whatIsWeird(){
-	
-}
-
-
 function makeNewElement(id, type, atributes, txt) {
 	var theDiv = document.getElementById(id);
 	var content = document.createElement(type);
@@ -1008,7 +1016,7 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 	invert_btns.push(document.getElementById('invert_buttion'+curent_id_num));
 	invert_btns[curent_id_num].addEventListener("click", function() {
 		invertHandeler(curent_id_num,true)
-		prev_states.push(state_dict)
+		
 		saveState()
 		redo_states = []
 		is_shifting = false
@@ -1075,7 +1083,7 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 			
 			DrawLines(curent_id_num)
 			RenderGrid()
-			prev_states.push(state_dict)
+			
 			saveState()
 			redo_states = []
 			is_shifting = false
@@ -1089,7 +1097,7 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 				return
 			}
 			LoadMethodDropdown(curent_id_num,0);
-			prev_states.push(state_dict)
+			
 			saveState()
 			redo_states = []
 			is_shifting = false
@@ -1118,6 +1126,7 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 	if (!is_load_call){
 		DrawLines(curent_id_num)
 	}
+	
 //	for (i = 0; i <= curent_id_num; i++){
 //		DrawLines(i)
 //	}
@@ -1148,7 +1157,7 @@ invert_all_button.addEventListener("click", function () {
 		invertHandeler(i,false)
 	}
 	RenderGrid()
-	prev_states.push(state_dict)
+	
 	saveState()
 	redo_states = []
 	is_shifting = false
@@ -1229,19 +1238,22 @@ function detectMove() {
 
 function newMeasurementHandeler(event,val,is_load_call) {
 	let can_save = false
-	console.log(is_load_call)
+	const was_undoing = is_undoing
+	is_undoing = true
 	if (val == undefined){
 		let v = 0.5
 		is_load_call = false
 		can_save = true
 	}
 	if ( measurement_index >= 4 || !is_active ){
+		is_undoing = false
 		return;
 	}
 	measurement_index ++
 	makeNewMeasurmeant(measurement_index,is_load_call)
+	is_undoing = was_undoing
 	if (can_save){
-		prev_states.push(state_dict)
+		
 		saveState()
 		redo_states = []
 		is_shifting = false
@@ -1252,11 +1264,13 @@ function newMeasurementHandeler(event,val,is_load_call) {
 }
 function deleteMeasurementHandeler() {
 	if (measurement_index > 0 || !is_active) {
+		const was_undoing = is_undoing
+		is_undoing = true
 		deleteMeasurement()
 		DrawLines(measurement_index)
 		LoadWXGrid()
 		reset_sliders(measurement_index,false)
-		prev_states.push(state_dict)
+		is_undoing = was_undoing
 		saveState()
 		redo_states = []
 		is_shifting = false
@@ -1344,7 +1358,7 @@ function reset_slider(i,num,is_load_call){
 		weight_vals[i] = weight_val
 	    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
 		handleSlider(i,weight_val)
-		updateQuerry()
+		saveState("weight")
 		});
 }
 
@@ -1389,7 +1403,7 @@ function handleSlider2(num,weight_val) {
 				weight_vals[i] = weight_val
 			    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
 				handleSlider(i,weight_val)
-				updateQuerry()
+				saveState("weight")
 				});
 			is_setting = false
 		}
@@ -1435,7 +1449,7 @@ function redoSlider2(i,num,total_weght,set_num,weights) {
 				weight_vals[i] = weight_val
 			    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
 				handleSlider(i,weight_val)
-				updateQuerry()
+				saveState("weight")
 				});
 		}
 		else {
@@ -1503,7 +1517,7 @@ function redoSlider(i,num,total_weght,set_num) {
 			weight_vals[i] = weight_val
 		    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
 			handleSlider(i,weight_val)
-			updateQuerry()
+			saveState("weight")
 			});
 	}
 	is_setting = false
@@ -1624,7 +1638,7 @@ function generateSlider(v1,v2){
 	    wx_stext_val0.textContent = wx_range_val0.toFixed(2);
 	    wx_stext_val1.textContent = wx_range_val1.toFixed(2);
 	    RenderGrid();
-		updateQuerry()
+		saveState("range")
 	});
 }
 
@@ -1952,7 +1966,7 @@ function AddClickHandler(num) {
 			return
 		}
 		RegisterClick(num,event)
-		prev_states.push(state_dict)
+		
 		saveState()
 		is_shifting = false
 		is_weigth_sliding = false
