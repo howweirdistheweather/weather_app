@@ -174,6 +174,7 @@ var is_sensetivity_sliding = false
 var is_loading = false
 var is_undoing = false
 var prev_update = "base"
+const offset = 28
 
 var is_trend = false
 var lines = []
@@ -206,6 +207,7 @@ var selects = []
 var select_draws = []
 var draws = []
 var compresed_data = []
+var data_len = 0
 var wx_grdata_min = 0.0;
 var wx_grdata_max = 1.0;
 var wx_range_val0 = 0.33;
@@ -331,6 +333,12 @@ fetch(url , {   method:'GET',
 				for (var i=0; i < reading_options.length; i++){
 					method_dict[reading_options[i]] = Object.keys(all_data[reading_options[i]])
 				}
+				for (year of cropped_data[reading_options[0]][method_dict[reading_options[0]][0]]){
+					if (year[0]){
+						data_len ++
+					}
+				}
+				console.log(data_len)
 				unitNamesHandaler()
 				unitMulHandaler()
 				makeNewMeasurmeant(0,false)
@@ -2070,6 +2078,7 @@ function getCellCoords(x,y){
 }
 
 function DetectYearClick(event,is_render_call){
+	y_coord = event.offsetY-offset-data_len/2+20
 	if (!is_render_call && !(event.metaKey || event.shiftKey)){
 		save_clicks_x = []
 		save_clicks_y = []
@@ -2083,7 +2092,7 @@ function DetectYearClick(event,is_render_call){
 			season_covers.splice(-1)
 		} 
 	}
-	if (!is_render_call && event.offsetY < compresed_data.length/2+14){
+	if (!is_render_call && y_coord < 0){
 		if (!(event.metaKey || event.shiftKey)){
 			var year_cover_length = year_covers.length
 			for (let i=0; i < year_cover_length; i++){
@@ -2097,7 +2106,7 @@ function DetectYearClick(event,is_render_call){
 	num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
 	if (!is_render_call){
 		if (event.shiftKey && selected_years.length >= 1){
-			c_year = Math.floor((event.offsetY-17)/9)
+			c_year = Math.floor((y_coord)/9)
 			p_year = selected_years[selected_years.length-1]
 			t_year = c_year
 			if (c_year == p_year){
@@ -2121,7 +2130,7 @@ function DetectYearClick(event,is_render_call){
 			}
 		}
 		else {
-			selected_years.push(Math.floor((event.offsetY-17)/9))
+			selected_years.push(Math.floor((y_coord)/9))
 		}
 	}
 	var year_cover_length = year_covers.length
@@ -2177,14 +2186,14 @@ function DetectYearClick(event,is_render_call){
 			for (let i=0; i < 52; i++){
 				var is_selected = false
 				for (var j=0; j < save_clicks_x.length; j++){
-					if (i == save_clicks_x[j] && compresed_data.length-Math.floor((event.offsetY+1)/9-1)+5 == save_clicks_y[j]){
+					if (i == save_clicks_x[j] && compresed_data.length-Math.floor((y_coord-27)/9-1) == save_clicks_y[j]){
 						is_selected = true
 						break
 					}
 				}
 				if (!is_selected){
 					save_clicks_x.push(i)
-					save_clicks_y.push(compresed_data.length-Math.floor((event.offsetY+1)/9)+5)
+					save_clicks_y.push(compresed_data.length-Math.floor((y_coord-27)/9))
 				}
 			}
 		}
@@ -2197,7 +2206,7 @@ function DetectYearClick(event,is_render_call){
 	}
 	for (let i=4; i < num_years+4; i++){
 		if (!(selected_years.includes(i))){
-			year_covers.push(year_draw.rect( 52*3, 9 ).move( move, (i+2)*9-2.5).attr({
+			year_covers.push(year_draw.rect( 52*3, 9 ).move( move, (i-2)*9+data_len/2+offset-4).attr({
 					fill: '#fff'
 				, 'fill-opacity': 0.5
 						, stroke: '#ee0'
@@ -2319,7 +2328,7 @@ function DetectSeasonClick(event,is_render_call){
 	}
 	for (let i=0; i < 52; i++){
 		if (!(selected_seasons.includes(i))){
-			season_covers.push(season_draw.rect( 9, num_years*0.5 ).move( i*9+35, 30).attr({
+			season_covers.push(season_draw.rect( 9, num_years*0.5 ).move( i*9+35,offset).attr({
 					fill: '#fff'
 				, 'fill-opacity': 0.5
 						, stroke: '#ee0'
@@ -2852,7 +2861,7 @@ function DrawSesonalitys(compresed_data,months,off_x){
 		}
 	}
 	document.getElementById( 'gr_sesonalitys').innerHTML = ""; // clear existing
-	var draw = SVG().addTo('#gr_sesonalitys').size( 52*9+35, compresed_data.length*0.5 );
+	var draw = SVG().addTo('#gr_sesonalitys').size( 52*9+35, data_len*0.5+offset);
 	draw.attr({
 	    'shape-rendering':'crispEdges'
 	});
@@ -2874,17 +2883,17 @@ function DrawSesonalitys(compresed_data,months,off_x){
 	for (var i = 0; i < 52; i++) {
 		
 		var fillcol = '#ffffff'
-        draw.rect( 9, color_plot[2][i]*0.5 ).move( i*9+35, (compresed_data.length-color_plot[2][i])*0.5).attr({
+        draw.rect( 9, color_plot[2][i]*0.5 ).move( i*9+35, (data_len-color_plot[2][i])*0.5+offset).attr({
             'fill':color_lists[color_num][2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 9, color_plot[1][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]))*0.5).attr({
+        draw.rect( 9, color_plot[1][i]*0.5 ).move( i*9+35, (data_len-(color_plot[2][i]+color_plot[1][i]))*0.5+offset).attr({
             'fill':color_lists[color_num][1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+35, (compresed_data.length-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5).attr({
+        draw.rect( 9, color_plot[0][i]*0.5 ).move( i*9+35, (data_len-(color_plot[2][i]+color_plot[1][i]+color_plot[0][i]))*0.5+offset).attr({
             'fill':color_lists[color_num][0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
@@ -2940,59 +2949,59 @@ function DrawYears(compresed_data,num_years){
 	}
 	for (var i = 0; i < compresed_data.length; i++) {
 		
-        draw.rect( color_plot[2][i]*3, 9 ).move( move, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+        draw.rect( color_plot[2][i]*3, 9 ).move( move, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
             'fill':color_lists[color_num][2],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( color_plot[1][i]*3, 9 ).move( color_plot[2][i]*3 + move, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+        draw.rect( color_plot[1][i]*3, 9 ).move( color_plot[2][i]*3 + move, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
             'fill':color_lists[color_num][1],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
-        draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3 + move, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+        draw.rect( color_plot[0][i]*3, 9 ).move( (color_plot[2][i]+color_plot[1][i])*3 + move, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
             'fill':color_lists[color_num][0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
         });
 		if (doPDO){
 			if ((i < PDO.length) && (PDO[i] > 0.75)) {
-		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
 		            'fill':color_lists[2][2],
 		            'shape-rendering':'crispEdges',
 		            'stroke-width': 0, 
 		        });
 			}
 			else if ((i < PDO.length) && (PDO[i] > -0.75)) {
-		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
 		            'fill':color_lists[2][1],
 		            'shape-rendering':'crispEdges',
 		            'stroke-width': 0 , 
 		        });
 			}
 			else if (i < PDO.length) {
-		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		        draw.circle( 8 ).move( 0, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
 		            'fill':color_lists[2][0],
 		            'shape-rendering':'crispEdges',
 		            'stroke-width': 0 , 
 		        });
 			}
 			if ((i < ENSO.length) && (ENSO[i] > 0.75)) {
-		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
 		            'fill':color_lists[2][2],
 		            'shape-rendering':'crispEdges',
 		            'stroke-width': 0 
 		        });
 			}
 			else if ((i < ENSO.length) && (ENSO[i] > -0.75)) {
-		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
 		            'fill':color_lists[2][1],
 		            'shape-rendering':'crispEdges',
 		            'stroke-width': 0 
 		        });
 			}
 			else if (i < ENSO.length) {
-		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9 + compresed_data.length/2+5).attr({
+		        draw.circle( 8 ).move( 11, (compresed_data.length-i)*9+data_len/2+offset+5).attr({
 		            'fill':color_lists[2][0],
 		            'shape-rendering':'crispEdges',
 		            'stroke-width': 0 
@@ -3008,7 +3017,7 @@ function DrawYears(compresed_data,num_years){
         });
 	}
 	for (year of line_years) {
-        draw.rect( 52*3 +22, 1 ).move( 0, year[1]*9+9 + compresed_data.length/2+5).attr({
+        draw.rect( 52*3 +22, 1 ).move( 0, year[1]*9+9+data_len/2+offset+5).attr({
             'fill':'#ffffff'+year[0],
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
