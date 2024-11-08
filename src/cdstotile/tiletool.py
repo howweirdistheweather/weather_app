@@ -92,6 +92,30 @@ def out_filename( out_path:str, dgroup_name:str, year:int ) -> (dict):
     return o_names
 
 
+# open input dataset for given year (the cds downloads)
+def open_ds( inp_path:str, dir_name:str, year:int, var_name:str ) -> netCDF4.Dataset:
+    # we have 4 possibilities for the downloaded cds data we are trying to open:
+    # The entire year in one file vs. one file for each day in year (MFDataset())
+    # And oldcds dimension 'time' vs newcds dimension 'valid_time'
+
+    # first try to load the daily set of netcdfs
+    fullname, filename = inp_multiset_filename( inp_path, dir_name, year, var_name )
+    try:
+        # todo: make sure this fails if some daily files are missing in the middle of the set
+        # ...time should monotonically increase
+        ds = netCDF4.MFDataset( files=fullname, check=True ) #aggdim='valid_time') aggdim='time')
+    except OSError as ex:
+        print( f'daily input {filename} could not be opened. {ex} Trying yearly.' )
+        # ok try to open the single big yearly netcdf
+        fullname, filename = inp_filename( inp_path, dir_name, year, var_name )
+        try:
+            ds = netCDF4.Dataset( fullname, 'r' )
+        except OSError as ex:
+            print( f'{filename} could not be opened! {ex}' )
+            exit( -1 )
+    return ds
+
+
 # does output file already exist
 def output_exists( out_path:str, dgroup_name:str, year:int ) -> bool:
     o_names = out_filename( out_path, dgroup_name, year )
@@ -250,23 +274,14 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         var_name = var[0]
         short_var_name = var[1]
 
-        # first try to load the daily set of netcdfs
-        fullname, filename = inp_multiset_filename( inp_path, dir_name, year, var_name )
-        try:
-            # todo: make sure this fails if some daily files are missing in the middle of the set
-            # ...time should monotonically increase
-            ds = netCDF4.MFDataset( files=fullname, check=True, aggdim='time' )
-        except OSError as ex:
-            print( f'daily input {filename} could not be opened. {ex} Trying yearly.' )
-            # ok try to open the single big yearly netcdf
-            fullname, filename = inp_filename( inp_path, dir_name, year, var_name )
-            try:
-                ds = netCDF4.Dataset( fullname, 'r' )
-            except OSError as ex:
-                print( f'{filename} could not be opened! {ex}' )
-                exit( -1 )
-        
-        total_num_hours = min( len(ds.dimensions['time']), total_num_hours )
+        # open dataset for year
+        ds = open_ds( inp_path, dir_name, year, var_name )
+        if 'valid_time' in ds.dimensions:
+            time_dim_name = 'valid_time'
+        else:
+            time_dim_name = 'time'
+
+        total_num_hours = min( len(ds.dimensions[time_dim_name]), total_num_hours )
         num_lat         = ds.dimensions['latitude'].size
         num_long        = ds.dimensions['longitude'].size
         num_dimensions  = len(ds.dimensions)
@@ -310,25 +325,10 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             ds =                ncds['dataset']
             short_var_name =    ncds['short_var_name']
 
-            # load the weeks worth of hours (for all locations in file). transpose to lat,long,hour
+            # get the weeks worth of hours (for all locations in file). transpose to lat,long,hour
             hr_0 = week_i * HOURS_PER_WEEK
             hr_1 = hr_0 + HOURS_PER_WEEK
-            if num_dimensions == 3:
-                var_week = numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:], axes=(1, 2, 0) )
-
-            elif num_dimensions == 4:
-                # todo: we shouldn't need this code. cdstool should be fixing expver
-                # handle current year. it has a weird expver column / extra dimension
-                var_week = numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:][:], axes=(2, 3, 0, 1) )
-                # convert invalids to 0
-                var_week = numpy.ma.filled( var_week, 0 )
-                # sum columns on dimension 3 and then drop column 1
-                var_week[:, :, :, 0] = var_week[:, :, :, 0] + var_week[:, :, :, 1]
-                var_week = numpy.delete( var_week, 1, axis=3 )
-
-            else:
-                raise RuntimeError(f"Unknown dataset - it should have either 3 or 4 dimensions, but instead has {num_dimensions}.")
-
+            var_week = numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:], axes=(1, 2, 0) )
             assert( var_week.dtype == numpy.float64 )
             week_data.append( var_week )
 
