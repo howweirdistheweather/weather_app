@@ -156,6 +156,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
   </style>
 </head>
 <body>
+  <a id="downloadAnchorElem" style="display:none"></a>
   <div style="font-size: 20px;">How weird is the weather</div>
   <div id="myModal" class="modal">
 
@@ -170,17 +171,18 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
   </div>
   <div id=data_storage></div>
   <div style="padding-bottom: 5px;">HWITW project Copyright (C) 2020 2021</div>
-  <select id=color_selector style="display: inline-block;"><option value="0">purple</option><option value="1">red</option><option value="2">hot-cold</option><option value="3">blue</option><option value="4">green</option><option value="5">sepia</option><option value="6">pastell</option></select>
   <select id=unit_selector style="display: inline-block;"><option value="0">metric</option><option value="1">american</option></select>
-  <div id=location style="display: inline-block;"></div> <!--  margin-left: 100px;-->
+  <select id=color_selector style="display: inline-block;"><option value="0">purple</option><option value="1">red</option><option value="2">hot-cold</option><option value="3">blue</option><option value="4">green</option><option value="5">sepia</option><option value="6">pastell</option></select>
+  <input type="checkbox" id="color_grad" style="display: inline-block; margin-left: 20px" name="color_grad" value="1"> Use color gradeints
   <div></div>
-  <input type="checkbox" id="enable_line_editing" style="display: inline-block;" name="enable_line_editing" value="1"> Enable line editing
+  <input type="checkbox" id="enable_line_editing" style="display: inline-block;" name="enable_line_editing" value="1"> Enable transfer function editing
   <input type="checkbox" id="seasonal_adjust" style="display: inline-block; margin-left: 10px" name="seasonal_adjust" value="1"> Seasonally adjusted metrics
   <input type="checkbox" id="trend" style="display: inline-block; margin-left: 10px" name="enable_line_editing" value="1"> Display streaks
   <div id=sensetivity_slider_holder style="display: inline-block; margin-left: 20px;"></div>
   <input type="checkbox" id="do_PDO" style="display: inline-block; margin-left: 20px" name="enable_line_editing" value="1"> Display PDO and ENSO
   <button id="download" type="button" style="display: inline-block; margin-left: 20px; background-color: #fff; border-width: thin; border-radius: 2px;" name="enable_line_editing" value="1"> Download data</button>
   <button id="reset" type="button" style="display: inline-block; margin-left: 20px; background-color: #fff; border-width: thin; border-radius: 2px;" name="enable_line_editing" value="1">Reset all</button>
+  <div id=location style="display: inline-block;"></div>
   <!--input type="checkbox" id="temp" style="display: inline-block; margin-left: 20px" name="temp" value="1"> Display PDO and ENSO-->
   <!--select id=type_selector><option value="1">one metric</option><option value="2">two metrics</option></select>
   <button type="button" id=save_measurement_button style="display: inline-block;">save</button></div>
