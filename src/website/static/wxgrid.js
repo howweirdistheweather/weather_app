@@ -394,7 +394,6 @@ fetch(url , {   method:'GET',
 				unitNamesHandaler()
 				unitMulHandaler()
 				makeNewMeasurmeant(0,false)
-				console.log(querrySTR)
 				if (querrySTR) {
 					loadFromeQuerry(querrySTR)
 				}
@@ -530,6 +529,7 @@ function updateSeasonality(is_load_call){
 	}
 	if (!is_load_call){
 		LoadWXGrid();
+		RenderGrid()
 		if (!is_loading){
 			selects = []
 			for (select_draw of select_draws){
@@ -985,6 +985,7 @@ function lzw_decode(s) {
     return out.join("");
 }
 function loadState(){
+	is_loading = true
 	t_measurement_index = measurement_index
 	n_measurement_index = state_dict['measurement_index']
 	t_weight_vals = state_dict['weight_vals'].slice()
@@ -996,10 +997,9 @@ function loadState(){
 	}
 	else {
 		for (var i = n_measurement_index; i > t_measurement_index; i--){
-			newMeasurementHandeler(null,true)
+			newMeasurementHandeler(null,null,true)
 		}
 	}
-	is_loading = true
 	reset_sliders(measurement_index,true)
 	weight_vals = state_dict['weight_vals'].slice()
 	mins = state_dict['mins'].slice()
@@ -1056,6 +1056,7 @@ function loadState(){
 		DrawLines(i)
 	}
 	LoadWXGrid()
+	RenderGrid()
 	saveState("no_save")
 }
 
@@ -1206,10 +1207,10 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 	
 	makeNewElement("measurement"+curent_id_num,"select",{"id":"gr-method_dropdown"+curent_id_num},null);
 	method_dropdowns.push(document.getElementById('gr-method_dropdown'+curent_id_num));
-	
-	if (!is_load_call){
-		LoadReadingDropdown(curent_id_num,0,0);
-	}
+	// var was_loading = is_loading
+	// is_loading = true
+	LoadReadingDropdown(curent_id_num,0,0);
+	// is_loading = was_loading
 	makeNewElement("measurement"+curent_id_num,"button",{"id":"invert_button"+curent_id_num,"style":"font-size: 12px; height: 19px; background-color: #fff; border-width: thin; border-radius: 2px;"},"invert");
 	invert_btns.push(document.getElementById('invert_button'+curent_id_num));
 	invert_btns[curent_id_num].addEventListener("click", function() {
@@ -1270,6 +1271,7 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 				return
 			}
     		LoadWXGrid();
+			RenderGrid()
 			if (['dir_modal','dir_net'].includes(method_types[curent_id_num])){
 				click_coords[curent_id_num] = {}
 				click_coords[curent_id_num][13] = 0
@@ -1474,6 +1476,7 @@ function deleteMeasurementHandeler() {
 		deleteMeasurement()
 		DrawLines(measurement_index)
 		LoadWXGrid()
+		RenderGrid()
 		reset_sliders(measurement_index,false)
 		is_undoing = was_undoing
 		saveState()
@@ -1538,6 +1541,7 @@ function deleteSpecificMesurment(i){
 		DrawLines(i)
 	}
 	LoadWXGrid()
+	RenderGrid()
 }
 
 function deleteMeasurement() {
@@ -1825,8 +1829,9 @@ function LoadMethodDropdown(num,i) {
 	for (dropdown of method_dropdowns) {
 		method_types.push(dropdown.value);
 	}
+	LoadWXGrid();
 	if (!is_loading){
-		LoadWXGrid();
+		RenderGrid()
 		if (['dir_modal','dir_net'].includes(method_types[num])){
 			click_coords[num] = {}
 			click_coords[num][13] = 0
@@ -1926,11 +1931,7 @@ function LoadWXGrid() {
 	}
 	for ( var f = 0; f < reading_types.length; f++ ){
 		wx_grdata[reading_types[f]][method_types[f]] = all_data[reading_types[f]][method_types[f]];		
-	};
-//	console.log(reading_types);
-	RenderGrid();
-    // AJAX the JSON
-    
+	};    
 }
 
 function daysIntoYear( date ){
@@ -2673,6 +2674,19 @@ function DetectGridClick(event,is_render_call){
 	for (var i=0; i<save_clicks_x.length; i++){
 		RegisterGridClick(null,save_clicks_x[i],save_clicks_y[i],null)
 	}
+	
+	var extream_weeks = 0
+	for (var i = 0; i < save_clicks_x.length; i++){
+		if (compresed_data[save_clicks_y[i]][save_clicks_x[i]]/255 > wx_range_val1){
+			extream_weeks++
+		}
+	}
+	if (save_clicks_x.length > 0){
+		document.getElementById( 'extream_weeks' ).innerHTML = "Extream weeks: " + extream_weeks + "/" + save_clicks_x.length
+	} else {
+		document.getElementById( 'extream_weeks' ).innerHTML = ""
+	}
+	extream_weeks
 	if (can_fade){
 		var txt = ""
 		for (var i=0; i < reading_options.length; i++){
