@@ -229,6 +229,7 @@ var draws = []
 var compresed_data = []
 var color_data = []
 var wx_data = []
+var click_data = []
 var data_len = 0
 var wx_grdata_min = 0.0;
 var wx_grdata_max = 1.0;
@@ -2425,9 +2426,7 @@ function DetectYearClick(event,is_render_call){
 		selected_years = []
 		selected_seasons = []
 	}
-	if (!is_render_call && !(event.metaKey || event.shiftKey)){ 
-	}
-	if (!is_render_call && y_coord < data_len/2+offset+5){
+	if (!is_render_call && y_coord < 37){
 		DetectGridClick(null,true)
 		return
 	}
@@ -2736,13 +2735,15 @@ function DetectGridClick(event,is_render_call){
 			selected_seasons = []
 		}
 	}
-//	console.log(outlines)
+	click_data = new Array(num_years).fill().map(e => new Array(52).fill(false));
+	for (var i=0; i<save_clicks_x.length; i++){
+		click_data[save_clicks_y[i]][save_clicks_x[i]] = true
+	}
 	var outline_length = outlines.length
 	for (var i=0; i < outline_length; i++){
 		outlines[outlines.length-1].remove()
 		outlines.splice(-1)
 	} 
-//	console.log(covers)
 	var cover_length = covers.length
 	for (var i=0; i < cover_length; i++){
 		covers[covers.length-1].remove()
@@ -2769,56 +2770,51 @@ function DetectGridClick(event,is_render_call){
 		}
 	}
 	if (can_fade) {
-		fades.push(grid_draw.rect( 9*52, 9*num_years ).move( 35, 1).attr({
-					fill: '#fff'
-			, 'fill-opacity': 0.5
-		}));
-		// var num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
-// 		var fade_data = new Array(num_years).fill().map(e => [])
-// 		var click_array = []
-// 		for (var i = 0; i < save_clicks_x.length; i++){
-// 			click_array.push([save_clicks_x[i],save_clicks_y[i]])
-// 		}
-// 		for (var i=0; i < num_years; i++) {
-// 			var cp = false
-// 			for (var j = 0; j < 52; j++) {
-// 				if (arrayIncludes(click_array,[j,i])){
-// 					fade_data[i].push([false,null,null])
-// 					cp = false
-// 				} else if (cp){
-// 					fade_data[i].at(-1)[1] ++
-//
-// 				} else {
-// 					cp = true
-// 					fade_data[i].push([true,1,j])
-// 				}
-// 			}
-// 		}
-// 		for (var i=0; i < num_years; i++) {
-// 			for (var j = 0; j < fade_data[i].length; j++) {
-// 				if (fade_data[i][j][0]){
-// 					fades.push(grid_draw.rect( 9*fade_data[i][j][1], 9 ).move( 35+fade_data[i][j][2]*9, 1+(num_years-i-1)*9).attr({
-// 								fill: '#fff'
-// 						, 'fill-opacity': 0.5
-// 					}));
-// 				}
-// 			}
-// 		}	
+		// fades.push(grid_draw.rect( 9*52, 9*num_years ).move( 35, 1).attr({
+// 					fill: '#fff'
+// 			, 'fill-opacity': 0.5
+// 		}));
+		var fade_data = new Array(num_years).fill().map(e => [])
+		for (var i = 0; i < num_years; i++) {
+			var cp = false
+			for (var j = 0; j < 52; j++) {
+				if (click_data[i][j]){
+					fade_data[i].push([false,null,null])
+					cp = false
+				} else if (cp){
+					fade_data[i].at(-1)[1] ++
+
+				} else {
+					cp = true
+					fade_data[i].push([true,1,j])
+				}
+			}
+		}
+		for (var i=0; i < num_years; i++) {
+			for (var j = 0; j < fade_data[i].length; j++) {
+				if (fade_data[i][j][0]){
+					fades.push(grid_draw.rect( 9*fade_data[i][j][1], 9 ).move( 35+fade_data[i][j][2]*9, 1+(num_years-i-1)*9).attr({
+								fill: '#fff'
+						, 'fill-opacity': 0.5
+					}));
+				}
+			}
+		}	
 	}
 	DrawHistograms(compresed_data)
 	DrawYears()
 	DrawSesonalitys()
 	for (var i=0; i<save_clicks_x.length; i++){
-		//grid_cells[num_years-save_clicks_y[i]-1][save_clicks_x[i]].front()
-		fillcol = color_data[num_years-save_clicks_y[i]-1][save_clicks_x[i]][0]
-		size = bsizes[save_clicks_y[i]][save_clicks_x[i]]
-		if (size > 0 && color_data[num_years-save_clicks_y[i]-1][save_clicks_x[i]][0])
-		covers.push(grid_draw.rect( size, size ).move( (save_clicks_x[i]+4)*9-0.5+(9-size)/2, (num_years-save_clicks_y[i]-1)*9+2+(9-size)/2).attr({
-				fill: fillcol
-			, 'fill-opacity': 1
-				, stroke: '#000'
-			, 'stroke-width': 0
-	    }));
+		// fillcol = color_data[num_years-save_clicks_y[i]-1][save_clicks_x[i]][0]
+// 		size = bsizes[save_clicks_y[i]][save_clicks_x[i]]
+// 		if (size > 0 && color_data[num_years-save_clicks_y[i]-1][save_clicks_x[i]][1]){
+// 			covers.push(grid_draw.rect( size, size ).move( (save_clicks_x[i]+4)*9-0.5+(9-size)/2, (num_years-save_clicks_y[i]-1)*9+2+(9-size)/2).attr({
+// 					fill: fillcol
+// 				, 'fill-opacity': 1
+// 					, stroke: '#000'
+// 				, 'stroke-width': 0
+// 		    }));
+// 		}
 		RegisterGridClick(null,save_clicks_x[i],save_clicks_y[i],null)
 	}
 	
@@ -2935,12 +2931,12 @@ function DetectGridClick(event,is_render_call){
 			}
 		}
 	}
-	for (var i = 0; i < gridlines.length; i++){
-		gridlines[i].front()
-	}
-	for (var i = 0; i < outlines.length; i++){
-		outlines[i].front()
-	}
+	// for (var i = 0; i < gridlines.length; i++){
+// 		gridlines[i].front()
+// 	}
+// 	for (var i = 0; i < outlines.length; i++){
+// 		outlines[i].front()
+// 	}
 }
 function arrayIncludes(a,b){
     a = JSON.stringify(a);
@@ -2968,12 +2964,8 @@ function RegisterGridClick(event,click_x,click_y,num) {
     else {
         fillcol = color_lists[color_num][2];
     }
-	var click_array = []
-	for (var i = 0; i < save_clicks_x.length; i++){
-		click_array.push([save_clicks_x[i],save_clicks_y[i]])
-	}
 	size = bsizes[click_y][click_x]
-	if (click_x == 51 || !arrayIncludes(click_array,[click_x+1,click_y]) || wx_data[click_y][click_x+1] == null){
+	if (click_x == 51 || !click_data[click_y][click_x+1] || wx_data[click_y][click_x+1] == null){
 		outlines.push(grid_draw.rect( 1.5, size).move( (click_x+4)*9-0.5+(9-size)/2+8, (num_years-click_y-1)*9+2+(9-size)/2).attr({
 			fill: '#000'
 		, 'fill-opacity': 1
@@ -2981,7 +2973,7 @@ function RegisterGridClick(event,click_x,click_y,num) {
 		, 'stroke-width': 0 
     	}));
 	}
-	if (click_x == 0 || !arrayIncludes(click_array,[click_x-1,click_y]) || wx_data[click_y][click_x-1] == null){
+	if (click_x == 0 || !click_data[click_y][click_x-1] || wx_data[click_y][click_x-1] == null){
 		outlines.push(grid_draw.rect( 1.5, size).move( (click_x+4)*9-0.5+(9-size)/2, (num_years-click_y-1)*9+2+(9-size)/2).attr({
 			fill: '#000'
 		, 'fill-opacity': 1
@@ -2989,7 +2981,7 @@ function RegisterGridClick(event,click_x,click_y,num) {
 		, 'stroke-width': 0 
     	}));
 	}
-	if (click_y == num_years-1 || !arrayIncludes(click_array,[click_x,click_y+1]) || wx_data[click_y+1][click_x] == null){
+	if (click_y == num_years-1 || !click_data[click_y+1][click_x] || wx_data[click_y+1][click_x] == null){
 		outlines.push(grid_draw.rect( size, 1.5).move( (click_x+4)*9-0.5+(9-size)/2, (num_years-click_y-1)*9+2+(9-size)/2).attr({
 			fill: '#000'
 		, 'fill-opacity': 1
@@ -2997,7 +2989,7 @@ function RegisterGridClick(event,click_x,click_y,num) {
 		, 'stroke-width': 0 
     	}));
 	}
-	if (click_y == 0 || !arrayIncludes(click_array,[click_x,click_y-1]) || wx_data[click_y-1][click_x] == null){
+	if (click_y == 0 || !click_data[click_y-1][click_x] || wx_data[click_y-1][click_x] == null){
 		outlines.push(grid_draw.rect( size, 1.5).move( (click_x+4)*9-0.5+(9-size)/2, (num_years-click_y-1)*9+2+(9-size)/2+8).attr({
 			fill: '#000'
 		, 'fill-opacity': 1
@@ -3712,7 +3704,7 @@ function DrawYears(){
 		}
 	}
 	for (var i = 0; i < 4; i++) {
-        draw.rect( 2, (compresed_data.length+1)*9.5+10 ).move( i*31+data_len*season_hight+move, 0  ).attr({
+        draw.rect( 2, (compresed_data.length)*9 ).move( (i+1)*31+move, data_len*season_hight+offset+14  ).attr({
             'fill':'#ffffff66',
             'shape-rendering':'crispEdges',
             'stroke-width': 0 
@@ -3932,8 +3924,6 @@ function getGradColor(val,log_vars){
 		}
 		color += color_part
 	}
-	if (log_vars){
-	}
 	return color
 }
 
@@ -3960,7 +3950,6 @@ function RenderGrid(){
 	for ( var i = 0; i < reading_types.length; i++ ){
 		grids.push(wx_grdata[reading_types[i]][method_types[i]]);		
 	};
-	console.log(grids)
 	var num_years = grids[0].length;
 	const total_weight = weight_vals.reduce((a, b) => a + b, 0); //summing the weights
 	for ( var n = 0; n < num_years; n++ ) {
@@ -3994,9 +3983,6 @@ function RenderGrid(){
 				else {
 					var mul = (click_coords[k][relev_coords[1]]-click_coords[k][relev_coords[0]])*255/((relev_coords[1]-relev_coords[0])*histo_hights[k])
 				}
-				if (isNaN((relev_coords[0]))){
-					console.log("NaN")
-				}
 				num += ((grid_val+15-relev_coords[0])*mul+ofset)*weight_vals[k];
 			}
 			// if (isNaN(num)){
@@ -4012,7 +3998,6 @@ function RenderGrid(){
 			}
 		}
 	}
-	console.log(wx_data)
 	compresed_data = wx_data
 	DrawHistograms(wx_data)
 	bsizes = []
