@@ -237,7 +237,7 @@ var wx_range_val0 = 0.33;
 var wx_range_val1 = 0.66;
 var off_x = 0
 var season_hight = 0.5
-var sensetivity = 1
+var sensetivity = 5
 var save_clicks_x = []
 var save_clicks_y = []
 var grid_draw = null
@@ -269,8 +269,16 @@ var ENSO = [-1.31, 0.45, 0.03, 0.65, -0.45, -1.16, -0.97, 0.6, 0.58, 0.09, -0.13
 var start_year = 0
 var is_setting = false // dir_net
 var is_active = true
-var color_lists = [['#dadaeb','#9e9ac8','#54278f'],['#ffffb2','#fecc5c','#e31a1c'],['#1871bc','#f7e3f7','#ef8a62'],['#bdd7e7','#6baed6','#1871bc'],['#bae4b3','#74c476','#006d2c'],['#ffffcc','#b2aa93','#110800'],['#e9a3c9','#f7f7f7','#a1d76a']]
+var color_lists = [['#dadaeb','#9e9ac8','#54278f'], // purple
+				['#ffffb2','#fecc5c','#e31a1c'], // red
+				['#bdd7e7','#6baed6','#1871bc'], // blue
+				['#bae4b3','#74c476','#006d2c'], // green
+				['#ffffcc','#b2aa93','#110800'], // sepia
+				['#889fff','#f7e3f7','#c64141'], // hot-cold
+				['#e9a3c9','#f7f7f7','#a1d76a']] // pastell
 var color_num = 0
+var diverging = false
+const diverging_threshold = 5
 var t_weight_vals = []
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.004]};
 //var wxgrid_url = http://localhost:5001/wxapp/getwxvar?lat=1000&lon=1000
@@ -339,7 +347,7 @@ fetch(url , {   method:'GET',
             function(data) {
                 // parse JSON and determine some stuff
                 start_data = data;//JSON.parse( data.response );
-				//start_data = data_temp
+				start_data = data_temp
 				start_year = start_data["data_specs"]["start_year"];
 				document.getElementById( 'location' ).innerHTML = start_data["data_specs"]["Name"];
 				compresion_types = start_data["compression"];
@@ -494,6 +502,11 @@ color_selector.onchange =
 		function () {
 			if (!is_loading){
 				color_num = parseInt(color_selector.value)
+				if (color_num >= diverging_threshold){
+					diverging = true
+				} else {
+					diverging = false
+				}
 				saveState()
 				RenderGrid()
 			}
@@ -600,11 +613,12 @@ function updateTrends(st_sensetivity){
 	if (is_trend){
 		makeNewElement("sensetivity_slider_holder","div",{"class":"sensetivity_slider","id":"sensetivity_slider"},null);
 		noUiSlider.create( document.getElementById('sensetivity_slider'), {
-		    start: [st_sensetivity],
+		    start: [sensetivity],
 		    connect: false,
+			step: 1,
 		    range: {
-		        'min': 1,
-		        'max': 9
+		        'min': 2,
+		        'max': 20
 		    },     
 		});
 		document.getElementById('sensetivity_slider').noUiSlider.on('update', function (values, handle) {
@@ -1011,7 +1025,7 @@ function loadState(){
 			newMeasurementHandeler(null,null,true)
 		}
 	}
-	reset_sliders(measurement_index,true)
+	reset_sliders(measurement_index,true,true)
 	weight_vals = state_dict['weight_vals'].slice()
 	mins = state_dict['mins'].slice()
 	maxes = state_dict['maxes'].slice()
@@ -1041,6 +1055,11 @@ function loadState(){
 	colorGrads.checked = color_grads;
 	color_num = state_dict['color_num']
 	color_selector.selectedIndex = color_num
+	if (color_num >= diverging_threshold){
+		diverging = true
+	} else {
+		diverging = false
+	}
 	unit_num = state_dict['unit_num']
 	unit_selector.selectedIndex = unit_num
 	let t_wx_grdata_min = state_dict['wx_grdata_min']
@@ -1258,6 +1277,7 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 	noUiSlider.create( weight_sliders[curent_id_num], {
 	    start: [100],
 	    connect: false,
+		animate: false,
 	    range: {
 	        'min': 1,
 	        'max': 100
@@ -1268,12 +1288,10 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 	weight_sliders[curent_id_num].noUiSlider.on('update', function (values, handle) {
 	    var weight_val = values[0] / 100;
 	    // update text and redraw wx grid
-		if (!is_active) {
-			return
-		}
-		weight_vals[curent_id_num] = parseFloat(weight_val)
+		weight_vals[curent_id_num] = weight_val
 	    weight_setexes[curent_id_num].textContent = (weight_val*100).toFixed(0)+'%';
-		handleSlider(curent_id_num)
+		handleSlider(curent_id_num,weight_val)
+		saveState("weight")
 		});
 	is_loading = was_loading
 	method_dropdowns[curent_id_num].onchange =
@@ -1542,6 +1560,9 @@ function deleteSpecificMesurment(i){
 		let m_index = Object.keys(all_data[t_reading_types[i]]).indexOf(t_method_types[i]) 
 		LoadReadingDropdown(i,r_index,m_index)
 	}
+	console.log(measurement_index)
+	reset_sliders(measurement_index,true)
+	console.log("r")
 	click_coords = []
 	is_loading = false
 	let t_click_coords = save_dict['click_coords']
@@ -1587,13 +1608,13 @@ function deleteMeasurement() {
 	measurement_index --
 }
 
-function reset_sliders(num,is_load_call){
+function reset_sliders(num,is_load_call,use_t_vals=false){
 	if (!is_active){
 		return
 	}
 	is_setting = true
 	for (var i = 0; i < num+1; i++){
-		reset_slider(i,num,is_load_call)
+		reset_slider(i,num,use_t_vals)
 	}
 	is_setting = false
 	if (!is_load_call){
@@ -1601,7 +1622,20 @@ function reset_sliders(num,is_load_call){
 	}
 }
 
-function reset_slider(i,num,is_load_call){
+function reset_slider(i,num,use_t_vals){
+	let s_val = 0
+	if (use_t_vals){
+		s_val = t_weight_vals[i]*100
+	}
+	else{
+		s_val = 100/(num+1)
+	}
+	prevs[i] = s_val
+	weight_sliders[i].noUiSlider.set([s_val],false,false)
+}
+	
+
+function reset_slider_bup(i,num,is_load_call){
 	let s_val = 0
 	if (is_load_call){
 		s_val = t_weight_vals[i]*100
@@ -1673,6 +1707,7 @@ function handleSlider2(num,weight_val) {
 			    },     
 			});
 			weight_sliders[i].noUiSlider.on('update', function (values, handle) {
+				console.log("slide")
 			    var weight_val = values[0] / 100;
 			    // update text and redraw wx grid
 				weight_vals[i] = weight_val
@@ -1719,6 +1754,7 @@ function redoSlider2(i,num,total_weght,set_num,weights) {
 			    },     
 			});
 			weight_sliders[i].noUiSlider.on('update', function (values, handle) {
+				console.log("slide")
 			    var weight_val = values[0] / 100;
 			    // update text and redraw wx grid
 				weight_vals[i] = weight_val
@@ -1767,35 +1803,11 @@ function redoSlider(i,num,total_weght,set_num) {
 			wegth_i = 1/(weight_sliders.length)
 		}
 		i_setex = weight_vals[i]
-		document.getElementById("weight_slider_holder"+i).remove()
-		document.getElementById("weight_stext_div"+i).remove()
-		makeNewElement("measurement"+i,"div",{"style":"padding-top: 10px;","id":"weight_slider_holder"+i});
-		makeNewElement("weight_slider_holder"+i,"div",{"class":"weight_slider","id":"weight_slider"+i});
-		makeNewElement("measurement"+i,"div",{"style":"padding-bottom: 10px;","id":"weight_stext_div"+i});
-		makeNewElement("weight_stext_div"+i,"div",{"class":"weight_setex","id":"weight_stext"+i});
-
-		weight_setexes[i] = document.getElementById( 'weight_stext'+i);
-		weight_sliders[i] = document.getElementById('weight_slider'+i);
 //		console.log('r')
 		if (set_num == null){
 			set_num = (i_setex+wegth_i*(prevs[num]-weight_vals[num]))*100
 		}
-		noUiSlider.create( weight_sliders[i], {
-		    start: [set_num],
-		    connect: false,
-		    range: {
-		        'min': 0,
-		        'max': 100
-		    },     
-		});
-		weight_sliders[i].noUiSlider.on('update', function (values, handle) {
-		    var weight_val = values[0] / 100;
-		    // update text and redraw wx grid
-			weight_vals[i] = weight_val
-		    weight_setexes[i].textContent = (weight_val*100).toFixed(0)+'%';
-			handleSlider(i,weight_val)
-			saveState("weight")
-			});
+		weight_sliders[i].noUiSlider.set(set_num,false,true)
 	}
 	is_setting = false
 }
@@ -1866,6 +1878,8 @@ function LoadMethodDropdown(num,i) {
 			}
 		}
 		DrawLines(num)
+		RenderGrid()
+		
 	}
 	
 	
@@ -1929,8 +1943,10 @@ function generateSlider(v1,v2){
 // using port 88 here to get around CORS block
 //var testurl = "http://localhost:5000/plot0.json?df_station=13743 RONALD REAGAN WASHINGTON NATL AP&df_col=HourlySeaLevelPressure&df_method=MEDIAN";
 function LoadWXGrid() {
-	if (!has_reading)
-		return;
+	if (!has_reading){
+		return
+	}
+	console.log("load")
 	// make modifiers into arrays
 	
     // clear existing wxgriddata
@@ -2815,9 +2831,55 @@ function DetectGridClick(event,is_render_call){
 // 				, 'stroke-width': 0
 // 		    }));
 // 		}
-		RegisterGridClick(null,save_clicks_x[i],save_clicks_y[i],null)
+		RegisterGridClick(null,save_clicks_x[i],save_clicks_y[i],null,num_years)
 	}
 	
+	if (save_clicks_x.length == 1){
+		var coords = [save_clicks_x[0],save_clicks_y[0]]
+		month_lenghths = [31,28,31,30,31,30,31,31,30,31,30,31]
+		var day = [coords[0]]*7
+		var display_day = null
+		var month = null
+		for (i=0;i<month_lenghths.length;i++){
+			if (day < month_lenghths.slice(0,i).reduce((a, b) => a + b, 0)){
+				month = i-1
+				display_day = day - month_lenghths.slice(0,i-1).reduce((a, b) => a + b, 0)
+				break;
+			}
+		}
+		if (month == null){
+			display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
+			month = 11
+		}
+		let months_txt = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+		var year = coords[1]+parseInt(start_year) 
+		txt = (display_day+1)+'/'+months_txt[month]+'/'+year
+		if (unit_sets[unit_num] == "american"){
+			txt = months_txt[month]+'/'+(display_day+1)+'/'+year
+		}
+		day = [coords[0]]*7+6
+		var display_day = null
+		var month = null
+		for (i=0;i<month_lenghths.length;i++){
+			if (day < month_lenghths.slice(0,i).reduce((a, b) => a + b, 0)){
+				month = i-1
+				display_day = day - month_lenghths.slice(0,i-1).reduce((a, b) => a + b, 0)
+				break;
+			}
+		}
+		if (month == null){
+			display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
+			month = 11
+		}
+		txt2 = (display_day+1)+'/'+months_txt[month]+'/'+year
+		if (unit_sets[unit_num] == "american"){
+			txt2 = months_txt[month]+'/'+(display_day+1)+'/'+year
+		}
+		document.getElementById( "heder" ).innerHTML = "Details from the week "+txt+"-"+txt2;
+	}
+	else {
+		document.getElementById( "heder" ).innerHTML = "Details from selected weeks"
+	}
 	var extream_weeks = 0
 	for (var i = 0; i < save_clicks_x.length; i++){
 		if (compresed_data[save_clicks_y[i]][save_clicks_x[i]]/255 > wx_range_val1){
@@ -2947,23 +3009,11 @@ function arrayIncludes(a,b){
 	}
 	return false
 }
-function RegisterGridClick(event,click_x,click_y,num) {
-	var num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;
+function RegisterGridClick(event,click_x,click_y,num,num_years) {
 	var coords = [click_x,click_y]
 	if (Math.min(...coords) < 0 || wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] == null){
 		return
 	}
-	var fillcol = '#0000'
-    var mx = compresed_data[coords[1]][coords[0]] / 255;
-    if ( mx < wx_range_val0 ){
-        fillcol = color_lists[color_num][0];
-    }
-    else if ( mx < wx_range_val1 ){
-        fillcol = color_lists[color_num][1];
-    }
-    else {
-        fillcol = color_lists[color_num][2];
-    }
 	size = bsizes[click_y][click_x]
 	if (click_x == 51 || !click_data[click_y][click_x+1] || wx_data[click_y][click_x+1] == null){
 		outlines.push(grid_draw.rect( 1.5, size).move( (click_x+4)*9-0.5+(9-size)/2+8, (num_years-click_y-1)*9+2+(9-size)/2).attr({
@@ -2997,73 +3047,7 @@ function RegisterGridClick(event,click_x,click_y,num) {
 		, 'stroke-width': 0 
     	}));
 	}
-	// covers.push(grid_draw.rect( size-1, size-1 ).move( (click_x+4)*9-0.5+(9-size)/2, (num_years-click_y-1)*9+2+(9-size)/2).attr({
-	// 		fill: fillcol
-	// 	, 'fill-opacity': 0
-	// 		, stroke: '#000'
-	// 	, 'stroke-width': 1
-	//         }));
-	// if (save_clicks_x.length == 0){
-	// 	for (var num = 0; num < measurement_index+1; num ++){
-	// 		var max_value = Math.max(...histo_data[num]['histo_plot'])
-	// 		var data = wx_grdata[reading_types[num]][method_types[num]][coords[1]][coords[0]]
-	// 		histo_index = parseInt(data/2)
-	// 		draw = draws[num]
-	// 		if (highlights[num] == null){
-	// 			highlights[num] = []
-	// 		}
-	//         highlights[num].push(draw.rect( 2, histo_data[num]['histo_plot'][histo_index]*0.5*125/max_value ).move( histo_index*2+15,(125-histo_data[num]['histo_plot'][histo_index]*125/max_value)*0.5+9).attr({
-	//             'fill':'#eeee00',
-	//             'shape-rendering':'crispEdges',
-	//             'stroke-width': 0
-	//         }));
-	// 	}
-	// }
-	month_lenghths = [31,28,31,30,31,30,31,31,30,31,30,31]
-	var day = [coords[0]]*7
-	var display_day = null
-	var month = null
-	for (i=0;i<month_lenghths.length;i++){
-		if (day < month_lenghths.slice(0,i).reduce((a, b) => a + b, 0)){
-			month = i-1
-			display_day = day - month_lenghths.slice(0,i-1).reduce((a, b) => a + b, 0)
-			break;
-		}
-	}
-	if (month == null){
-		display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
-		month = 11
-	}
-	let months_txt = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-	var year = coords[1]+parseInt(start_year) 
-	txt = (display_day+1)+'/'+months_txt[month]+'/'+year
-	if (unit_sets[unit_num] == "american"){
-		txt = months_txt[month]+'/'+(display_day+1)+'/'+year
-	}
-	day = [coords[0]]*7+6
-	var display_day = null
-	var month = null
-	for (i=0;i<month_lenghths.length;i++){
-		if (day < month_lenghths.slice(0,i).reduce((a, b) => a + b, 0)){
-			month = i-1
-			display_day = day - month_lenghths.slice(0,i-1).reduce((a, b) => a + b, 0)
-			break;
-		}
-	}
-	if (month == null){
-		display_day = day - month_lenghths.slice(0,11).reduce((a, b) => a + b, 0)
-		month = 11
-	}
-	txt2 = (display_day+1)+'/'+months_txt[month]+'/'+year
-	if (unit_sets[unit_num] == "american"){
-		txt2 = months_txt[month]+'/'+(display_day+1)+'/'+year
-	}
-	if (save_clicks_x.length == 1){
-		document.getElementById( "heder" ).innerHTML = "Details from the week "+txt+"-"+txt2;
-	}
-	else {
-		document.getElementById( "heder" ).innerHTML = "Details from selected weeks"
-	}
+	
 //	document.getElementById( 'txt' ).innerHTML = txt;
 	
 }
@@ -3234,6 +3218,7 @@ function DrawSesonalitys(){
 		season_draw.clear()
 		season_draw.remove()
 	}
+	var has_selections = save_clicks_x.length != 0
 	var num_years = wx_data.length
 	document.getElementById( 'gr_sesonalitys').innerHTML = ""; // clear existing
 	var draw = SVG().addTo('#gr_sesonalitys').size( 52*9+36, data_len*season_hight+offset);
@@ -3256,107 +3241,7 @@ function DrawSesonalitys(){
 // 	        });
 // 		}
     }
-	var dupe_color_data = []
-	for (var i = 0; i < color_data.length; i ++){
-		dupe_color_data.push(color_data[i].slice())
-	}
-	var inverted_color_data = color_data[0].map((_, colIndex) => color_data.map(row => row[colIndex]));
-	for (var week = 0; week < 52; week ++){
-		var sorted_week = inverted_color_data[week].slice().sort((a, b) => b[1] - a[1]);
-		var fillcols = []
-		if (sorted_week.length > 0) {
-			var cp = 0
-			fillcols.push(sorted_week[0].slice())
-			fillcols[0].push(1)
-			fillcols[0].push(0)
-			for ( p=1; p<sorted_week.length; p++ ){
-				if (sorted_week[p][0] == sorted_week[cp][0]) {
-					fillcols.at(-1)[2] ++ 
-				} else {
-					fillcols.push(sorted_week[p].slice())
-					fillcols.at(-1).push(1)
-					fillcols.at(-1).push(p)
-					cp = p
-				}
-			}
-		}
-		var acc_ind = 0
-		for (var i = 0; i < fillcols.length; i ++){
-			if (fillcols[i][1] != null){
-				if (acc_ind == 0 && i < fillcols.length-1 && fillcols[i+1][1] != null && fillcols[i][2]+fillcols[i+1][2] <= 3 && color_grads){
-					acc_ind = 2
-					var color1 = fillcols[i][0]
-					var color2 = fillcols[i+1][0]
-					//var color3 = sorted_week[year+2][0]
-					color1 = [parseInt(color1.slice(1,3),16),parseInt(color1.slice(3,5),16),parseInt(color1.slice(5),16)]
-					color2 = [parseInt(color2.slice(1,3),16),parseInt(color2.slice(3,5),16),parseInt(color2.slice(5),16)]
-					//color3 = [parseInt(color3.slice(1,3),16),parseInt(color3.slice(3,5),16),parseInt(color3.slice(5),16)]
-					var color = '#'
-					for (var k = 0; k < 3; k++){
-						var color_part = parseInt((color1[k]+color2[k])/2).toString(16)
-						if (color_part.length == 0){
-							color_part = "00"
-						} else if (color_part.length == 1){
-							color_part = "0" + color_part
-						}
-						color += color_part
-					}
-			        draw.rect( 9, (fillcols[i][2]+fillcols[i+1][2])*season_hight ).move( week*9+35, (data_len-fillcols[i][3]-fillcols[i][2]-fillcols[i+1][2])*season_hight+offset).attr({
-			            'fill':color,
-			            'shape-rendering':'crispEdges',
-			            'stroke-width': 0 
-			        });
-				} else if (acc_ind == 0) {
-					acc_ind = 1
-			        draw.rect( 9, fillcols[i][2]*season_hight ).move( week*9+35, (data_len-fillcols[i][3]-fillcols[i][2])*season_hight+offset).attr({
-			            'fill':fillcols[i][0],
-			            'shape-rendering':'crispEdges',
-			            'stroke-width': 0 
-			        });
-				}
-				acc_ind --
-			}
-		}
-		// for (var year = 0; year < num_years; year ++){
-// 			if (sorted_week[year][1] != null){
-// 				if (year%2 == 0 && year < num_years-1 && sorted_week[year+1][1] != null){
-// 					var color1 = sorted_week[year][0]
-// 					var color2 = sorted_week[year+1][0]
-// 					//var color3 = sorted_week[year+2][0]
-// 					color1 = [parseInt(color1.slice(1,3),16),parseInt(color1.slice(3,5),16),parseInt(color1.slice(5),16)]
-// 					color2 = [parseInt(color2.slice(1,3),16),parseInt(color2.slice(3,5),16),parseInt(color2.slice(5),16)]
-// 					//color3 = [parseInt(color3.slice(1,3),16),parseInt(color3.slice(3,5),16),parseInt(color3.slice(5),16)]
-// 					var color = '#'
-// 					for (var k = 0; k < 3; k++){
-// 						var color_part = parseInt((color1[k]+color2[k])/2).toString(16)
-// 						if (color_part.length == 0){
-// 							color_part = "00"
-// 						} else if (color_part.length == 1){
-// 							color_part = "0" + color_part
-// 						}
-// 						color += color_part
-// 					}
-// 					draw.rect( 9, season_hight*2 ).move( week*9+35, (data_len-year)*season_hight+offset).attr({
-// 			            'fill':color,
-// 			            'shape-rendering':'crispEdges',
-// 			            'stroke-width': 0
-// 			        });
-// 				} else if (year >= num_years-1 || sorted_week[year+1][1] == null) {
-// 					draw.rect( 9, season_hight ).move( week*9+35, (data_len-year)*season_hight+offset).attr({
-// 			            'fill':sorted_week[year][0],
-// 			            'shape-rendering':'crispEdges',
-// 			            'stroke-width': 0
-// 			        });
-// 				}
-// 			}
-// 		}
-	}
-	if (save_clicks_x.length != 0) {
-		draw.rect( 52*9, (data_len)*season_hight).move(35,offset).attr({
-            'fill':"#ffffffdd",
-            'shape-rendering':'crispEdges',
-            'stroke-width': 0
-        });
+	if (has_selections) {
 		var filtered_data = new Array(52).fill().map(e => []);
 		for (var index = 0; index < save_clicks_x.length; index ++){
 			let year = wx_data.length - save_clicks_y[index] - 1
@@ -3372,6 +3257,74 @@ function DrawSesonalitys(){
 			}
 		}
 		var scale = data_len/max_len
+	}
+	var inverted_color_data = color_data[0].map((_, colIndex) => color_data.map(row => row[colIndex]));
+	for (var week = 0; week < 52; week ++){
+		if (!has_selections || filtered_data[week].length < max_len){
+			var sorted_week = inverted_color_data[week].slice().sort((a, b) => b[1] - a[1]);
+			var fillcols = []
+			if (sorted_week.length > 0) {
+				var cp = 0
+				fillcols.push(sorted_week[0].slice())
+				fillcols[0].push(1)
+				fillcols[0].push(0)
+				for ( p=1; p<sorted_week.length; p++ ){
+					if (sorted_week[p][0] == sorted_week[cp][0]) {
+						fillcols.at(-1)[2] ++ 
+					} else {
+						fillcols.push(sorted_week[p].slice())
+						fillcols.at(-1).push(1)
+						fillcols.at(-1).push(p)
+						cp = p
+					}
+				}
+			}
+			var acc_ind = 0
+			for (var i = 0; i < fillcols.length; i ++){
+				if (fillcols[i][1] != null){
+					if (acc_ind == 0 && i < fillcols.length-1 && fillcols[i+1][1] != null && fillcols[i][2]+fillcols[i+1][2] <= 3 && color_grads){
+						acc_ind = 2
+						var color1 = fillcols[i][0]
+						var color2 = fillcols[i+1][0]
+						//var color3 = sorted_week[year+2][0]
+						color1 = [parseInt(color1.slice(1,3),16),parseInt(color1.slice(3,5),16),parseInt(color1.slice(5),16)]
+						color2 = [parseInt(color2.slice(1,3),16),parseInt(color2.slice(3,5),16),parseInt(color2.slice(5),16)]
+						//color3 = [parseInt(color3.slice(1,3),16),parseInt(color3.slice(3,5),16),parseInt(color3.slice(5),16)]
+						var color = '#'
+						for (var k = 0; k < 3; k++){
+							var color_part = parseInt((color1[k]+color2[k])/2).toString(16)
+							if (color_part.length == 0){
+								color_part = "00"
+							} else if (color_part.length == 1){
+								color_part = "0" + color_part
+							}
+							color += color_part
+						}
+				        draw.rect( 9, (fillcols[i][2]+fillcols[i+1][2])*season_hight ).move( week*9+35, (data_len-fillcols[i][3]-fillcols[i][2]-fillcols[i+1][2])*season_hight+offset).attr({
+				            'fill':color,
+				            'shape-rendering':'crispEdges',
+				            'stroke-width': 0 
+				        });
+					} else if (acc_ind == 0) {
+						acc_ind = 1
+				        draw.rect( 9, fillcols[i][2]*season_hight ).move( week*9+35, (data_len-fillcols[i][3]-fillcols[i][2])*season_hight+offset).attr({
+				            'fill':fillcols[i][0],
+				            'shape-rendering':'crispEdges',
+				            'stroke-width': 0 
+				        });
+					}
+					acc_ind --
+				}
+			}
+		}
+		
+	}
+	if (has_selections) {
+		draw.rect( 52*9, (data_len)*season_hight).move(35,offset).attr({
+            'fill':"#ffffffdd",
+            'shape-rendering':'crispEdges',
+            'stroke-width': 0
+        });
 		for (var week = 0; week < 52; week ++){
 			var sorted_week = filtered_data[week].slice().sort((a, b) => b[1] - a[1]);
 			var fillcols = []
@@ -3474,6 +3427,7 @@ function DrawSesonalitys(){
     }
 }
 function DrawYears(){
+	var has_selections = save_clicks_x.length != 0
 	var num_years = wx_data.length
 	if (year_draw){
 		year_draw.clear()
@@ -3488,78 +3442,7 @@ function DrawYears(){
 	if (doPDO){
 		move = 22
 	}
-	var line_years = []
-	for (var year = 0; year < num_years; year ++){
-        syear = num_years + start_year - year;    
-        if ( !((syear-1)%5) ) {
-			var opacity = "37"
-			if (!((syear-1)%10)){
-				var opacity = "bb" 
-			}
-			line_years.push([opacity,year])
-		}
-		var sorted_year = color_data[year].slice().sort((a, b) => b[1] - a[1]);
-		var fillcols = []
-		if (sorted_year.length > 0) {
-			var cp = 0
-			fillcols.push(sorted_year[0].slice())
-			fillcols[0].push(1)
-			fillcols[0].push(0)
-			for ( p=1; p<sorted_year.length; p++ ){
-				if (sorted_year[p][0] == sorted_year[cp][0]) {
-					fillcols.at(-1)[2] ++ 
-				} else {
-					fillcols.push(sorted_year[p].slice())
-					fillcols.at(-1).push(1)
-					fillcols.at(-1).push(p)
-					cp = p
-				}
-			}
-		}
-		var acc_ind = 0
-		for (var i = 0; i < fillcols.length; i ++){
-			if (fillcols[i][1] != null){
-				if (acc_ind == 0 && i < fillcols.length-1 && fillcols[i+1][1] != null && fillcols[i][2]+fillcols[i+1][2] <= 2 && color_grads){
-					acc_ind = 2
-					var color1 = fillcols[i][0]
-					var color2 = fillcols[i+1][0]
-					//var color3 = sorted_week[year+2][0]
-					color1 = [parseInt(color1.slice(1,3),16),parseInt(color1.slice(3,5),16),parseInt(color1.slice(5),16)]
-					color2 = [parseInt(color2.slice(1,3),16),parseInt(color2.slice(3,5),16),parseInt(color2.slice(5),16)]
-					//color3 = [parseInt(color3.slice(1,3),16),parseInt(color3.slice(3,5),16),parseInt(color3.slice(5),16)]
-					var color = '#'
-					for (var k = 0; k < 3; k++){
-						var color_part = parseInt((color1[k]+color2[k])/2).toString(16)
-						if (color_part.length == 0){
-							color_part = "00"
-						} else if (color_part.length == 1){
-							color_part = "0" + color_part
-						}
-						color += color_part
-					}
-			        draw.rect( (fillcols[i][2]+fillcols[i+1][2])*3, 9 ).move( move+fillcols[i][3]*3, (year+1)*9+data_len*season_hight+offset+5).attr({
-			            'fill':color,
-			            'shape-rendering':'crispEdges',
-			            'stroke-width': 0 
-			        });
-				} else if (acc_ind == 0) {
-					acc_ind = 1
-			        draw.rect( fillcols[i][2]*3, 9 ).move( move+fillcols[i][3]*3, (year+1)*9+data_len*season_hight+offset+5).attr({
-			            'fill':fillcols[i][0],
-			            'shape-rendering':'crispEdges',
-			            'stroke-width': 0 
-			        });
-				}
-				acc_ind --
-			}
-		}
-	}
-	if (save_clicks_x.length != 0) {
-        draw.rect( 52*3, (num_years+1)*9).move( move,data_len*season_hight+offset+5).attr({
-            'fill':"#ffffffdd",
-            'shape-rendering':'crispEdges',
-            'stroke-width': 0 
-        });
+	if (has_selections) {
 		var filtered_data = new Array(wx_data.length).fill().map(e => []);
 		for (var index = 0; index < save_clicks_x.length; index ++){
 			let year = wx_data.length - save_clicks_y[index] - 1
@@ -3575,6 +3458,81 @@ function DrawYears(){
 			}
 		}
 		var scale = 52/max_len
+	}
+	var line_years = []
+	for (var year = 0; year < num_years; year ++){
+        syear = num_years + start_year - year;    
+        if ( !((syear-1)%5) ) {
+			var opacity = "37"
+			if (!((syear-1)%10)){
+				var opacity = "bb" 
+			}
+			line_years.push([opacity,year])
+		}
+		if (!has_selections || filtered_data[year].length < max_len){
+			var sorted_year = color_data[year].slice().sort((a, b) => b[1] - a[1]);
+			var fillcols = []
+			if (sorted_year.length > 0) {
+				var cp = 0
+				fillcols.push(sorted_year[0].slice())
+				fillcols[0].push(1)
+				fillcols[0].push(0)
+				for ( p=1; p<sorted_year.length; p++ ){
+					if (sorted_year[p][0] == sorted_year[cp][0]) {
+						fillcols.at(-1)[2] ++ 
+					} else {
+						fillcols.push(sorted_year[p].slice())
+						fillcols.at(-1).push(1)
+						fillcols.at(-1).push(p)
+						cp = p
+					}
+				}
+			}
+			var acc_ind = 0
+			for (var i = 0; i < fillcols.length; i ++){
+				if (fillcols[i][1] != null){
+					if (acc_ind == 0 && i < fillcols.length-1 && fillcols[i+1][1] != null && fillcols[i][2]+fillcols[i+1][2] <= 2 && color_grads){
+						acc_ind = 2
+						var color1 = fillcols[i][0]
+						var color2 = fillcols[i+1][0]
+						//var color3 = sorted_week[year+2][0]
+						color1 = [parseInt(color1.slice(1,3),16),parseInt(color1.slice(3,5),16),parseInt(color1.slice(5),16)]
+						color2 = [parseInt(color2.slice(1,3),16),parseInt(color2.slice(3,5),16),parseInt(color2.slice(5),16)]
+						//color3 = [parseInt(color3.slice(1,3),16),parseInt(color3.slice(3,5),16),parseInt(color3.slice(5),16)]
+						var color = '#'
+						for (var k = 0; k < 3; k++){
+							var color_part = parseInt((color1[k]+color2[k])/2).toString(16)
+							if (color_part.length == 0){
+								color_part = "00"
+							} else if (color_part.length == 1){
+								color_part = "0" + color_part
+							}
+							color += color_part
+						}
+				        draw.rect( (fillcols[i][2]+fillcols[i+1][2])*3, 9 ).move( move+fillcols[i][3]*3, (year+1)*9+data_len*season_hight+offset+5).attr({
+				            'fill':color,
+				            'shape-rendering':'crispEdges',
+				            'stroke-width': 0 
+				        });
+					} else if (acc_ind == 0) {
+						acc_ind = 1
+				        draw.rect( fillcols[i][2]*3, 9 ).move( move+fillcols[i][3]*3, (year+1)*9+data_len*season_hight+offset+5).attr({
+				            'fill':fillcols[i][0],
+				            'shape-rendering':'crispEdges',
+				            'stroke-width': 0 
+				        });
+					}
+					acc_ind --
+				}
+			}
+		}
+		
+	}
+	if (has_selections) {
+        draw.rect( 52*3, (num_years+1)*9).move( move,data_len*season_hight+offset+5).attr({
+            'fill':"#ffffffdd",
+            'shape-rendering':'crispEdges',
+        });
 		for (var year = 0; year < num_years; year ++){
 	        syear = num_years + start_year - year;    
 	        if ( !((syear-1)%5) ) {
@@ -3802,84 +3760,65 @@ function getSizesBup(data,base_size,div){
 }
 
 function getSizes(data,base_size,sensetivity){
-	var trend_list = new Array((sensetivity+1)).fill(0);
-	let range = sensetivity*2+1
-	sizes = []
-	for (var i = 0; i < sensetivity; i++){
+	var trend_list = [0]
+	var num_years = data.length
+	sizes = new Array(num_years*52).fill(0)
+	if (diverging){
+		var v0 = -2
+		var v1 = 0
+		var v2 = 2
+	} else {
+		var v0 = 0
+		var v1 = 0.5
+		var v2 = 2
+	}
+	for (var i = 0; i < sensetivity-1; i++){
 		let val = data[0][i]
 		let val_num = 0
         if ( val/255 < wx_range_val0 ){
-            val_num = 0;
+            val_num = v0;
         }
         else if ( val/255 < wx_range_val1 ){
-            val_num = 1/2;
+            val_num = v1;
         }
         else {
-            val_num = 2;
+            val_num = v2;
         }
 		trend_list.push(val_num)
 	}
 	var c_total = trend_list.reduce((a, b) => a + b, 0)
-	var st = sensetivity
+	var st = sensetivity-1
 	var ind = 0
-	for (var i = 0; i < data.length; i++){
-		sizes.push([])
+	for (var i = 0; i < num_years; i++){
 		for (var j = st; j < data[i].length; j++){
 			let val = data[i][j]
 			let val_num = 0
             if ( val/255 < wx_range_val0 ){
-                val_num = 0;
+                val_num = v0;
 	        }
             else if ( val/255 < wx_range_val1 ){
-                val_num = 1/2;
+                val_num = v1;
             }
             else {
-                val_num = 2;
+                val_num = v2;
             }
 			c_total -= trend_list.shift()
 			trend_list.push(val_num)
 			c_total += val_num
-			sizes[ind].push(c_total/range)
-			if (sizes[ind].length == 52){
-				ind++
+			if (ind < i*52+j-sensetivity+1){
+				ind = i*52+j-sensetivity+1
+			}
+			//console.log(c_total/sensetivity)
+			if (Math.abs(c_total/sensetivity) > 1.5){
+				for (var ind = ind; ind < i*52+j+1; ind++){
+					sizes[ind] = 9
+				}
 			}
 		}
 		st = 0
 	}
-	for (var i = 0; i < sensetivity; i++){
-		c_total -= trend_list.shift()
-		trend_list.push(0)
-		sizes[ind].push(base_size*c_total/range)
-		if (sizes[ind].length == 52){
-			ind++
-		}
-	}
-	var trend_len = 0
-	var trends = new Array(sizes.length).fill().map(e => [])
-	var ind = 0
-	for (var i = 0; i < sizes.length; i++){
-		for (var j = 0; j < sizes[i].length; j++){
-			if (sizes[i][j] < 1){
-				var size = 0
-				if (trend_len >= sensetivity*2+1){
-					size = base_size
-				}
-				for (var k = 0; k < trend_len; k++){
-					trends[ind].push(size)
-					if (trends[ind].length == 52){
-						ind++
-					}
-				}
-				trends[ind].push(0)
-				if (trends[ind].length == 52){
-					ind++
-				}
-				trend_len = 0
-			} else {
-				trend_len ++
-			}
-		}
-	}
+	var trends = [];
+	while(sizes.length) trends.push(sizes.splice(0,52));
 	return trends;
 }
 function getGradColor(val,log_vars){
@@ -3902,15 +3841,19 @@ function getGradColor(val,log_vars){
 			var prod = (5*(t**3)-7*(t**2)+2)/3+((t**3)-2*(t**2)+t)*m2*(1-b)+(-2*(t**3)+3*(t**2))
 		}
 	}
+	var expo = 2
+	if (diverging){
+		expo = 1
+	}
 	if (prod < 0.5) {
 		color0 = color_lists[color_num][0]
 		color1 = color_lists[color_num][1]
-		prod = (prod*2)**2
+		prod = (prod*2)**expo
 		
 	} else {
 		color0 = color_lists[color_num][1]
 		color1 = color_lists[color_num][2]
-		prod = 1-(2-prod*2)**2
+		prod = 1-(2-prod*2)**expo
 	}
 	var color0 = [parseInt(color0.slice(1,3),16),parseInt(color0.slice(3,5),16),parseInt(color0.slice(5),16)]
 	var color1 = [parseInt(color1.slice(1,3),16),parseInt(color1.slice(3,5),16),parseInt(color1.slice(5),16)]
@@ -4029,7 +3972,6 @@ function RenderGrid(){
 	color_data = []
     for ( k=0; k<num_years; k++ ) {
 		color_data.push([])
-		grid_cells.push([])
         sy = k * boxspace + off_y;
         // draw year label every 3 rows, vertically centered on the row, to the left of the grid
         syear = num_years + start_year - k;  
@@ -4054,7 +3996,7 @@ function RenderGrid(){
             // get measurement, years are reversed order, & calculate fill color
             var fillcol = 0;
 	        let shape_rend = 'crispEdges';	// render the contigous blocks with crispedges
-            var bsize = bsizes[num_years-1-k][p]
+            var bsize = boxsize
 			var mb = (boxsize-bsize)/2
             var mx = wx_data[num_years-1-k][p];
             if ( mx == null ) {
@@ -4087,7 +4029,7 @@ function RenderGrid(){
 		}
 		var cp = 0
 		for ( p=1; p<num_weeks; p++ ){
-			if (fillcols[p][0] == fillcols[cp][0]) {
+			if (fillcols[p][0] == fillcols[cp][0] && fillcols[p][1] == fillcols[cp][1]) {
 				fillcols[cp][6] ++
 				fillcols[p][6] = 0
 			} else {
@@ -4110,7 +4052,91 @@ function RenderGrid(){
             'stroke-width': 0 
         }));
     }
+	if (is_trend){
+		draw.rect( 9*52, 9*num_years ).move( 35, 1).attr({
+					fill: "#ffffffdd"
+		});
+	    for ( k=0; k<num_years; k++ ) {
+	        sy = k * boxspace + off_y;
+	        // draw year label every 3 rows, vertically centered on the row, to the left of the grid
+	        syear = num_years + start_year - k;  
+			var opacity = "bb"      
+	        if ( !((syear-1)%5) || k == 0) {
+				if (!((syear-1)%10)){
+					opacity = "ff" 
+				}
+	            var stext = draw.text( `${syear-1}` ).font('size',12).font('family','Arial');
+	            syear_width = stext.length()+6;
+	            syear_height = stext.bbox().height/2; // bbox is double for some reason.
+	            stext.move( off_x - syear_width, sy - 2 );
+	        }
+			var fillcols = []
+	        for ( p=0; p<num_weeks; p++ ) {
+	            // var fillcol = color0;
+	            // if ( Math.floor(Math.random() * 6)==0 )
+	            //     fillcol = color1;
+	            // else if ( Math.floor(Math.random() * 9)==0 )
+	            //     fillcol = color2;
 
+	            // get measurement, years are reversed order, & calculate fill color
+	            var fillcol = 0;
+		        let shape_rend = 'crispEdges';	// render the contigous blocks with crispedges
+	            var bsize = bsizes[num_years-1-k][p]
+				var mb = (boxsize-bsize)/2
+	            var mx = wx_data[num_years-1-k][p];
+	            if ( mx == null ) {
+	                fillcol = null;    // nulls are this color
+	            } else {
+	                mx = mx / 255;
+					if (color_grads){
+						fillcol = getGradColor(mx,p == 0)
+					} else {
+		                if ( mx < wx_range_val0 ){
+		                    fillcol = color0;
+				            shape_rend = 'auto';		// draw the blue grid blocks with AntiAliasing
+				        }
+		                else if ( mx < wx_range_val1 ){
+		                    fillcol = color1;
+		                }
+		                else {
+		                    fillcol = color2;
+		                }
+					}
+	            }
+				sx = p * boxspace + off_x;
+				fillcols.push([fillcol,bsize,mb,shape_rend,sx,sy,1])
+	            // draw.rect( bsize, bsize ).move( sx+mb, sy+mb).attr({
+	//                 'fill':fillcol,
+	//                 'shape-rendering':shape_rend,
+	//                 'stroke-width': 0
+	//             });
+			}
+			var cp = 0
+			for ( p=1; p<num_weeks; p++ ){
+				if (fillcols[p][0] == fillcols[cp][0] && fillcols[p][1] == fillcols[cp][1]) {
+					fillcols[cp][6] ++
+					fillcols[p][6] = 0
+				} else {
+					cp = p
+				}
+			}
+			for ( p=0; p<num_weeks; p++ ) {
+				if (fillcols[p][0] && fillcols[p][1] > 0 && fillcols[p][6] > 0){
+		            var rect = draw.rect( fillcols[p][6]*fillcols[p][1], fillcols[p][1] ).move( fillcols[p][4]+fillcols[p][2], fillcols[p][5]+fillcols[p][2] ).attr({
+		                'fill':fillcols[p][0],
+		                'shape-rendering':fillcols[p][3],
+		                'stroke-width': 0
+		            });
+				}
+	        }
+
+	        gridlines.push(draw.rect( (num_weeks) * boxspace, 1 ).move( off_x, sy ).attr({
+	            'fill':'#ffffff'+opacity,
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        }));
+	    }
+	}
     // draw bottom month labels
     let months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec' ];
     let by = num_years * (boxspace) + off_y - (boxspace-boxsize);
@@ -4129,16 +4155,8 @@ function RenderGrid(){
 		}
     }
 	let t3 = Date.now()
-	// DrawSesonalitys()
-// 	DrawYears()
 	let t4 = Date.now()
 	DetectGridClick(null,true)
-	// if (selected_years.length){
-	// 	DetectYearClick(null,true)
-	// }
-	// if (selected_seasons.length){
-	// 	DetectSeasonClick(null,true)
-	// }
 	let t5 = Date.now()
 	// console.log(t5-t1)
 // 	console.log(t2-t1)
