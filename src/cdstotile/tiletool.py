@@ -37,6 +37,8 @@ from data_settings import data_settings
 from data_groups import data_groups, all_variables
 from wxdb import *
 
+NEW_TIME_DIMENSION = 'valid_time'
+OLD_TIME_DIMENSION = 'time'
 
 # ignoring leap years (i.e. week 53)!
 HOURS_PER_WEEK = 24 * 7
@@ -94,25 +96,30 @@ def out_filename( out_path:str, dgroup_name:str, year:int ) -> (dict):
 
 # open input dataset for given year (the cds downloads)
 def open_ds( inp_path:str, dir_name:str, year:int, var_name:str ) -> netCDF4.Dataset:
-    # we have 4 possibilities for the downloaded cds data we are trying to open:
-    # The entire year in one file vs. one file for each day in year (MFDataset())
-    # And oldcds dimension 'time' vs newcds dimension 'valid_time'
+    # we have 3 possibilities for the downloaded cds data we are trying to open:
+    # The entire year in one file with 'time' dimension, OR one file for each day in year
+    # ..AND (oldcds dimension 'time' OR newcds dimension 'valid_time')
 
     # first try to load the daily set of netcdfs
     fullname, filename = inp_multiset_filename( inp_path, dir_name, year, var_name )
     try:
         # todo: make sure this fails if some daily files are missing in the middle of the set
         # ...time should monotonically increase
-        ds = netCDF4.MFDataset( files=fullname, check=True ) #aggdim='valid_time') aggdim='time')
+        # try with the new valid_time dim
+        ds = netCDF4.MFDataset( files=fullname, check=True, aggdim=NEW_TIME_DIMENSION)
     except OSError as ex:
-        print( f'daily input {filename} could not be opened. {ex} Trying yearly.' )
-        # ok try to open the single big yearly netcdf
-        fullname, filename = inp_filename( inp_path, dir_name, year, var_name )
+        # try with the old time dim
         try:
-            ds = netCDF4.Dataset( fullname, 'r' )
+            ds = netCDF4.MFDataset( files=fullname, check=True, aggdim=OLD_TIME_DIMENSION)
         except OSError as ex:
-            print( f'{filename} could not be opened! {ex}' )
-            exit( -1 )
+            print( f'daily input {filename} could not be opened. {ex} Trying yearly.' )
+            # ok try to open the single big yearly netcdf
+            fullname, filename = inp_filename( inp_path, dir_name, year, var_name )
+            try:
+                ds = netCDF4.Dataset( fullname, 'r' )
+            except OSError as ex:
+                print( f'{filename} could not be opened! {ex}' )
+                exit( -1 )
     return ds
 
 
@@ -276,10 +283,10 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
 
         # open dataset for year
         ds = open_ds( inp_path, dir_name, year, var_name )
-        if 'valid_time' in ds.dimensions:
-            time_dim_name = 'valid_time'
+        if NEW_TIME_DIMENSION in ds.dimensions:
+            time_dim_name = NEW_TIME_DIMENSION
         else:
-            time_dim_name = 'time'
+            time_dim_name = OLD_TIME_DIMENSION
 
         total_num_hours = min( len(ds.dimensions[time_dim_name]), total_num_hours )
         num_lat         = ds.dimensions['latitude'].size
