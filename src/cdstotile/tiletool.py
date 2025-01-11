@@ -28,6 +28,7 @@ import gc
 import json
 import numpy
 import netCDF4
+import xarray
 import argparse
 import pathlib
 import concurrent.futures
@@ -94,32 +95,41 @@ def out_filename( out_path:str, dgroup_name:str, year:int ) -> (dict):
     return o_names
 
 
-# open input dataset for given year (the cds downloads)
-def open_ds( inp_path:str, dir_name:str, year:int, var_name:str ) -> netCDF4.Dataset:
-    # we have 3 possibilities for the downloaded cds data we are trying to open:
-    # The entire year in one file with 'time' dimension, OR one file for each day in year
-    # ..AND (oldcds dimension 'time' OR newcds dimension 'valid_time')
-
+# open input dataset for given year (from the cds downloads)
+def open_ds( inp_path:str, dir_name:str, year:int, var_name:str ) -> xarray.Dataset:
     # first try to load the daily set of netcdfs
+    # todo: make sure this fails if some daily files are missing in the middle of the set
+    # ...time should monotonically increase
     fullname, filename = inp_multiset_filename( inp_path, dir_name, year, var_name )
     try:
-        # todo: make sure this fails if some daily files are missing in the middle of the set
-        # ...time should monotonically increase
-        # try with the new valid_time dim
-        ds = netCDF4.MFDataset( files=fullname, check=True, aggdim=NEW_TIME_DIMENSION)
+        ds = xarray.open_mfdataset(fullname)# engine='netcdf4', combine='nested', concat_dim='time', parallel=True)
     except OSError as ex:
-        # try with the old time dim
+        print( f'daily input {filename} could not be opened. {ex} Trying yearly.' )
+        # ok try to open the single big yearly netcdf
+        fullname, filename = inp_filename( inp_path, dir_name, year, var_name )
         try:
-            ds = netCDF4.MFDataset( files=fullname, check=True, aggdim=OLD_TIME_DIMENSION)
+            ds = xarray.open_dataset(fullname)
         except OSError as ex:
-            print( f'daily input {filename} could not be opened. {ex} Trying yearly.' )
-            # ok try to open the single big yearly netcdf
-            fullname, filename = inp_filename( inp_path, dir_name, year, var_name )
-            try:
-                ds = netCDF4.Dataset( fullname, 'r' )
-            except OSError as ex:
-                print( f'{filename} could not be opened! {ex}' )
-                exit( -1 )
+            print( f'{filename} could not be opened! {ex}' )
+            exit( -1 )
+    # try:
+    #     # todo: make sure this fails if some daily files are missing in the middle of the set
+    #     # ...time should monotonically increase
+    #     # try with the new valid_time dim
+    #     ds = netCDF4.MFDataset( files=fullname, check=True, aggdim=NEW_TIME_DIMENSION)
+    # except OSError as ex:
+    #     # try with the old time dim
+    #     try:
+    #         ds = netCDF4.MFDataset( files=fullname, check=True, aggdim=OLD_TIME_DIMENSION)
+    #     except OSError as ex:
+    #         print( f'daily input {filename} could not be opened. {ex} Trying yearly.' )
+    #         # ok try to open the single big yearly netcdf
+    #         fullname, filename = inp_filename( inp_path, dir_name, year, var_name )
+    #         try:
+    #             ds = netCDF4.Dataset( fullname, 'r' )
+    #         except OSError as ex:
+    #             print( f'{filename} could not be opened! {ex}' )
+    #             exit( -1 )
     return ds
 
 
@@ -273,25 +283,26 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         print( f'\rSkipping completed output {dg_name}-{year}' )
         return
 
-    if show_progress: print( f"Analyzing {dg_name}..." )
+    if show_progress: print( f"Analyzing {year} {dg_name}..." )
     # open all the netcdf input files needed to process this data_group
     ncds_group = []
     total_num_hours = HOURS_PER_YEAR
     for var in data_group['files']:
         var_name = var[0]
         short_var_name = var[1]
+        if show_progress: print(f'{var_name}')
 
         # open dataset for year
         ds = open_ds( inp_path, dir_name, year, var_name )
-        if NEW_TIME_DIMENSION in ds.dimensions:
+        if NEW_TIME_DIMENSION in ds.dims:
             time_dim_name = NEW_TIME_DIMENSION
         else:
             time_dim_name = OLD_TIME_DIMENSION
 
-        total_num_hours = min( len(ds.dimensions[time_dim_name]), total_num_hours )
-        num_lat         = ds.dimensions['latitude'].size
-        num_long        = ds.dimensions['longitude'].size
-        num_dimensions  = len(ds.dimensions)
+        total_num_hours = min( ds.dims[time_dim_name], total_num_hours )
+        num_lat         = ds.dims['latitude']
+        num_long        = ds.dims['longitude']
+        num_dimensions  = len(ds.dims)
 
         assert total_num_hours >= 0
         assert num_long == NUM_LONGIDX_GLOBAL
@@ -332,11 +343,12 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
             ds =                ncds['dataset']
             short_var_name =    ncds['short_var_name']
 
-            # get the weeks worth of hours (for all locations in file). transpose to lat,long,hour
+            # get the weeks worth of hours (for all locations in file)
             hr_0 = week_i * HOURS_PER_WEEK
             hr_1 = hr_0 + HOURS_PER_WEEK
-            var_week = numpy.transpose( ds[ short_var_name ][hr_0:hr_1][:][:], axes=(1, 2, 0) )
-            assert( var_week.dtype == numpy.float64 )
+            aa = ds[ short_var_name ][hr_0:hr_1][:][:].values # get week data as numpy array
+            var_week = numpy.transpose( aa, axes=(1, 2, 0) ) # transpose to lat,long,hour
+            assert( var_week.dtype == numpy.float32 )
             week_data.append( var_week )
 
         # # debug: single threaded version for profiling
