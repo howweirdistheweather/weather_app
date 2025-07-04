@@ -51,6 +51,7 @@ document.onkeydown = function() {
 	console.log(key)
 	if (key == 80) {
 		console.log(prev_states)
+		console.log(offset)
 	}
 	if (key == 18 && event.metaKey && event.shiftKey){
 		// command+shift+option
@@ -59,6 +60,10 @@ document.onkeydown = function() {
 		dlAnchorElem.setAttribute("href",     dataStr     );
 		dlAnchorElem.setAttribute("download", "state.json");
 		dlAnchorElem.click();
+	}
+	if (key == 192 && event.shiftKey){
+		// shift+~
+		console.log(state_dict)
 	}
 	// if (key == 79){
 // 		// command+shift+option
@@ -159,9 +164,6 @@ document.onkeydown = function() {
 		}
 		is_undoing = false
 	}
-	if (document.getElementById("myModal").style.display == "block"){
-//		update_txt()
-	}
 };
 
 window.addEventListener("keydown", function(e) {
@@ -222,6 +224,7 @@ var prev_mins = [];
 var doPDO = false
 var is_seasonaly_adjusted = false
 var color_grads = false
+var advanced = false
 var grid_cells = []
 var selects = []
 var select_draws = []
@@ -277,20 +280,255 @@ var color_lists = [['#dadaeb','#9e9ac8','#54278f'], // purple
 				['#889fff','#f7e3f7','#c64141'], // hot-cold
 				['#e9a3c9','#f7f7f7','#a1d76a']] // pastell
 var color_num = 0
+var state_index = 1
 var diverging = false
 const diverging_threshold = 5
 var t_weight_vals = []
+function tutorial0(){
+	document.getElementById("tutorial_txt").innerHTML = "How weird is the weather is a weather data visualization tool, each cell on the central grid is one week and the color is how extreme the weather was according to some criteria, currently that criteria is simply how hot was it (this tutorial uses data form seldovia alaska)"
+}
+function tutorial1(){
+	document.getElementById("tutorial_txt").innerHTML = "Currently the threshold for extreme is not very strict so a lot of weeks are considered extreme, to see the very hottest weeks change the thresholds using the bottom slider to around 0.82, 0.88"
+}
+function tutorial2(){
+	document.getElementById("tutorial_txt").innerHTML = "To see cold weeks instead you can simply press the “invert” button"
+}
+function tutorial3(){
+	document.getElementById("tutorial_txt").innerHTML = "Now you can see that there aren't as many weeks being displayed since there is a longer tail so loosen the thresholds a bit (to around 0.54, 0.74)"
+}
+function tutorial4(){
+	document.getElementById("tutorial_txt").innerHTML = ""
+	var next_btn = document.getElementById("next")
+	next_btn.innerHTML = "Return to main site"
+	next_btn.addEventListener("click",function () {
+				    window.location.href = "http://localhost:5001/static/index.html?state=%5Bfalse%2C2%2C%C4%81%C4%83%C4%85%5B46%5D%2C%5B74%C4%8F0%2C1%2C0.33%C4%98.66%C4%90%5B%5B1%C4%9C0%C4%8F%C4%A309%C4%98%C4%A7165%2C62.5%C4%A7267%C4%B0%C4%B2%C4%B4%5D%C4%AC%C4%94%C4%90%C4%A6%C4%BF%C4%BD%C4%88%C4%82%C4%84%2Ctru%C4%85%C4%95%C4%95%C4%89%C4%84%5D";
+			});
+	next_btn.disabled = false;
+}
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.004]};
 //var wxgrid_url = http://localhost:5001/wxapp/getwxvar?lat=1000&lon=1000
 var wxgrid_url = `/wxapp/getwxvar`;
 var urlParams = new URLSearchParams(window.location.search);
 var tutorial = urlParams.get('tutorial');
-if (tutorial != '0' && tutorial != null){
+var states = [[tutorial0,[{
+    "is_trend": false,
+    "sensetivity": 2,
+    "is_seasonaly_adjusted": false,
+    "mins": [
+        46
+    ],
+    "maxes": [
+        74
+    ],
+    "wx_grdata_min": 0,
+    "wx_grdata_max": 1,
+    "wx_range_val0": 0.33,
+    "wx_range_val1": 0.66,
+    "click_coords": [[[13,0],[109,0],[165,62.5],[267,62.5]]],
+    "weight_vals": [
+        1
+    ],
+    "measurement_index": 0,
+    "reading_types": [
+        "temperature"
+    ],
+    "method_types": [
+        "avg"
+    ],
+    "prevs": [
+        1
+    ],
+    "doPDO": false,
+    "line_editing": true,
+    "color_num": 0,
+    "unit_num": 0,
+    "color_grads": false
+},tutorial1],
+[{
+    "is_trend": false,
+    "sensetivity": 2,
+    "is_seasonaly_adjusted": false,
+    "mins": [
+        46
+    ],
+    "maxes": [
+        74
+    ],
+    "wx_grdata_min": 0,
+    "wx_grdata_max": 1,
+    "wx_range_val0": 0.8249,
+    "wx_range_val1": 0.88,
+    "click_coords": [
+        [
+            [
+                13,
+                0
+            ],
+            [
+                109,
+                0
+            ],
+            [
+                165,
+                62.5
+            ],
+            [
+                267,
+                62.5
+            ]
+        ]
+    ],
+    "weight_vals": [
+        1
+    ],
+    "measurement_index": 0,
+    "reading_types": [
+        "temperature"
+    ],
+    "method_types": [
+        "avg"
+    ],
+    "prevs": [
+        1
+    ],
+    "doPDO": false,
+    "line_editing": true,
+    "color_num": 0,
+    "unit_num": 0,
+    "color_grads": false
+},tutorial2],[{
+    "is_trend": false,
+    "sensetivity": 2,
+    "is_seasonaly_adjusted": false,
+    "mins": [
+        46
+    ],
+    "maxes": [
+        74
+    ],
+    "wx_grdata_min": 0,
+    "wx_grdata_max": 1,
+    "wx_range_val0": 0.8249,
+    "wx_range_val1": 0.88,
+    "click_coords": [
+        [
+            [
+                13,
+                62.5
+            ],
+            [
+                109,
+                62.5
+            ],
+            [
+                165,
+                0
+            ],
+            [
+                267,
+                0
+            ]
+        ]
+    ],
+    "weight_vals": [
+        1
+    ],
+    "measurement_index": 0,
+    "reading_types": [
+        "temperature"
+    ],
+    "method_types": [
+        "avg"
+    ],
+    "prevs": [
+        1
+    ],
+    "doPDO": false,
+    "line_editing": true,
+    "color_num": 0,
+    "unit_num": 0,
+    "color_grads": false
+},tutorial3],[{
+    "is_trend": false,
+    "sensetivity": 2,
+    "is_seasonaly_adjusted": false,
+    "mins": [
+        46
+    ],
+    "maxes": [
+        74
+    ],
+    "wx_grdata_min": 0,
+    "wx_grdata_max": 1,
+    "wx_range_val0": 0.54,
+    "wx_range_val1": 0.74,
+    "click_coords": [
+        [
+            [
+                13,
+                62.5
+            ],
+            [
+                109,
+                62.5
+            ],
+            [
+                165,
+                0
+            ],
+            [
+                267,
+                0
+            ]
+        ]
+    ],
+    "weight_vals": [
+        1
+    ],
+    "measurement_index": 0,
+    "reading_types": [
+        "temperature"
+    ],
+    "method_types": [
+        "avg"
+    ],
+    "prevs": [
+        1
+    ],
+    "doPDO": false,
+    "line_editing": true,
+    "color_num": 0,
+    "unit_num": 0,
+    "color_grads": false
+},tutorial4]]]
+if (tutorial != 'null' && tutorial != null){
 	tutorial = parseInt(tutorial)
-	target_state = {"is_trend":true,"sensetivity":7,"is_seasonaly_adjusted":true,"mins":[55,41],"maxes":[69,86],"wx_grdata_min":0,"wx_grdata_max":1,"wx_range_val0":0.33,"wx_range_val1":0.66,"click_coords":[{"13":0,"123":0,"155":62.5,"268":62.5},{"13":0,"95":0,"189":62.5,"268":62.5}],"weight_vals":[0.3543,0.6456999999999999],"measurement_index":1,"reading_types":["temperature","wind"],"method_types":["avg","speed_avg"],"prevs":[0.3543,0.6456999999999999],"doPDO":false,"line_editing":true,"color_num":0,"unit_num":0}
+	var next_btn = document.getElementById("next")
+	next_btn.disabled = true;
+	next_btn.addEventListener("click",function () {
+				next_btn.disabled = true
+				target_state[1]()
+				state_index ++
+				if (state_index < target_states.length){
+					target_state = target_states[state_index]
+				} else {
+					tutorial = false
+				}
+				console.log(target_state)
+			});
+	var target_states = states[tutorial]
+	var state_len = target_states.length
+	var target_state = target_states[state_index]
+	target_states[0]()
 } else {
+	var next_btn = document.getElementById("next")
+	next_btn.innerHTML = "Tutorial"
+	next_btn.addEventListener("click",function () {
+				    window.location.href = "http://localhost:5001/static/index.html?state=%5Bfalse%2C2%2C%C4%81%C4%83%C4%85%5B46%5D%2C%5B74%C4%8F0%2C1%2C0.33%C4%98.66%C4%90%5B%5B1%C4%9C0%C4%8F%C4%A309%C4%98%C4%A7165%2C62.5%C4%A7267%C4%B0%C4%B2%C4%B4%5D%C4%AC%C4%94%C4%90%C4%A6%C4%BF%C4%BD%C4%88%C4%82%C4%84%2Ctru%C4%85%C4%95%C4%95%C4%89%C4%84%5D&tutorial=0";
+			});
 	tutorial = false
 }
+console.log("tutorial")
 console.log(tutorial)
 var lat = urlParams.get('lat');
 if (lat == null || tutorial){
@@ -302,7 +540,7 @@ if (lon == null || tutorial){
 }
 
 var querrySTR = urlParams.get('state')
-if (!querrySTR || querrySTR == "0" || tutorial){
+if (!querrySTR || querrySTR == "0" || tutorial !== false){
 	// state_dict = {
 	// 	'is_trend':false,
 	// 	'sensetivity':1,
@@ -326,7 +564,7 @@ if (!querrySTR || querrySTR == "0" || tutorial){
 	// }
 	// updateQuerry([false,1,false,[51],[74],0,1,0.33,0.66,{13:0,115:0,165:62.5,267:62.5},[1],0,['temperature'],['avg'],[1],false,false,0,0])
 	var url = new URL(window.location.href);
-	url.searchParams.set("state","[false,1,āăą[51],[74ď0Ć,0.33ė.66Đ{\"13\":ĕĢ15ĥħ16Ī:62.5,\"267ĥıĳ}ď[ĎėĐ0ľŃĐŀĉĄĈĂŉĕŃ");
+	url.searchParams.set("state","[false,2,āăą[46],[74ď0,1,0.33Ę.66Đ[[1Ĝ0ďģ09Ęħ165,62.5ħ267İĲĴ]ĬĔĐĦĿĽĈĂĄ,truąĕĕĉĄ]");
 	window.history.pushState(null, null, url);
 }
 urlParams = new URLSearchParams(window.location.search);
@@ -347,7 +585,7 @@ fetch(url , {   method:'GET',
             function(data) {
                 // parse JSON and determine some stuff
                 start_data = data;//JSON.parse( data.response );
-				//start_data = data_temp
+				start_data = data_temp
 				start_year = start_data["data_specs"]["start_year"];
 				document.getElementById( 'location' ).innerHTML = start_data["data_specs"]["Name"];
 				compresion_types = start_data["compression"];
@@ -444,7 +682,7 @@ fetch(url , {   method:'GET',
 				// }
 				
 				has_loaded = true
-				//saveState()
+				saveState("no_save")
             }
         );
     }
@@ -511,6 +749,16 @@ color_selector.onchange =
 				RenderGrid()
 			}
 		};
+var advanced_options = document.getElementById("advanced_checkbox")
+advanced_options.onchange =
+		function () {
+			if (advanced){
+				document.getElementById("advanced").style.visibility = 'hidden';
+			} else {
+				document.getElementById("advanced").style.visibility = 'visible';
+			}
+			advanced = !advanced
+		};
 var enable_line_editing = document.getElementById("enable_line_editing")
 enable_line_editing.onchange =
 		function () {
@@ -564,16 +812,16 @@ function updateSeasonality(is_load_call){
 				if (['dir_modal','dir_net'].includes(method_types[num])){
 					click_coords[num] = {}
 					click_coords[num][13] = 0
-					click_coords[num][mins[num]*2+13] = 0
+					click_coords[num][mins[num]*2+17] = 0
 					click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
 					click_coords[num][268] = 0
 				}
 				else {
-					click_coords[num] = {}
-					click_coords[num][13] = 0
-					click_coords[num][mins[num]*2+13] = 0
-					click_coords[num][maxes[num]*2+17] = histo_hights[num]
-					click_coords[num][268] = histo_hights[num]
+					click_coords[num] = []
+					click_coords[num].push([13,0])
+					click_coords[num].push([mins[num]*2+17,0])
+					click_coords[num].push([maxes[num]*2+17,histo_hights[num]])
+					click_coords[num].push([267,histo_hights[num]])
 				}
 				DrawLines(num)
 			}
@@ -779,10 +1027,7 @@ function saveState(update_type="base"){
 		prev_states.push(state_dict)
 	}
 	prev_update = update_type
-	var t_click_coords = []
-	for (var i = 0; i < click_coords.length; i++){
-	    t_click_coords[i] = {...click_coords[i]};
-	}
+	var t_click_coords = JSON.parse(JSON.stringify(click_coords));
 	state_dict = {
 		'is_trend':is_trend,
 		'sensetivity':sensetivity,
@@ -805,72 +1050,74 @@ function saveState(update_type="base"){
 		'unit_num':unit_num,
 		'color_grads':color_grads
 	}
-	if (tutorial){
+	if (tutorial !== false){
 		is_matching = true
 		for (key of ['is_trend','is_seasonaly_adjusted','measurement_index','doPDO']){
-			if (target_state[key] != state_dict[key]){
+			if (target_state[0][key] != state_dict[key]){
 				console.log(key)
 				is_matching = false
 			}
 		}
 		for (key of ['method_types','reading_types']){
-			if (JSON.stringify(target_state[key]) != JSON.stringify(state_dict[key])){
+			if (JSON.stringify(target_state[0][key]) != JSON.stringify(state_dict[key])){
 				console.log(key)
 				is_matching = false
 			}
 		}
+		console.log(target_state[0])
+		console.log(state_dict)
 		for (key of ['wx_range_val0','wx_range_val1']){
-			if (Math.abs(target_state[key] - state_dict[key]) > 0.02){
+			if (Math.abs(target_state[0][key] - state_dict[key]) > 0.03){ //target_state[0][key][1]
 				console.log(key)
 				is_matching = false
 			}
 		}
-		click_problem = false
-		clicks1 = target_state['click_coords']
-		clicks2 = state_dict['click_coords']
-		if (clicks1.length == clicks2.length){
-			for (var i = 0; i < clicks1.length; i++){
-				click_list1 = []
-				for (var key in clicks1[i]) {
-				    if (clicks1[i].hasOwnProperty(key)) {
-				        click_list1.push( [parseInt(key), clicks1[i][key] ] );
-				    }
-				}
-				click_list2 = []
-				for (var key in clicks2[i]) {
-				    if (clicks2[i].hasOwnProperty(key)) {
-				        click_list2.push( [parseInt(key), clicks2[i][key] ] );
-				    }
-				}
-				if (click_list2.length == click_list1.length){
-					for (var j = 0; j < click_list1.length; j++){
-						if (Math.abs(click_list2[j][0] - click_list1[j][0]) > 2 || Math.abs(click_list2[j][1] - click_list1[j][1]) > 2) {
-							click_problem = true
-						}
-					}
-				} else {
-					click_problem = true
-				}
-			}
-		} else {
-			click_problem = true
-		}
-		if (click_problem){
-			console.log('click_coords')
-			is_matching = false
-		}
-		if (target_state['is_trend']){
-			if (target_state['sensetivity'] != state_dict['sensetivity']){
+		// click_problem = false
+// 		clicks1 = target_state[0]['click_coords']
+// 		clicks2 = state_dict['click_coords']
+// 		if (clicks1.length == clicks2.length){
+// 			for (var i = 0; i < clicks1.length; i++){
+// 				click_list1 = []
+// 				for (var key in clicks1[i]) {
+// 				    if (clicks1[i].hasOwnProperty(key)) {
+// 				        click_list1.push( [parseInt(key), clicks1[i][key] ] );
+// 				    }
+// 				}
+// 				click_list2 = []
+// 				for (var key in clicks2[i]) {
+// 				    if (clicks2[i].hasOwnProperty(key)) {
+// 				        click_list2.push( [parseInt(key), clicks2[i][key] ] );
+// 				    }
+// 				}
+// 				if (click_list2.length == click_list1.length){
+// 					for (var j = 0; j < click_list1.length; j++){
+// 						if (Math.abs(click_list2[j][0] - click_list1[j][0]) > 2 || Math.abs(click_list2[j][1] - click_list1[j][1]) > 2) {
+// 							click_problem = true
+// 						}
+// 					}
+// 				} else {
+// 					click_problem = true
+// 				}
+// 			}
+// 		} else {
+// 			click_problem = true
+// 		}
+// 		if (click_problem){
+// 			console.log('click_coords')
+// 			is_matching = false
+// 		}
+		if (target_state[0]['is_trend']){
+			if (target_state[0]['sensetivity'] != state_dict['sensetivity']){
 				console.log('sensetivity')
 				is_matching = false
 			}
 		}
 		weight_problem = false
-		weight1 = target_state['weight_vals']
+		weight1 = target_state[0]['weight_vals']
 		weight2 = state_dict['weight_vals']
 		if (weight1.length == weight2.length){
 			for (var i = 0; i < weight1.length; i++){
-				if (Math.abs(weight1[i] - weight2[i]) > 0.02){
+				if (Math.abs(weight1[i][0] - weight2[i]) > weight1[i][1]){
 					weight_problem = true
 				}
 			}
@@ -882,7 +1129,9 @@ function saveState(update_type="base"){
 			is_matching = false
 		}
 		if (is_matching){
-			console.log('match')
+			next_btn.disabled = false;
+		} else {
+			next_btn.disabled = true;
 		}
 	}
 	
@@ -890,10 +1139,7 @@ function saveState(update_type="base"){
 }
 
 function getState(){
-	var t_click_coords = []
-	for (var i = 0; i < click_coords.length; i++){
-	    t_click_coords[i] = {...click_coords[i]};
-	}
+	var t_click_coords = JSON.parse(JSON.stringify(click_coords));
 	let state = [is_trend,sensetivity,is_seasonaly_adjusted,mins.slice(),maxes.slice(),wx_grdata_min,
 		wx_grdata_max,wx_range_val0,wx_range_val1,t_click_coords.slice(),weight_vals.slice(),measurement_index,
 		reading_types.slice(),method_types.slice(),prevs.slice(),doPDO,enable_line_editing.checked,color_num,unit_num,color_grads]
@@ -1079,9 +1325,17 @@ function loadState(){
 	click_coords = []
 	is_loading = false
 	let t_click_coords = state_dict['click_coords']
-	for (var i = 0; i < t_click_coords.length; i++){
+	for (var i = 0; i < 1; i++){
 	    click_coords.push({...t_click_coords[i]})
+		click_coords[i] = []
+		console.log(mins[i]*2+17)
+		click_coords[i].push([13,0])
+		click_coords[i].push([mins[i]*2+17,0])
+		click_coords[i].push([maxes[i]*2+17,histo_hights[i]])
+		click_coords[i].push([267,histo_hights[i]])
 	}
+	click_coords = t_click_coords
+	console.log(click_coords)
 	for (var i = 0; i < measurement_index+1; i++){
 		DrawLines(i)
 	}
@@ -1217,7 +1471,7 @@ function makeNewElement(id, type, atributes, txt) {
 	}
 }
 function makeNewMeasurmeant(curent_id_num,is_load_call) {
-	click_coords.push({})
+	click_coords.push([[0,0],[267,0]])
 	histo_hights.push(0)
 	lines.push([])
 	draws.push(null)
@@ -1301,31 +1555,6 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 			}
     		LoadWXGrid();
 			RenderGrid()
-			if (['dir_modal','dir_net'].includes(method_types[curent_id_num])){
-				click_coords[curent_id_num] = {}
-				click_coords[curent_id_num][13] = 0
-				click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
-				click_coords[curent_id_num][maxes[curent_id_num]+mins[curent_id_num]+17] = histo_hights[curent_id_num]
-				click_coords[curent_id_num][maxes[curent_id_num]*2+17] = 0
-				click_coords[curent_id_num][268] = 0
-			}
-			else {
-				click_coords[curent_id_num] = {}
-				click_coords[curent_id_num][13] = 0
-				click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
-				click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
-				click_coords[curent_id_num][268] = histo_hights[curent_id_num]
-			}
-			for (i in selects){
-				if (selects[i][1] == measurement_index){
-					selects.splice(i);
-					select_draws[i].remove();
-					select_draws.splice(i);
-				}
-			}
-			
-			DrawLines(curent_id_num)
-			RenderGrid()
 			
 			saveState()
 			redo_states = []
@@ -1354,17 +1583,17 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 	if (compresion[mesurment][func] == 'direction'){
 		click_coords[curent_id_num] = {}
 		click_coords[curent_id_num][13] = 0
-		click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
+		click_coords[curent_id_num][mins[curent_id_num]*2+17] = 0
 		click_coords[curent_id_num][maxes[curent_id_num]+mins[curent_id_num]+17] = histo_hights[curent_id_num]
 		click_coords[curent_id_num][maxes[curent_id_num]*2+17] = 0
 		click_coords[curent_id_num][267] = 0
 	}
 	else {
-		click_coords[curent_id_num] = {}
-		click_coords[curent_id_num][13] = 0
-		click_coords[curent_id_num][mins[curent_id_num]*2+13] = 0
-		click_coords[curent_id_num][maxes[curent_id_num]*2+17] = histo_hights[curent_id_num]
-		click_coords[curent_id_num][267] = histo_hights[curent_id_num]
+		click_coords[curent_id_num] = []
+		click_coords[curent_id_num].push([13,0])
+		click_coords[curent_id_num].push([mins[curent_id_num]*2+17,0])
+		click_coords[curent_id_num].push([maxes[curent_id_num]*2+17,histo_hights[curent_id_num]])
+		click_coords[curent_id_num].push([267,histo_hights[curent_id_num]])
 	}
 	if (!is_load_call){
 		DrawLines(curent_id_num)
@@ -1560,9 +1789,7 @@ function deleteSpecificMesurment(i){
 		let m_index = Object.keys(all_data[t_reading_types[i]]).indexOf(t_method_types[i]) 
 		LoadReadingDropdown(i,r_index,m_index)
 	}
-	console.log(measurement_index)
 	reset_sliders(measurement_index,true)
-	console.log("r")
 	click_coords = []
 	is_loading = false
 	let t_click_coords = save_dict['click_coords']
@@ -1707,7 +1934,6 @@ function handleSlider2(num,weight_val) {
 			    },     
 			});
 			weight_sliders[i].noUiSlider.on('update', function (values, handle) {
-				console.log("slide")
 			    var weight_val = values[0] / 100;
 			    // update text and redraw wx grid
 				weight_vals[i] = weight_val
@@ -1754,7 +1980,6 @@ function redoSlider2(i,num,total_weght,set_num,weights) {
 			    },     
 			});
 			weight_sliders[i].noUiSlider.on('update', function (values, handle) {
-				console.log("slide")
 			    var weight_val = values[0] / 100;
 			    // update text and redraw wx grid
 				weight_vals[i] = weight_val
@@ -1795,7 +2020,6 @@ function handleSlider(num,weight_val) {
 }
 function redoSlider(i,num,total_weght,set_num) {
 	if (i != num) {
-//		console.log(total_weght)
 		if (total_weght != 0){
 			wegth_i = weight_vals[i]/total_weght
 		}
@@ -1803,7 +2027,6 @@ function redoSlider(i,num,total_weght,set_num) {
 			wegth_i = 1/(weight_sliders.length)
 		}
 		i_setex = weight_vals[i]
-//		console.log('r')
 		if (set_num == null){
 			set_num = (i_setex+wegth_i*(prevs[num]-weight_vals[num]))*100
 		}
@@ -1858,17 +2081,17 @@ function LoadMethodDropdown(num,i) {
 		if (['dir_modal','dir_net'].includes(method_types[num])){
 			click_coords[num] = {}
 			click_coords[num][13] = 0
-			click_coords[num][mins[num]*2+13] = 0
+			click_coords[num][mins[num]*2+17] = 0
 			click_coords[num][maxes[num]+mins[num]+17] = histo_hights[num]
 			click_coords[num][maxes[num]*2+17] = 0
 			click_coords[num][268] = 0
 		}
 		else {
-			click_coords[num] = {}
-			click_coords[num][13] = 0
-			click_coords[num][mins[num]*2+13] = 0
-			click_coords[num][maxes[num]*2+17] = histo_hights[num]
-			click_coords[num][268] = histo_hights[num]
+			click_coords[num] = []
+			click_coords[num].push([13,0])
+			click_coords[num].push([mins[num]*2+17,0])
+			click_coords[num].push([maxes[num]*2+17,histo_hights[num]])
+			click_coords[num].push([267,histo_hights[num]])
 		}
 		for (i in selects){
 			if (selects[i][1] == num){
@@ -1878,8 +2101,7 @@ function LoadMethodDropdown(num,i) {
 			}
 		}
 		DrawLines(num)
-		RenderGrid()
-		
+		RenderGrid()	
 	}
 	
 	
@@ -1933,8 +2155,8 @@ function generateSlider(v1,v2){
 			saveState("range")
 		}
 		const t2 = Date.now()
-		console.log("total")
-		console.log(t2-t)
+		// console.log("total")
+// 		console.log(t2-t)
 	});
 }
 
@@ -2275,7 +2497,7 @@ function DrawHistograms(compresed_data,inc_data){
 		for (i in selects){
 			if (selects[i][1] == num){
 				val = selects[i][0]
-			    select_draws[i] = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)+7 ).attr({
+			    select_draws[i] = draw.rect( 4, 4 ).move( click_coords[num][val][0]-2, (click_coords[num][val][1]-histo_hights[num])*(-1)+7 ).attr({
 			        'fill':'#d55',
 			        'shape-rendering':'crispEdges',
 			        'stroke-width': 0
@@ -2375,57 +2597,7 @@ function DetectHistoClick(num,event) {
 	}
 	DetectGridClick(null,true)
 }
-function RegisterClick(num,event) {
-	click_x = event.offsetX
-	click_y = histo_hights[num]-event.offsetY+9
-	if (click_y < -4 || click_x < 13 || click_x > 268 ||  click_y > 71){
-		return
-	}
-	if (click_y < 0){
-		click_y = 0
-	}
-	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
-	for (i in selects){
-		if (Math.abs(click_x-selects[i][0]) < 4 && Math.abs(click_y-click_coords[num][selects[i][0]]) < 4) {
-			selects.splice(i)
-			select_draws[i].remove()
-			select_draws.splice(i)
-			return
-		}
-	}
-	for (val of x_vals) {
-		if (Math.abs(click_x-val) < 4 && Math.abs(click_y-click_coords[num][val]) < 4) {
-			if (!event.metaKey || (selects.length && selects[0][1] != num)){
-				for (i in selects){
-					selects.splice(i);
-					select_draws[i].remove();
-					select_draws.splice(i);
-				}
-			}
-			selects.push([val,num])
-			var draw = draws[num];
-	        select_draws.push(draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)+7 ).attr({
-	            'fill':'#d55',
-	            'shape-rendering':'crispEdges',
-	            'stroke-width': 0 
-	        }));
-			
-			return
-		}
-	}
-	if (selects.length != 0){
-		for (i in selects){
-			selects.splice(i);
-			select_draws[i].remove();
-			select_draws.splice(i);
-		}
-	}
-	if (Object.keys(click_coords[num]).length < 10){
-		click_coords[num][click_x] = click_y
-	}
-	DrawLines(num)
-	RenderGrid()
-}
+
 
 function getCellCoords(x,y){
 	num_years = Object.keys(wx_grdata[reading_types[0]][method_types[0]]).length;	
@@ -3051,36 +3223,87 @@ function RegisterGridClick(event,click_x,click_y,num,num_years) {
 //	document.getElementById( 'txt' ).innerHTML = txt;
 	
 }
+
+function RegisterClick(num,event) {
+	click_x = event.offsetX
+	click_y = histo_hights[num]-event.offsetY+9
+	if (click_y < -4 || click_x < 13 || click_x > 268 ||  click_y > 71){
+		return
+	}
+	if (click_y < 0){
+		click_y = 0
+	}
+	if (!event.metaKey || (selects.length && selects[0][1] != num)){
+		for (var j = 0; j < select_draws.length; j++){
+			select_draws[j].remove();
+		}
+		selects = []
+		select_draws = []
+	}
+	for (var i = 0; i < selects.length; i++){
+		if (Math.abs(click_x-click_coords[num][selects[i][0]][0]) < 4 && Math.abs(click_y-click_coords[num][selects[i][0]][1]) < 4) {
+			selects.splice(i)
+			select_draws[i].remove()
+			select_draws.splice(i)
+			return
+		}
+	}
+	for (var i = 0; i < click_coords[num].length; i++) {
+		if (Math.abs(click_x-click_coords[num][i][0]) < 4 && Math.abs(click_y-click_coords[num][i][1]) < 4) {
+			console.log(i)
+			selects.push([i,num])
+			var draw = draws[num];
+	        select_draws.push(draw.rect( 4, 4 ).move( click_coords[num][i][0]-2, (click_coords[num][i][1]-histo_hights[num])*(-1)+7 ).attr({
+	            'fill':'#d55',
+	            'shape-rendering':'crispEdges',
+	            'stroke-width': 0 
+	        }));
+			console.log(selects)
+			return
+		}
+	}
+	click_coords_length = click_coords[num].length
+	if (click_coords[num].length < 10){
+		var has_added = false
+		for (var i = 0; i < click_coords_length; i++){
+			if (click_coords[num][i][0] > click_x){
+				has_added = true
+				click_coords[num].splice(i,0,[click_x,click_y])
+				for (var j = 0; j < selects.length; j++){
+					if (selects[j][0] >= i){
+						selects[j][0] ++
+					}
+				}
+				selects.push([i,num])
+				break
+			}
+		}
+		if (!has_added){
+			click_coords[num].push([click_x,click_y])
+		}
+	}
+	console.log(click_coords)
+	DrawLines(num)
+	RenderGrid()
+}
 	
 function HandleDelete() {
 	if (selects.length == 0){
 		return
 	}
-	for (i in selects){
-		select = selects[i]
-		select_draw = select_draws[i]
+	for (var j = 0; j < selects.length; j++){
+		select = selects[j]
 		num = select[1]
-		var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
-		click_dict = click_coords[num]
-		select_draw.remove()
-		if (select[0] == x_vals[0]){
-			click_coords[num][x_vals[0]] = click_coords[num][x_vals[1]]
-			DrawLines(num)
-			select_draws = []
-			selects = []
-			RenderGrid()
-			return
-		}
-		else if (select[0] == x_vals[x_vals.length-1]){
-			click_coords[num][x_vals[x_vals.length-1]] = click_coords[num][x_vals[x_vals.length-2]]
-			DrawLines(num)
-			select_draws = []
-			selects = []
-			RenderGrid()
-			return
-		}
-		delete click_dict[select[0]]
+		select_draws[0].remove()
+		click_coords[num][select[0]] = null
 	}
+	t_click_coords = []
+	for (var i = 0; i < click_coords[num].length; i++){
+		if (click_coords[num][i] != null){
+			t_click_coords.push(click_coords[num][i])
+		}
+	}
+	click_coords[num] = t_click_coords
 	select_draws = [];
 	selects = []
 	DrawLines(num)
@@ -3099,22 +3322,22 @@ function arrowHandler(y_dif) {
 		var select = selects[i]
 		var select_draw = select_draws[i]
 		var num = select[1]
-		var val = select[0]
-		click_dict = click_coords[num]
-		click_dict[select[0]] += y_dif*shift_mul
-		if (click_dict[select[0]] > histo_hights[num]){
-			click_dict[select[0]] = histo_hights[num]
+		click_coords[num][select[0]][1] += y_dif*shift_mul
+		if (click_coords[num][select[0]][1] > histo_hights[num]){
+			click_coords[num][select[0]][1] = histo_hights[num]
 		}
-		if (click_dict[select[0]] < 0){
-			click_dict[select[0]] = 0
+		if (click_coords[num][select[0]][1] < 0){
+			click_coords[num][select[0]][1] = 0
 		}
-		select_draw.remove()
+		select_draws[i].remove()
 		var draw = draws[num];
-	    select_draw = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)-2 ).attr({
-	        'fill':'#d55',
-	        'shape-rendering':'crispEdges',
-	        'stroke-width': 0 
-	    });
+		console.log(select[0])
+		console.log(click_coords[num][select[0]][0]-2)
+	    // select_draw = draw.rect( 4, 4 ).move( click_coords[num][select[0]][0]-2, (histo_hights[num]-click_coords[num][select[0]][1])-2 ).attr({
+// 	        'fill':'#d55',
+// 	        'shape-rendering':'crispEdges',
+// 	        'stroke-width': 0
+// 	    });
 	}
 	DrawLines(num)
 	RenderGrid()
@@ -3130,82 +3353,86 @@ function horizontalArrowHandler(x_dif) {
 	}
 	for (i in selects){
 		var select = selects[i]
-		var select_draw = select_draws[i]
 		var num = select[1]
-		var val = select[0]
-		var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
-		var x_index = x_vals.indexOf(val)
-		var new_x = parseInt(val)+x_dif*shift_mul
-		if (new_x <= x_vals[x_index-1]){
-			new_x = parseInt(x_vals[x_index-1]) + 1
+		var dupelicate_ind = NaN
+		var dupelicate_save = null
+		if (select[0] == 0){
+			var min = 13
+			dupelicate_ind = 0
+			dupelicate_save = click_coords[num][0]
 		}
-		else if (new_x < parseInt(x_vals[0])){
-			new_x = parseInt(x_vals[0])
+		else {
+
+			var min = click_coords[num][select[0]-1][0]
 		}
-		if (new_x >= x_vals[x_index+1]){
-			new_x = parseInt(x_vals[x_index+1]) - 1
+		if (select[0] == click_coords[num].length-1){
+			dupelicate_ind = click_coords[num].length-1
+			dupelicate_save = click_coords[num][click_coords[num].length-1]
+			var max = 267
 		}
-		else if (new_x > parseInt(x_vals[x_vals.length-1])){
-			new_x = parseInt(x_vals[x_vals.length-1])
+		else {
+			var max = click_coords[num][select[0]+1][0]
 		}
-		click_dict = click_coords[num]
-		y_val = click_dict[select[0]]
-		if (parseInt(select[0]) != parseInt(x_vals[0]) && parseInt(select[0]) != parseInt(x_vals[x_vals.length-1])){
-			delete click_dict[select[0]]
+		var select_draw = select_draws[i]
+		click_coords[num][select[0]][0] += x_dif*shift_mul
+		if (click_coords[num][select[0]][0] > max){
+			click_coords[num][select[0]][0] = max
 		}
-		else if (Object.keys(click_coords[num]).length >= 10){
-			return
+		if (click_coords[num][select[0]][0] < min){
+			click_coords[num][select[0]][0] = min
 		}
-		click_dict[new_x] = y_val
-		selects[i] = [new_x.toString(),num]
 		select_draw.remove()
 		var draw = draws[num];
-	    select_draws[i] = draw.rect( 4, 4 ).move( val-2, (click_coords[num][val]-histo_hights[num])*(-1)+7 ).attr({
+		console.log((click_coords[num][select[0]][1]-histo_hights[num])*(-1)-2)
+	    select_draw = draw.rect( 4, 4 ).move( click_coords[num][select[0]][0]-2, (click_coords[num][select[0]][1]-histo_hights[num])*(-1)-2 ).attr({
 	        'fill':'#d55',
 	        'shape-rendering':'crispEdges',
 	        'stroke-width': 0 
 	    });
+		
 	}
 	DrawLines(num)
 	RenderGrid()
 }
 
 function DrawLines(num) {
+	
 	for (line of lines[num]) {
 		line.remove()
 	}
 	lines[num] = []
 	var draw = draws[num];
-	var x_vals = Object.keys(click_coords[num]).sort((a,b) => a - b); //sort the keys
-	for (var b = 0; b < x_vals.length-1; b ++) {
-		lines[num].push(draw.line(0, histo_hights[num], x_vals[b+1]-x_vals[b], (click_coords[num][x_vals[b+1]]-click_coords[num][x_vals[b]]-histo_hights[num])*(-1))
-		.move(x_vals[b], (Math.max(click_coords[num][x_vals[b+1]],click_coords[num][x_vals[b]])-histo_hights[num])*(-1)+9).attr({
+	for (var b = 0; b < click_coords[num].length-1; b ++) {
+		lines[num].push(draw.line(0, histo_hights[num], click_coords[num][b+1][0]-click_coords[num][b][0], (click_coords[num][b+1][1]-click_coords[num][b][1]-histo_hights[num])*(-1))
+		.move(click_coords[num][b][0], (Math.max(click_coords[num][b+1][1],click_coords[num][b][1])-histo_hights[num])*(-1)+9).attr({
 					fill: '#000'
 			, 'stroke-opacity': line_opacidy
 					, stroke: '#000'
 			, 'stroke-width': 1 
 				}));
-		lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)+7.5).attr({
+		lines[num].push(draw.circle(3).move(parseInt(click_coords[num][b][0])-1.5, (click_coords[num][b][1]-histo_hights[num])*(-1)+7.5).attr({
 					fill: '#000'
 			, 'fill-opacity': line_opacidy
 					, stroke: '#ee0'
 			, 'stroke-width': 0 
 				}));
 	}
-	b = x_vals.length-1
-	lines[num].push(draw.circle(3).move(parseInt(x_vals[b])-1.5, (click_coords[num][x_vals[b]]-histo_hights[num])*(-1)+7.5).attr({
-					fill: '#000'
-			, 'fill-opacity': line_opacidy
-					, stroke: '#ee0'
-			, 'stroke-width': 0 
-				}));
+	if (click_coords[num].length){
+		b = click_coords[num].length-1
+		lines[num].push(draw.circle(3).move(parseInt(click_coords[num][b][0])-1.5, (click_coords[num][b][1]-histo_hights[num])*(-1)+7.5).attr({
+						fill: '#000'
+				, 'fill-opacity': line_opacidy
+						, stroke: '#ee0'
+				, 'stroke-width': 0 
+					}));
+	}
+	
 }
 
 function invertHandeler(num, will_render) {
 	click_dict = click_coords[num]
-	var x_vals = Object.keys(click_dict).sort((a,b) => a - b); //sort the keys
-	for (val of x_vals) {
-		click_dict[val] = click_dict[val]*(-1)+histo_hights[num]
+	for (var i = 0; i < click_coords[num].length; i ++) {
+		click_coords[num][i][1] = click_coords[num][i][1]*(-1)+histo_hights[num]
 	}
 	DrawLines(num)
 	if (will_render){
@@ -3894,6 +4121,8 @@ function RenderGrid(){
 		grids.push(wx_grdata[reading_types[i]][method_types[i]]);		
 	};
 	var num_years = grids[0].length;
+	
+	console.log(grids.length)
 	const total_weight = weight_vals.reduce((a, b) => a + b, 0); //summing the weights
 	for ( var n = 0; n < num_years; n++ ) {
 		wx_data.push([]);
@@ -3905,6 +4134,7 @@ function RenderGrid(){
 					break
 				}
 				var relev_coords = []
+				var ind = 0
 				var grid_val = grids[k][n][m]
 				if (grid_val > 255){
 					grid_val = 255
@@ -3912,20 +4142,24 @@ function RenderGrid(){
 				if (grid_val < 0){
 					grid_val = 0
 				}
-				x_vals = Object.keys(click_coords[k]).sort((a,b) => a - b);
-				for ( var j = 0; j < x_vals.length; j++ ){
-					if (x_vals[j]-15 > grid_val) {
-						relev_coords = [x_vals[j-1],x_vals[j]]
+				for ( var j = 0; j < click_coords[k].length; j++ ){
+					if (click_coords[k][j][0]-15 > grid_val) {
+						ind = j
+						relev_coords = [click_coords[k][j-1][0],click_coords[k][j][0]]
 						break
 					}
 				}
-				var ofset = click_coords[k][relev_coords[0]]*255/histo_hights[k]
-				if (Math.abs(click_coords[k][relev_coords[0]]-click_coords[k][relev_coords[1]]) < 0.001){
+				if (ind < 0){
+					ind = 0
+				}
+				var ofset = click_coords[k][ind-1][1]*255/histo_hights[k]
+				if (Math.abs(click_coords[k][ind-1][1]-click_coords[k][ind][1]) < 0.001){
 					var mul = 0
 				}
 				else {
-					var mul = (click_coords[k][relev_coords[1]]-click_coords[k][relev_coords[0]])*255/((relev_coords[1]-relev_coords[0])*histo_hights[k])
+					var mul = (click_coords[k][ind][1]-click_coords[k][ind-1][1])*255/((relev_coords[1]-relev_coords[0])*histo_hights[k])
 				}
+				//console.log(((grid_val+15-relev_coords[0])*mul+ofset)*weight_vals[k])
 				num += ((grid_val+15-relev_coords[0])*mul+ofset)*weight_vals[k];
 			}
 			// if (isNaN(num)){
