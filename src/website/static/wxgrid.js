@@ -301,7 +301,7 @@ function tutorial4(){
 	var next_btn = document.getElementById("next")
 	next_btn.innerHTML = "Return to main site"
 	next_btn.addEventListener("click",function () {
-				    window.location.href = "http://localhost:5001/static/index.html?state=%5Bfalse%2C2%2C%C4%81%C4%83%C4%85%5B46%5D%2C%5B74%C4%8F0%2C1%2C0.33%C4%98.66%C4%90%5B%5B1%C4%9C0%C4%8F%C4%A309%C4%98%C4%A7165%2C62.5%C4%A7267%C4%B0%C4%B2%C4%B4%5D%C4%AC%C4%94%C4%90%C4%A6%C4%BF%C4%BD%C4%88%C4%82%C4%84%2Ctru%C4%85%C4%95%C4%95%C4%89%C4%84%5D";
+				    window.location.href = "http://localhost:5001/static/index.html?state=%5Bfalse%2C2%2Cāăą%5B46%5D%2C%5B74ď0%2C1%2C0.33Ę.66Đ%5B%5B1Ĝ0ďģ09Ęħ165%2C62.5ħ267İĲĴ%5DĬĔĐĦĿĽĈĂĄŃĊĘňĉĄ%5D";
 			});
 	next_btn.disabled = false;
 }
@@ -564,7 +564,7 @@ if (!querrySTR || querrySTR == "0" || tutorial !== false){
 	// }
 	// updateQuerry([false,1,false,[51],[74],0,1,0.33,0.66,{13:0,115:0,165:62.5,267:62.5},[1],0,['temperature'],['avg'],[1],false,false,0,0])
 	var url = new URL(window.location.href);
-	url.searchParams.set("state","[false,2,āăą[46],[74ď0,1,0.33Ę.66Đ[[1Ĝ0ďģ09Ęħ165,62.5ħ267İĲĴ]ĬĔĐĦĿĽĈĂĄ,truąĕĕĉĄ]");
+	url.searchParams.set("state","[false,2,āăą[46],[74ď0,1,0.33Ę.66Đ[[1Ĝ0ďģ09Ęħ165,62.5ħ267İĲĴ]ĬĔĐĦĿĽĈĂĄŃĊĘňĉĄ]");
 	window.history.pushState(null, null, url);
 }
 urlParams = new URLSearchParams(window.location.search);
@@ -585,7 +585,7 @@ fetch(url , {   method:'GET',
             function(data) {
                 // parse JSON and determine some stuff
                 start_data = data;//JSON.parse( data.response );
-				start_data = data_temp
+				//start_data = data_temp
 				start_year = start_data["data_specs"]["start_year"];
 				document.getElementById( 'location' ).innerHTML = start_data["data_specs"]["Name"];
 				compresion_types = start_data["compression"];
@@ -2836,7 +2836,9 @@ function DetectGridClick(event,is_render_call){
 		let click_x = event.offsetX
 		let click_y = event.offsetY
 		let cell_coords = getCellCoords(click_x-1,click_y-2)
-		if (cell_coords[0] < 0 || cell_coords[1] < 0 ) {
+		console.log(wx_data)
+		console.log(cell_coords)
+		if (cell_coords[0] < 0 || cell_coords[1] < 0 || wx_data[cell_coords[1]][cell_coords[0]]==null) {
 			save_clicks_x = []
 			save_clicks_y = []
 			selected_years = []
