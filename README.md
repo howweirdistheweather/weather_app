@@ -67,10 +67,6 @@ kubectl create job --from=cronjob.batch/hwitw-tiletool tiletool
 
 ## Docker image builds and publication to GHCR
 
-An open source versions of the `docker` commandline tool is `nerdctl`, which works pretty much as
-a dropin replacement, and can be used to generate images that can be executed with the `containerd`
-runtime.
-
 - build the image, setting the appropriate version tag
 
 ```sh

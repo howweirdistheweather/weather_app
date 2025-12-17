@@ -25,7 +25,7 @@ from data_groups import data_groups, all_variables
 from data_settings import *
 from location_settings import *
 
-APP_VERSION         = '0.69'
+APP_VERSION         = '1.0.0'
 
 HOURS_PER_WEEK      = 24 * 7
 HOURS_PER_YEAR      = 364 * 24

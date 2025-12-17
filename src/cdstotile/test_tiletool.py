@@ -67,7 +67,7 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-APP_VERSION = "0.50"
+APP_VERSION = "1.0.0"
 current_time = datetime.datetime.now()
 
 def universal_flatten_cds(ds):
