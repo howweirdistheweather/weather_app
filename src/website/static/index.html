@@ -153,6 +153,19 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 		border-left: 2px solid #999;
 		padding-left: 1em; 
 	}
+	#gr_grid, #gr_grid svg {
+	  user-select: none;
+	  -webkit-user-select: none;
+	}
+
+	#gr_grid svg text {
+	  user-select: none;
+	  -webkit-user-select: none;
+	  pointer-events: none; /* optional: clicks pass through text */
+	}
+	html, body {
+	  overflow-anchor: none;
+	}
   </style>
 </head>
 <body>
@@ -165,19 +178,29 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 	  <div style="padding-bottom: 5px;">HWITW project Copyright (C) 2020 2021</div>
 	  <select id=unit_selector style="display: inline-block;"><option value="0">metric</option><option value="1">american</option></select>
 	  <select id=color_selector style="display: inline-block;"><option value="0">purple</option><option value="1">red</option><option value="2">blue</option><option value="3">green</option><option value="4">sepia</option><option value="5">hot-cold</option><option value="6">pastell</option></select>
-	  <input type="checkbox" id="color_grad" style="display: inline-block; margin-left: 10px" name="color_grad" value="1"> Use color gradeints
+	  <input type="checkbox" id="color_grad" style="display: inline-block; margin-left: 10px" name="color_grad" value="1"> Use color gradients
 	  <div id=extream_weeks style="display: inline-block; margin-left: 10px;"></div>
 	  <button id="next" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;" value="1">Next</button>
 	  <div></div>
 	  <input type="checkbox" id="seasonal_adjust" style="display: inline-block;" name="seasonal_adjust" value="1"> Seasonally adjusted metrics
 	  <button id="download" type="button" style="display: inline-block; margin-left: 20px; background-color: #fff; border-width: thin; border-radius: 2px;" name="enable_line_editing" value="1"> Download data</button>
 	  <button id="reset" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;" name="enable_line_editing" value="1">Reset all</button>
-	  <div id=location style="display: inline-block; margin-left: 10px;"></div>
+	  
+	  <!--div style="display: inline-block; margin-left: 10px;">lat:</div-->
+	  <div id="location_div" style="display: inline-block; margin-left: 0px;">
+		<div style="display: inline-block; margin-left: 10px;">Location:</div>
+	  	<input type="text" style="display: inline-block; margin-left: 0px;" id="latlon" size="12" placeholder="">
+	  <!--input type="text" style="display: inline-block; margin-left: 0px;" id="lat" size="5" placeholder="">
+	  <div style="display: inline-block; margin-left: 0px;">,</div>
+	  <input type="text" style="display: inline-block; margin-left: 0px;" id="lon" size="5" placeholder=""-->
+	  	<button id="location_go" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;"  value="1">Go</button>
+	  	<input type="checkbox" id="preserve_metrics" style="display: inline-block;" name="seasonal_adjust" value="0"> Preserve metrics
+	  </div>
 	  <div></div>
 	  
 	  
   </div>
-  <div id=tutorial_txt style="font-size: 16px; margin-left: 10px; display: inline-block; width: 500px"></div>
+  <div id=tutorial_txt style="font-size: 16px; margin-left: 10px; display: inline-block; width: 500px; background-color: #ffffaa;"></div>
   <div> </div>
   <input type="checkbox" id="advanced_checkbox" style="display: inline-block;" name="enable_line_editing" value="1"> Enable advanced options
   <div id="advanced" style="visibility: hidden; display: inline-block;">
@@ -222,16 +245,17 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     </div>
 	
 	<div style="display: inline-block;">
+		<div id=click_data style="display: inline-block; overflow: auto; align-elements: center;">
+			<div id=heder style=" font-size: 20px; margin-left: 340px; font-weight: bold;" ></div>
+	    	<div id=histos style="display: inline-block; padding-bottom: 20px; align-items: vertical;"></div>
+			<div id=tables style="display: inline-block;">
+		</div>
 		<p>Welcome to How Weird is the Weather! This is the alpha-release of a data exploration tool you can use to compare unusual weather events you've experienced to other similar weather in the past.</p>
 
 		<p>It was built by Hig (Bretwood Higman) of <a href="https://groundtruthalaska.org/">Ground Truth Alaska</a>, John McInnes, and Katmai McKittrick who all live in Seldovia, Alaska, with help from Matt Jones from the <a href="https://arcticdata.io/">Arctic Data Center</a>, and David Yerrington.</p>
 
 		<p><em>Technical Summary</em> The raw data that this site provides access to is <a href="https://www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5">ERA5</a> hourly weather reanalysis data, updated daily with an approximately 5-day latency, and extending back to 1950. The data is pre-processed into a collection of weekly statistics, with the fidelity of each statistic limited to 1 byte, making it possible to quickly view data for any of about 1 million 1/4 degree x 1/4 degree areas around the world. The interactive tools act on one of these datasets, allowing you to develop a metric that highlights some particular weather conditions and then see that metric applied to the entire timespan.</p>
-		<div id=click_data style="display: inline-block; overflow: auto; align-elements: center;">
-			<div id=heder style="text-align: center; font-size: 20px; font-weight: bold;" ></div>
-	    	<div id=histos style="display: inline-block; padding-bottom: 20px; align-items: vertical;"></div>
-			<div id=tables style="display: inline-block;">
-		</div>
+		
 	
     </div>
 	<!--div id=gr_choices2 class="center_vertical" style="overflow: auto; display: none; float: right; margin-left: 10px;">
