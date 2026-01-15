@@ -2,9 +2,24 @@
 // Replace `your_access_token` with your Cesium ion access token.
 // Cesium.Ion.defaultAccessToken = 'your_access_token';
 
-const start_latitude = 58.35;
-const start_longitude = -134.63;
+const urlParams = new URLSearchParams(window.location.search);
+var lat = urlParams.get('lat');
+var lon = urlParams.get('lon');
+console.log(lat)
+var start_latitude = 59.44;
+var start_longitude = -151.70;
 const start_height = 45000;
+var preserve_metrics = false
+if (lat){
+	start_latitude = parseFloat(lat)
+}
+if (lon){
+	start_longitude = parseFloat(lon)
+}
+var map = true
+var tutorial = false
+var has_querry = false
+console.log('awerstdyfg')
 
 // Keep track of the last lat/lon string.
 let lastPositionString = [];
@@ -18,6 +33,7 @@ const scene = viewer.scene;
 
 // Base URL for How Weird Is The Weather.
 const urlBase = "https://hwitw-dev.arcticdata.io/static/index.html?";
+//const urlBase = "http://192.168.194.103:5001/static/index.html?";
 
 // Create the Cesium mouse event handler
 const handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
@@ -90,6 +106,73 @@ handler.setInputAction(function (movement) {
       updateLabel(labelString, cartesian);
 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
+
+
+var map_btn = document.getElementById("map_btn")
+
+map_btn.addEventListener("click",function () {
+	var cesiumContainer = document.getElementById("cesiumContainer")
+	var hwitw = document.getElementById("hwitw")
+	var hwitwContainer = document.getElementById("hwitw-container")
+	if (map) {
+		map = false
+		// cesiumContainer.style.visibility = 'hidden';
+// 		cesiumContainer.style.position = 'absolute';
+		hwitw.style.width = '100vw';
+		hwitwContainer.style.width = '100vw';
+		hwitw.style.hight = '10000';
+		hwitwContainer.style.hight = '10000';
+		hwitw.style.border = 'none';
+		map_btn.innerHTML = '>'
+	} else {
+		map = true
+		hwitw.style.width = '';
+		hwitwContainer.style.width = '';
+		hwitw.style.hight = '';
+		hwitwContainer.style.hight = '';
+		hwitw.style.border = '';
+		map_btn.innerHTML = '<'
+	}
+});
+
+window.addEventListener("message", (event) => {
+	console.log("ssdfdfgh")
+ 	if (event.data?.type === "queryString") {
+		console.log("sdfgh")
+    	const params = new URLSearchParams(event.data.value);
+		var url = new URL(window.location.href);
+		url.searchParams.set("state", params.get("state"));
+		url.searchParams.set("tutorial", params.get("tutorial"));
+		var cesiumContainer = document.getElementById("cesiumContainer")
+		var hwitw = document.getElementById("hwitw")
+		var hwitwContainer = document.getElementById("hwitw-container")
+		if (params.get("tutorial") != 'null' && params.get("tutorial") != null){
+			if (map){
+				hwitw.style.width = '100vw';
+				hwitwContainer.style.width = '100vw';
+				hwitw.style.hight = '10000';
+				hwitwContainer.style.hight = '10000';
+				hwitw.style.border = 'none';
+				map = false
+			}
+			map_btn.style.visibility = 'hidden'
+			tutorial = true
+		} else if (tutorial) {
+			map = true
+			hwitw.style.width = '';
+			hwitwContainer.style.width = '';
+			hwitw.style.hight = '';
+			hwitwContainer.style.hight = '';
+			hwitw.style.border = '';
+			map_btn.innerHTML = '<'
+			map_btn.style.visibility = 'visible'
+		}
+		window.history.pushState(null, null, url);
+  	} else if (event.data?.type === "preserve_metrics"){
+  		preserve_metrics = event.data.value
+		console.log(preserve_metrics)
+  	}
+});
 // Set the start position of the viewer and redirect HWITW to that location.
 function setStartPosition() {
       const cartesian = Cesium.Cartesian3.fromDegrees(start_longitude, start_latitude, start_height);
@@ -109,13 +192,37 @@ function setStartPosition() {
 
 // Redirect HWITW to the last known lat/lon position.
 function redirectHWITW() {
-      if (!lastPositionString || !lastPositionString.length) {
-            return;
-      }
-      const hwitwString = formatLatLonForHWITW(lastPositionString);
-      const url = urlBase + hwitwString;
-      document.getElementById("hwitw").src = url;
+	if (!lastPositionString || !lastPositionString.length) {
+	    return;
+	}
+	// if (!preserve_metrics) {
+// 		url.searchParams.set("state","");
+// 		window.history.pushState(null, null, url);
+// 	}
+	const [longitudeString, latitudeString] = lastPositionString;
+	var url = new URL(window.location.href);
+	url.searchParams.set("lat", latitudeString);
+	url.searchParams.set("lon", longitudeString);
+	window.history.pushState(null, null, url);
+	const locString = formatLatLonForHWITW(lastPositionString);
+	const urlParams = new URLSearchParams(window.location.search);
+	const tutorial = urlParams.get('tutorial');
+	const state = urlParams.get('state');
+	const tutorialString = `&tutorial=${tutorial}`;
+	const stateString = `&state=${state}`;
+	const cesiumString = `&cesium=1`;
+	if (tutorial != 'null' && tutorial != null){
+		var url = urlBase + tutorialString + cesiumString;
+	} else if (state && state != 'null' && preserve_metrics){
+		var url = urlBase + locString + tutorialString + stateString + cesiumString;
+	} else {
+		var url = urlBase + locString + cesiumString;
+	}
+	//const url = urlBase + locString + internalString;
+	document.getElementById("hwitw").src = url;
 }
+
+
 
 setStartPosition();
 
