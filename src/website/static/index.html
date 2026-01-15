@@ -170,45 +170,46 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 </head>
 <body>
   <a id="downloadAnchorElem" style="display:none"></a>
-  
+  <img src="720px_HWITW_logo_2color.png" alt="Description of the image" width="144" height="103">
   <div style="display: inline-block;">
-	  <div style="font-size: 20px; display: inline-block;">How weird is the weather</div>
+	  <div style="display: inline-block;">
   
-	  <div id=data_storage></div>
-	  <div style="padding-bottom: 5px;">HWITW project Copyright (C) 2020 2021</div>
-	  <select id=unit_selector style="display: inline-block;"><option value="0">metric</option><option value="1">american</option></select>
-	  <select id=color_selector style="display: inline-block;"><option value="0">purple</option><option value="1">red</option><option value="2">blue</option><option value="3">green</option><option value="4">sepia</option><option value="5">hot-cold</option><option value="6">pastell</option></select>
-	  <input type="checkbox" id="color_grad" style="display: inline-block; margin-left: 10px" name="color_grad" value="1"> Use color gradients
-	  <div id=extream_weeks style="display: inline-block; margin-left: 10px;"></div>
-	  <button id="next" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;" value="1">Next</button>
-	  <div></div>
-	  <input type="checkbox" id="seasonal_adjust" style="display: inline-block;" name="seasonal_adjust" value="1"> Seasonally adjusted metrics
-	  <button id="download" type="button" style="display: inline-block; margin-left: 20px; background-color: #fff; border-width: thin; border-radius: 2px;" name="enable_line_editing" value="1"> Download data</button>
-	  <button id="reset" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;" name="enable_line_editing" value="1">Reset all</button>
+		  <div id=data_storage></div>
+		  <select id=unit_selector style="display: inline-block;"><option value="0">metric</option><option value="1">american</option></select>
+		  <select id=color_selector style="display: inline-block;"><option value="0">purple</option><option value="1">red</option><option value="2">blue</option><option value="3">green</option><option value="4">sepia</option><option value="5">hot-cold</option><option value="6">pastell</option></select>
+		  <input type="checkbox" id="color_grad" style="display: inline-block; margin-left: 10px" name="color_grad" value="1"> Use color gradients
+		  <div id=extream_weeks style="display: inline-block; margin-left: 10px;"></div>
+		  <button id="next" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;" value="1">Next</button>
+		  <div></div>
+		  <input type="checkbox" id="seasonal_adjust" style="display: inline-block;" name="seasonal_adjust" value="1"> Seasonally adjusted metrics
+		  <button id="download" type="button" style="display: inline-block; margin-left: 20px; background-color: #fff; border-width: thin; border-radius: 2px;" name="enable_line_editing" value="1"> Download data</button>
+		  <button id="reset" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;" name="enable_line_editing" value="1">Reset all</button>
 	  
-	  <!--div style="display: inline-block; margin-left: 10px;">lat:</div-->
-	  <div id="location_div" style="display: inline-block; margin-left: 0px;">
-		<div style="display: inline-block; margin-left: 10px;">Location:</div>
-	  	<input type="text" style="display: inline-block; margin-left: 0px;" id="latlon" size="12" placeholder="">
-	  <!--input type="text" style="display: inline-block; margin-left: 0px;" id="lat" size="5" placeholder="">
-	  <div style="display: inline-block; margin-left: 0px;">,</div>
-	  <input type="text" style="display: inline-block; margin-left: 0px;" id="lon" size="5" placeholder=""-->
-	  	<button id="location_go" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;"  value="1">Go</button>
-	  	<input type="checkbox" id="preserve_metrics" style="display: inline-block;" name="seasonal_adjust" value="0"> Preserve metrics
+		  <!--div style="display: inline-block; margin-left: 10px;">lat:</div-->
+		  <div id="location_div" style="display: inline-block; margin-left: 0px;">
+			<div style="display: inline-block; margin-left: 10px;">Location:</div>
+			<div id="loc_txt" style="display: inline-block; margin-left: 0px;"></div>
+		  	<input type="text" style="display: inline-block; margin-left: 0px;" id="latlon" size="12" placeholder="">
+		  <!--input type="text" style="display: inline-block; margin-left: 0px;" id="lat" size="5" placeholder="">
+		  <div style="display: inline-block; margin-left: 0px;">,</div>
+		  <input type="text" style="display: inline-block; margin-left: 0px;" id="lon" size="5" placeholder=""-->
+		  	<button id="location_go" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;"  value="1">Go</button>
+		  	<input type="checkbox" id="preserve_metrics" style="display: inline-block;" name="seasonal_adjust" value="0"> Preserve metrics between locations
+		  </div>
+		  <div></div>
+	  
+	  
 	  </div>
-	  <div></div>
-	  
-	  
-  </div>
-  <div id=tutorial_txt style="font-size: 16px; margin-left: 10px; display: inline-block; width: 500px; background-color: #ffffaa;"></div>
-  <div> </div>
-  <input type="checkbox" id="advanced_checkbox" style="display: inline-block;" name="enable_line_editing" value="1"> Enable advanced options
-  <div id="advanced" style="visibility: hidden; display: inline-block;">
-  	<input type="checkbox" id="enable_line_editing" style="display: inline-block;" name="enable_line_editing" value="1"> Enable transfer function editing
-    <input type="checkbox" id="trend" style="display: inline-block; margin-left: 10px" name="enable_line_editing" value="1"> Display streaks
-    <div id=sensetivity_slider_holder style="display: inline-block; margin-left: 20px;"></div>
-	<input type="checkbox" id="do_PDO" style="display: inline-block; margin-left: 20px" name="enable_line_editing" value="1"> Display PDO and ENSO
-  </div>
+	  <div id=tutorial_txt style="font-size: 16px; margin-left: 10px; display: inline-block; width: 500px; background-color: #ffffaa;"></div>
+	  <div> </div>
+	  <input type="checkbox" id="advanced_checkbox" style="display: inline-block;" name="enable_line_editing" value="1"> Enable advanced options
+	  <div id="advanced" style="visibility: hidden; display: inline-block;">
+	  	<input type="checkbox" id="enable_line_editing" style="display: inline-block;" name="enable_line_editing" value="1"> Enable transfer function editing
+	    <input type="checkbox" id="trend" style="display: inline-block; margin-left: 10px" name="enable_line_editing" value="1"> Display streaks
+	    <div id=sensetivity_slider_holder style="display: inline-block; margin-left: 20px;"></div>
+		<input type="checkbox" id="do_PDO" style="display: inline-block; margin-left: 20px" name="enable_line_editing" value="1"> Display PDO and ENSO
+	  </div>
+	</div>
   <!--input type="checkbox" id="temp" style="display: inline-block; margin-left: 20px" name="temp" value="1"> Display PDO and ENSO-->
   <!--select id=type_selector><option value="1">one metric</option><option value="2">two metrics</option></select>
   <button type="button" id=save_measurement_button style="display: inline-block;">save</button></div>
@@ -217,7 +218,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 	<div id=gr_choices class="center_vertical">
 		<div id=measurements></div>
-		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="measurement_button">add new measurement</button></div>
+		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="measurement_button">Add new variable</button></div>
 		<div style="text-align: center; padding-bottom: 20px;"><button type="button" id="invert_all_button">invert all</button></div>
 		<div id=gr_mainctr style="text-align: center;">
 		  
