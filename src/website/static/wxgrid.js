@@ -13,7 +13,12 @@
 //COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 //OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+const params = window.location.search;
 
+window.parent.postMessage(
+  { type: "queryString", value: params },
+  "*"
+);
 
 const svg = document.getElementById('mySvg');
 const tooltip = document.getElementById('tooltip');
@@ -241,6 +246,7 @@ var timerIDs = []
 var pre_time_weight = 0
 var timerIDs_weight = []
 
+var is_advanced_setting = false
 var is_trend = false
 var lines = []
 var year_draw = null
@@ -273,6 +279,7 @@ var color_grads = false
 var grad_list = []
 var has_grad_list = false
 var color_list = []
+var Streaks_back = []
 
 var season_draw_list = []
 var has_season_draw_list = false
@@ -354,7 +361,7 @@ const diverging_threshold = 5
 var t_weight_vals = []
 var broken_querry = false
 function tutorial0(){
-	document.getElementById("tutorial_txt").innerHTML = "How weird is the weather is a weather data visualization tool, each cell on the central grid is one week and the color is how extreme the weather was according to some criteria, currently that criteria is simply how hot was it (this tutorial uses data form seldovia alaska)"
+	document.getElementById("tutorial_txt").innerHTML = "How weird is the weather is a weather data visualization tool, each cell on the central grid is one week and the color is how extreme the weather was according to some criteria, currently that criteria is simply how hot was it (this tutorial uses data form seldovia alaska). TO CONTINUE PRESS NEXT"
 }
 function tutorial1(){
 	document.getElementById("tutorial_txt").innerHTML = "Currently the threshold for extreme is not very strict so a lot of weeks are considered extreme, to see the very hottest weeks change the thresholds using the bottom slider to around 0.82, 0.88"
@@ -366,6 +373,12 @@ function tutorial3(){
 	document.getElementById("tutorial_txt").innerHTML = "Now you can see that there aren't as many weeks being displayed since there is a longer tail so loosen the thresholds a bit (to around 0.54, 0.74)"
 }
 function tutorial4(){
+	document.getElementById("tutorial_txt").innerHTML = "To look at combinations of variables (say cold snowy days) you can press \"add new variable\" and then set the left dropdown to the desired variable (in this case precipitation)"
+}
+function tutorial5(){
+	document.getElementById("tutorial_txt").innerHTML = "Because it isn't usualy snowwy when it's very cold no extream weeks are being displayed so slide the slider to around 0.46,0.57"
+}
+function tutorial6(){
 	document.getElementById("tutorial_txt").innerHTML = ""
 	var next_btn = document.getElementById("next")
 	next_btn.innerHTML = "Return to main site"
@@ -374,6 +387,7 @@ function tutorial4(){
 		return2();
 			});
 	next_btn.disabled = false;
+	next_btn.style.fontWeight = 'bold';
 }
 function return2(){
 	var url = new URL(window.location.href);
@@ -580,22 +594,45 @@ var states = [[tutorial0,[{
     "unit_num": 0,
     "color_grads": false,
 	'preserve_metrics':false
-},tutorial4]]]
+},tutorial4],[{
+	"is_trend":false,
+	"sensetivity":2,
+	"is_seasonaly_adjusted":false,
+	"mins":[51,0],"maxes":[74,79],
+	"wx_grdata_min":0,
+	"wx_grdata_max":1,
+	"wx_range_val0":0.54,
+	"wx_range_val1":0.74,
+	"click_coords":[[[13,62.5],[119,62.5],[165,0],[270,0]],[[13,0],[17,0],[175,62.5],[270,62.5]]],
+	"weight_vals":[0.5,0.5],
+	"measurement_index":1,
+	"reading_types":["temperature","precipitation"],
+	"method_types":["avg","total"],
+	"prevs":[0.5,0.5],
+	"doPDO":false,
+	"line_editing":false,
+	"color_num":0,
+	"unit_num":0,
+	"color_grads":false,
+	"preserve_metrics":false
+},tutorial5],[{
+	"is_trend":false,"sensetivity":2,"is_seasonaly_adjusted":false,"mins":[51,0],"maxes":[74,79],"wx_grdata_min":0,"wx_grdata_max":1,"wx_range_val0":0.46130000000000004,"wx_range_val1":0.5690999999999999,"click_coords":[[[13,62.5],[119,62.5],[165,0],[270,0]],[[13,0],[17,0],[175,62.5],[270,62.5]]],"weight_vals":[0.5,0.5],"measurement_index":1,"reading_types":["temperature","precipitation"],"method_types":["avg","total"],"prevs":[0.5,0.5],"doPDO":false,"line_editing":false,"color_num":0,"unit_num":0,"color_grads":false,"preserve_metrics":false
+},tutorial6]]]
 if (tutorial != 'null' && tutorial != null){
 	document.body.style.backgroundColor = "#ffffee";
 	document.getElementById("location_div").innerHTML = ""
 	
 	tutorial = parseInt(tutorial)
 	var next_btn = document.getElementById("next")
+	next_btn.style.backgroundColor = '#ffff99';
 	next_btn.disabled = true;
 	next_btn.addEventListener("click",function () {
 				next_btn.disabled = true
+				next_btn.style.fontWeight = 'normal';
 				target_state[1]()
 				state_index ++
 				if (state_index < target_states.length){
 					target_state = target_states[state_index]
-				} else {
-					tutorial = false
 				}
 				console.log(target_state)
 			});
@@ -684,7 +721,7 @@ fetch(url , {   method:'GET',
 				let t0 = Date.now()
                 start_data = data;//JSON.parse( data.response );
 				if (devtools){
-					start_data = data_temp
+					//start_data = data_temp
 					console.log(start_data)
 				}
 				start_year = start_data["data_specs"]["start_year"];
@@ -747,7 +784,7 @@ fetch(url , {   method:'GET',
 					}
 				}
 				
-				seasonal_data = doSesonalCompression(cropped_data)
+				
 				all_data = cropped_data
 				reading_options = Object.keys(all_data)
 				for (var i=0; i < reading_options.length; i++){
@@ -762,6 +799,7 @@ fetch(url , {   method:'GET',
 				
 				unitNamesHandaler()
 				unitMulHandaler()
+				seasonal_data = doSesonalCompression(cropped_data)
 				let t3 = Date.now()
 				
 				makeNewMeasurmeant(0,false)
@@ -781,6 +819,10 @@ fetch(url , {   method:'GET',
 // 				console.log(t3-t2)
 // 				console.log(t4-t3)
 // 				console.log(t5-t4)
+				window.parent.postMessage(
+				  { type: "queryString", value: params },
+				  "*"
+				);
             }
         );
     }
@@ -789,95 +831,220 @@ fetch(url , {   method:'GET',
     console.error('Fetch Error -', err);
 });
 function doSesonalCompression(in_data){
+	['dir_net','speed_net','dir_modal']
 	var week_totals = [{},{}]
+	var out_data = {}
+	
+	var speed_net_save = []
+	var dr_net_save = []
 	for (mesurment of Object.keys(in_data)){
 		week_totals[0][mesurment] = {}
 		week_totals[1][mesurment] = {}
-		for (func of Object.keys(in_data[mesurment])){
-			week_totals[0][mesurment][func] = new Array(52).fill(0);
-			week_totals[1][mesurment][func] = new Array(52).fill(0);
-			var expon = 1
-			if (compresion[mesurment][func]["type"] == "parabolic") {
-				expon = 2
+		out_data[mesurment] = {}
+		console.log(mesurment)
+		if (mesurment == "wind") {
+			// var x = 0
+// 			var y = 0
+// 			for (var k=0; k < value_list[j].length; k++){
+// 				let ang = value_list[dir_net_index][k]*Math.PI/180
+// 				let dist = value_list[speed_net_index][k]
+// 				x += Math.cos(ang)*dist
+// 				y += Math.sin(ang)*dist
+// 			}
+// 			let new_dist = Math.sqrt(x**2+y**2)
+// 			if (method_options[j] == 'speed_net'){
+// 				compressed_value = new_dist/value_list[j].length
+// 			}
+// 			else {
+// 				compressed_value = Math.acos(x/new_dist)
+// 				if (Math.sign(y) == -1){
+// 					compressed_value = compressed_value + Math.PI
+// 				}
+// 				compressed_value *= 180/Math.PI
+// 			}
+			week_totals[0][mesurment]["vect"] = [];
+			week_totals[1][mesurment]["vect"] = new Array(52).fill(0);
+			for (var k = 0; k < 52; k++){
+				week_totals[0][mesurment]["vect"].push([0,0])
 			}
-			for (var i = 0; i < in_data[mesurment][func].length; i++){
-				for (var j = 0; j < in_data[mesurment][func][i].length; j++){
-					if (in_data[mesurment][func][i][j] != 255 && in_data[mesurment][func][i][j] != null){
-						week_totals[0][mesurment][func][j] += in_data[mesurment][func][i][j]**expon
-						week_totals[1][mesurment][func][j] += 1
+			for (var i = 0; i < in_data[mesurment]["speed_net"].length; i++){
+				for (var j = 0; j < in_data[mesurment]["speed_net"][i].length; j++){
+					if (in_data[mesurment]["speed_net"][i][j] != 255 && in_data[mesurment]["speed_net"][i][j] != null){
+						var dist = in_data[mesurment]["speed_net"][i][j]
+						var ang = in_data[mesurment]["dir_net"][i][j]
+						ang = (ang*compresion[mesurment]["dir_net"]["scale"]+compresion[mesurment]["dir_net"]["min"])*unit_muls[unit_sets[unit_num]][mesurment]["dir_net"][0]+unit_muls[unit_sets[unit_num]][mesurment]["dir_net"][1]
+						ang *= Math.PI/180
+						week_totals[0][mesurment]["vect"][j][0] += Math.cos(ang)*dist
+						week_totals[0][mesurment]["vect"][j][1] += Math.sin(ang)*dist
+						week_totals[1][mesurment]["vect"][j] += 1
 					}
 				}
 			}
-		}
-	}
-	//console.log(in_data)
-	var out_data = {}
-	for (mesurment of Object.keys(in_data)){
-		out_data[mesurment] = {}
-		for (func of Object.keys(in_data[mesurment])){
-			out_data[mesurment][func] = []
-			var expon = 1
-			if (compresion[mesurment][func]["type"] == "parabolic") {
-				expon = 2
-			}
-			for (var i = 0; i < in_data[mesurment][func].length; i++){
-				out_data[mesurment][func].push([])
-				for (var j = 0; j < in_data[mesurment][func][i].length; j++){
-					out_data[mesurment][func][i].push(0)
-					if (in_data[mesurment][func][i][j] == 255 || in_data[mesurment][func][i][j] == null){
-						out_data[mesurment][func][i][j] = null
+			for (var i = 0; i < in_data[mesurment]["speed_net"].length; i++){
+				speed_net_save.push([])
+				dr_net_save.push([])
+				for (var j = 0; j < in_data[mesurment]["speed_net"][i].length; j++){
+					speed_net_save[i].push(0)
+					dr_net_save[i].push(0)
+					if (in_data[mesurment]["speed_net"][i][j] == 255 || in_data[mesurment]["speed_net"][i][j] == null){
+						speed_net_save[i][j] = null
+						dr_net_save[i][j] = null
 					}
 					else {
-						var val = in_data[mesurment][func][i][j]**expon-week_totals[0][mesurment][func][j]/week_totals[1][mesurment][func][j]
-						var sign = 1
-						if (val < 0 && expon == 2){
-							sign = -1
+						//var val = in_data[mesurment][func][i][j]**expon-week_totals[0][mesurment][func][j]/week_totals[1][mesurment][func][j]
+						var dist = in_data[mesurment]["speed_net"][i][j]
+						var ang = in_data[mesurment]["dir_net"][i][j]
+						ang = (ang*compresion[mesurment]["dir_net"]["scale"]+compresion[mesurment]["dir_net"]["min"])*unit_muls[unit_sets[unit_num]][mesurment]["dir_net"][0]+unit_muls[unit_sets[unit_num]][mesurment]["dir_net"][1]
+						ang *= Math.PI/180
+						x = Math.cos(ang)*dist
+						y = Math.sin(ang)*dist
+						//console.log(x)
+						x -= week_totals[0][mesurment]["vect"][j][0]/week_totals[1][mesurment]["vect"][j]
+						y -= week_totals[0][mesurment]["vect"][j][1]/week_totals[1][mesurment]["vect"][j]
+						//console.log(x)
+						let new_dist = Math.sqrt(x**2+y**2)
+						speed_net_save[i][j] = Math.round(new_dist)
+
+						var new_ang = Math.acos(x/new_dist)
+						if (Math.sign(y) == -1){
+							new_ang = 2*Math.PI - new_ang
 						}
-						var div = 1
-						if (expon == 2){
-							div = 127
+						new_ang *= 180/Math.PI
+						new_ang = ((new_ang-unit_muls[unit_sets[unit_num]][mesurment]["dir_net"][1])/unit_muls[unit_sets[unit_num]][mesurment]["dir_net"][0]-compresion[mesurment]["dir_net"]["min"])/compresion[mesurment]["dir_net"]["scale"]
+						dr_net_save[i][j] = Math.round(new_ang)
+						if (dr_net_save[i][j] < 0){
+							dr_net_save[i][j] = 0
 						}
-						out_data[mesurment][func][i][j] = Math.round((val*sign)**(1/1)*sign/div)+127
-						if (out_data[mesurment][func][i][j] < 0){
-							out_data[mesurment][func][i][j] = 0
+						if (dr_net_save[i][j] > 254){
+							dr_net_save[i][j] = 254
 						}
-						if (out_data[mesurment][func][i][j] > 254){
-							out_data[mesurment][func][i][j] = 254
+						if (speed_net_save[i][j] < 0){
+							speed_net_save[i][j] = 0
+						}
+						if (speed_net_save[i][j] > 254){
+							speed_net_save[i][j] = 254
+						}
+					}
+				}
+			}
+		}
+		for (func of Object.keys(in_data[mesurment])){
+			if (func == 'dir_modal'){
+				out_data[mesurment][func] = []
+				for (var i = 0; i < in_data[mesurment][func].length; i++){
+					out_data[mesurment][func].push([])
+					for (var j = 0; j < in_data[mesurment][func][i].length; j++){
+						out_data[mesurment][func][i].push(0)
+						out_data[mesurment][func][i][j] = in_data[mesurment][func][i][j]
+					}
+				}
+			} else if (func == 'speed_net') {
+				out_data[mesurment][func] = speed_net_save
+			} else if (func == 'dir_net') {
+				out_data[mesurment][func] = dr_net_save
+			} else {
+				week_totals[0][mesurment][func] = new Array(52).fill(0);
+				week_totals[1][mesurment][func] = new Array(52).fill(0);
+				var expon = 1
+				if (compresion[mesurment][func]["type"] == "parabolic") {
+					expon = 2
+				}
+				for (var i = 0; i < in_data[mesurment][func].length; i++){
+					for (var j = 0; j < in_data[mesurment][func][i].length; j++){
+						if (in_data[mesurment][func][i][j] != 255 && in_data[mesurment][func][i][j] != null){
+							week_totals[0][mesurment][func][j] += in_data[mesurment][func][i][j]**expon
+							week_totals[1][mesurment][func][j] += 1
+						}
+					}
+				}
+				out_data[mesurment][func] = []
+				var expon = 1
+				if (compresion[mesurment][func]["type"] == "parabolic") {
+					expon = 2
+				}
+				for (var i = 0; i < in_data[mesurment][func].length; i++){
+					out_data[mesurment][func].push([])
+					for (var j = 0; j < in_data[mesurment][func][i].length; j++){
+						out_data[mesurment][func][i].push(0)
+						if (in_data[mesurment][func][i][j] == 255 || in_data[mesurment][func][i][j] == null){
+							out_data[mesurment][func][i][j] = null
+						}
+						else {
+							var val = in_data[mesurment][func][i][j]**expon-week_totals[0][mesurment][func][j]/week_totals[1][mesurment][func][j]
+							var sign = 1
+							if (val < 0 && expon == 2){
+								sign = -1
+							}
+							var div = 1
+							if (expon == 2){
+								div = 127
+							}
+							out_data[mesurment][func][i][j] = Math.round((val*sign)**(1/1)*sign/div)+127
+							if (out_data[mesurment][func][i][j] < 0){
+								out_data[mesurment][func][i][j] = 0
+							}
+							if (out_data[mesurment][func][i][j] > 254){
+								out_data[mesurment][func][i][j] = 254
+							}
 						}
 					}
 				}
 			}
 		}
 	}
+	console.log(out_data)
 	return out_data
 }
 if (tutorial === false){
-	location_go = document.getElementById("location_go")
-	location_go.addEventListener("click",function () {
-				if (!is_loading){
-					var preserve_metrics = document.getElementById("preserve_metrics")
-					if (!preserve_metrics.checked){
-						const url = new URL(window.location.href);
-						url.searchParams.delete('state');
-						window.history.replaceState({}, document.title, url.toString())
+	urlParams = new URLSearchParams(window.location.search);
+	if (urlParams.get('cesium') != 'null' && urlParams.get('cesium') != null){
+		document.getElementById("loc_txt").innerHTML = `${lat}, ${lon}`
+		document.getElementById("latlon").style.visibility = 'hidden'
+		document.getElementById("latlon").style.position = 'absolute'
+		document.getElementById("location_go").style.visibility = 'hidden'
+		document.getElementById("location_go").style.position = 'absolute'
+		var preserve_metrics = document.getElementById("preserve_metrics")
+		preserve_metrics.onchange =
+				function () {
+					if (!is_loading){
+						saveState()
+						preserve_metrics = document.getElementById("preserve_metrics")
+						console.log(preserve_metrics.checked)
+						window.parent.postMessage(
+						  { type: "preserve_metrics", value: preserve_metrics.checked },
+						  "*"
+						);
 					}
-					var loc = document.getElementById("latlon").value.replace(/\s/g, '').split(',');
-					var new_lat = parseFloat(loc[0])
-					var new_lon = parseFloat(loc[1])
-					var url = new URL(window.location.href);
-					url.searchParams.set("lat", new_lat);
-					url.searchParams.set("lon", new_lon);
-					window.history.pushState(null, null, url);
-					window.location.reload();
-				}
-			});
-	var preserve_metrics = document.getElementById("preserve_metrics")
-	preserve_metrics.onchange =
-			function () {
-				if (!is_loading){
-					saveState()
-				}
-			};
+		};
+	} else {
+		location_go = document.getElementById("location_go")
+		location_go.addEventListener("click",function () {
+					if (!is_loading){
+						var preserve_metrics = document.getElementById("preserve_metrics")
+						if (!preserve_metrics.checked){
+							const url = new URL(window.location.href);
+							url.searchParams.delete('state');
+							window.history.replaceState({}, document.title, url.toString())
+						}
+						var loc = document.getElementById("latlon").value.replace(/\s/g, '').split(',');
+						var new_lat = parseFloat(loc[0])
+						var new_lon = parseFloat(loc[1])
+						var url = new URL(window.location.href);
+						url.searchParams.set("lat", new_lat);
+						url.searchParams.set("lon", new_lon);
+						window.history.pushState(null, null, url);
+						window.location.reload();
+					}
+				});
+		var preserve_metrics = document.getElementById("preserve_metrics")
+		preserve_metrics.onchange =
+				function () {
+					if (!is_loading){
+						saveState()
+					}
+		};
+	}
+	
 }
 
 
@@ -895,16 +1062,7 @@ color_selector.onchange =
 				RenderGrid()
 			}
 		};
-var advanced_options = document.getElementById("advanced_checkbox")
-advanced_options.onchange =
-		function () {
-			if (advanced){
-				document.getElementById("advanced").style.visibility = 'hidden';
-			} else {
-				document.getElementById("advanced").style.visibility = 'visible';
-			}
-			advanced = !advanced
-		};
+		
 var enable_line_editing = document.getElementById("enable_line_editing")
 enable_line_editing.onchange =
 		function () {
@@ -924,6 +1082,30 @@ enable_line_editing.onchange =
 			}
 			saveState()
 		};
+var advanced_options = document.getElementById("advanced_checkbox")
+
+advanced_options.onchange =
+		function () {
+			if (is_advanced_setting){
+				return
+			}
+			is_advanced_setting = true
+			
+			if (advanced){
+				if (doPDO || enable_line_editing.checked || is_trend) {
+					advanced_options.checked = true
+				} else {
+					document.getElementById("advanced").style.visibility = 'hidden';
+					advanced = !advanced
+				}
+				
+			} else {
+				document.getElementById("advanced").style.visibility = 'visible';
+				advanced = !advanced
+			}
+			is_advanced_setting = false
+		};
+
 var seasonal_adjust = document.getElementById("seasonal_adjust")
 seasonal_adjust.onchange =
 		function () {
@@ -1067,7 +1249,7 @@ download.addEventListener("click",downloadData);
 var reset = document.getElementById("reset");
 reset.addEventListener("click",function () {
 	var url = new URL(window.location.href);
-	url.searchParams.set("state","0");
+	url.searchParams.set("state","");
 	window.history.pushState(null, null, url);
 	window.location.reload();
 });
@@ -1281,8 +1463,10 @@ function saveState(update_type="base"){
 		}
 		if (is_matching){
 			next_btn.disabled = false;
+			next_btn.style.fontWeight = 'bold';
 		} else {
 			next_btn.disabled = true;
+			next_btn.style.fontWeight = 'normal';
 		}
 	}
 	
@@ -1290,6 +1474,7 @@ function saveState(update_type="base"){
 }
 
 function getState(){
+	console.log(tutorial)
 	if (tutorial !== false){
 		preserve_metrics = false
 	} else {
@@ -1322,6 +1507,12 @@ function updateQuerry(state=null){
 	var url = new URL(window.location.href);
 	url.searchParams.set("state", querry);
 	window.history.pushState(null, null, url);
+	const params = window.location.search;
+
+	window.parent.postMessage(
+	  { type: "queryString", value: params },
+	  "*"
+	);
 }
 function loadFromeQuerry(querry) {
 	querry = lzw_decode(querry);
@@ -1501,6 +1692,11 @@ function loadState(){
 	LoadWXGrid()
 	RenderGrid()
 	saveState("no_save")
+	if (doPDO || enable_line_editing.checked || is_trend) {
+		advanced_options.checked = true
+		document.getElementById("advanced").style.visibility = 'visible';
+		advanced = true
+	}
 }
 
 function downloadData(){
@@ -2428,7 +2624,7 @@ function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,
 					}
 				}
 				if (is_mode){
-					if (is_seasonaly_adjusted){
+					if (is_seasonaly_adjusted && !['dir_net','speed_net','dir_modal'].includes(method_types[num])){
 						let st_txt = ''
 						if (parseFloat(((((j*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
 							st_txt = '+'
@@ -2446,7 +2642,7 @@ function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,
 				}
 			}
 		}
-		if (is_seasonaly_adjusted){
+		if (is_seasonaly_adjusted && !['dir_net','speed_net','dir_modal'].includes(method_types[num])){
 			let st_txt = ''
 			if (parseFloat(((((min_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
 				st_txt = '+'
@@ -2461,7 +2657,7 @@ function DrawHistogram(draw,histo_plot,min_num,max_num,expon,mul,color_plot,num,
 	    let min_extrem_length = min_extrem.length();
 	    min_extrem.move( min_num*2 - min_extrem_length/2 + 15,125*0.5+10 ); // center vertically
 
-		if (is_seasonaly_adjusted){
+		if (is_seasonaly_adjusted && !['dir_net','speed_net','dir_modal'].includes(method_types[num])){
 			let st_txt = ''
 			if (parseFloat(((((max_num*2*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul-(((st_subtract*compresion[reading_types[num]][method_types[num]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_types[num]][method_types[num]][0])*mul).toFixed(2)) > 0){
 				st_txt = '+'
@@ -3043,7 +3239,7 @@ function DetectYearClick(event,is_render_call){
 			for (let i=0; i < 52; i++){
 				var is_selected = false
 				for (var j=0; j < save_clicks_x.length; j++){
-					if (i == save_clicks_x[j] && compresed_data.length-Math.floor((y_coord-27)/9-1) == save_clicks_y[j]){
+					if (i == save_clicks_x[j] && compresed_data.length-Math.floor((y_coord-27)/9) == save_clicks_y[j]){
 						is_selected = true
 						break
 					}
@@ -3435,6 +3631,7 @@ function DetectGridClick(event,is_render_call){
 		document.getElementById( 'extream_weeks' ).innerHTML = ""
 	}
 	if (can_fade){
+		console.log(unit_muls)
 		var txt = ""
 		for (var i=0; i < reading_options.length; i++){
 			method_options = Object.keys(all_data[reading_options[i]]) 
@@ -3461,14 +3658,20 @@ function DetectGridClick(event,is_render_call){
 					var coords = [save_clicks_x[num],save_clicks_y[num]]
 					if (Math.min(...coords) >= 0 && wx_grdata[reading_types[0]][method_types[0]][coords[1]][coords[0]] != null){
 						var value = false
-						if (is_seasonaly_adjusted){
+						if (is_seasonaly_adjusted && !['dir_net','speed_net','dir_modal'].includes(method_options[j])){
+							var div = 1
+							if (expon==2){
+								div = 127
+							}
 							let st_txt = ''
-							if (parseFloat(((((all_data[reading_options[i]][method_options[j]][save_clicks_y[num]][save_clicks_x[num]]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2)) > 0){
+							
+							if (parseFloat(((((all_data[reading_options[i]][method_options[j]][save_clicks_y[num]][save_clicks_x[num]]-127)*div*(compresion[reading_options[i]][method_options[j]]["scale"]**expon))*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2)) > 0){
 								st_txt = '+'
 							}
-							value = parseFloat(((((all_data[reading_options[i]][method_options[j]][save_clicks_y[num]][save_clicks_x[num]]*compresion[reading_options[i]][method_options[j]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul-(((127*compresion[reading_options[i]][method_options[i]]["scale"])**expon)*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2))
+							
+							value = parseFloat(((((all_data[reading_options[i]][method_options[j]][save_clicks_y[num]][save_clicks_x[num]]-127)*div*(compresion[reading_options[i]][method_options[j]]["scale"]**expon))*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0])*mul).toFixed(2))
 						}
-						if (!value) {
+						if (value === false) {
 							value_list[j].push(((all_data[reading_options[i]][method_options[j]][save_clicks_y[num]][save_clicks_x[num]]*compresion[reading_options[i]][method_options[j]]["scale"])**expon+compresion[reading_options[i]][method_options[j]]["min"])*unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][0]+unit_muls[unit_sets[unit_num]][reading_options[i]][method_options[j]][1]);
 						}
 						else {
@@ -3508,12 +3711,12 @@ function DetectGridClick(event,is_render_call){
 					}
 					let new_dist = Math.sqrt(x**2+y**2)
 					if (method_options[j] == 'speed_net'){
-						compressed_value = new_dist
+						compressed_value = new_dist/value_list[j].length
 					}
-					else{
+					else {
 						compressed_value = Math.acos(x/new_dist)
 						if (Math.sign(y) == -1){
-							compressed_value = compressed_value + Math.PI
+							compressed_value = 2*Math.PI - compressed_value
 						}
 						compressed_value *= 180/Math.PI
 					}
@@ -3522,7 +3725,7 @@ function DetectGridClick(event,is_render_call){
 					compressed_value = value_list[j].reduce((a, b) => a + b, 0)/value_list[j].length
 				}
 				var st_txt = ''
-				if (is_seasonaly_adjusted){
+				if (is_seasonaly_adjusted && !['dir_net','speed_net','dir_modal'].includes(method_options[j])){
 					if (compressed_value > 0){
 						st_txt = '+'
 					}
@@ -3751,14 +3954,17 @@ function horizontalArrowHandler(x_dif) {
 		shift_mul = 10
 	}
 	for (i in selects){
+		console.log(selects[i])
 		var select = selects[i]
 		var num = select[1]
 		var dupelicate_ind = NaN
 		var dupelicate_save = null
+		var has_dupe = false
 		if (select[0] == 0){
 			var min = 13
 			dupelicate_ind = 0
-			dupelicate_save = click_coords[num][0]
+			dupelicate_save = click_coords[num][0].slice()
+			has_dupe = true
 		}
 		else {
 
@@ -3766,19 +3972,27 @@ function horizontalArrowHandler(x_dif) {
 		}
 		if (select[0] == click_coords[num].length-1){
 			dupelicate_ind = click_coords[num].length-1
-			dupelicate_save = click_coords[num][click_coords[num].length-1]
+			dupelicate_save = click_coords[num][click_coords[num].length-1].slice()
 			var max = 270
+			has_dupe = true
 		}
 		else {
 			var max = click_coords[num][select[0]+1][0]
 		}
 		var select_draw = select_draws[i]
 		click_coords[num][select[0]][0] += x_dif*shift_mul
+		
 		if (click_coords[num][select[0]][0] > max){
 			click_coords[num][select[0]][0] = max
 		}
 		if (click_coords[num][select[0]][0] < min){
 			click_coords[num][select[0]][0] = min
+		}
+		if (has_dupe && dupelicate_ind === 0){
+			click_coords[num].unshift(dupelicate_save)
+			selects[i][0] += 1
+		} else if (has_dupe){
+			click_coords[num].push(dupelicate_save)
 		}
 		select_draw.remove()
 		var draw = draws[num];
@@ -4713,24 +4927,29 @@ function RenderGrid(mins_maxes){
 		has_grad_list = true
 	}
 	let t3 = Date.now()
+	for (streak of Streaks_back){
+		streak.remove()
+	}
+	Streaks_back = []
 	if (is_trend){
-		grid_draw.rect( 9*52, 9*num_years ).move( 35, 1).attr({
+		
+		Streaks_back.push(grid_draw.rect( 9*52, 9*num_years ).move( 35, 1).attr({
 					fill: "#ffffffdd"
-		});
+		}));
 	    for ( k=0; k<num_years; k++ ) {
 	        sy = k * boxspace + off_y;
 	        // draw year label every 3 rows, vertically centered on the row, to the left of the grid
-	        syear = num_years + start_year - k;  
-			var opacity = "bb"      
-	        if ( !((syear-1)%5) || k == 0) {
-				if (!((syear-1)%10)){
-					opacity = "ff" 
-				}
-	            var stext = grid_draw.text( `${syear-1}` ).font('size',12).font('family','Arial');
-	            syear_width = stext.length()+6;
-	            syear_height = stext.bbox().height/2; // bbox is double for some reason.
-	            stext.move( off_x - syear_width, sy - 2 );
-	        }
+	        syear = num_years + start_year - k;
+			// var opacity = "bb"
+			// 	        if ( !((syear-1)%5) || k == 0) {
+			// 	if (!((syear-1)%10)){
+			// 		opacity = "ff"
+			// 	}
+			// 	            var stext = grid_draw.text( `${syear-1}` ).font('size',12).font('family','Arial');
+			// 	            syear_width = stext.length()+6;
+			// 	            syear_height = stext.bbox().height/2; // bbox is double for some reason.
+			// 	            stext.move( off_x - syear_width, sy - 2 );
+			// 	        }
 			var fillcols = []
 	        for ( p=0; p<num_weeks; p++ ) {
 	            // var fillcol = color0;
@@ -4783,15 +5002,16 @@ function RenderGrid(mins_maxes){
 			}
 			for ( p=0; p<num_weeks; p++ ) {
 				if (fillcols[p][0] && fillcols[p][1] > 0 && fillcols[p][6] > 0){
-		            var rect = draw.rect( fillcols[p][6]*fillcols[p][1], fillcols[p][1] ).move( fillcols[p][4]+fillcols[p][2], fillcols[p][5]+fillcols[p][2] ).attr({
+		            var rect = grid_draw.rect( fillcols[p][6]*fillcols[p][1], fillcols[p][1] ).move( fillcols[p][4]+fillcols[p][2], fillcols[p][5]+fillcols[p][2] ).attr({
 		                'fill':fillcols[p][0],
 		                'shape-rendering':fillcols[p][3],
 		                'stroke-width': 0
 		            });
+					Streaks_back.push(rect)
 				}
 	        }
 
-	        gridlines.push(draw.rect( (num_weeks) * boxspace, 1 ).move( off_x, sy ).attr({
+	        gridlines.push(grid_draw.rect( (num_weeks) * boxspace, 1 ).move( off_x, sy ).attr({
 	            'fill':'#ffffff'+opacity,
 	            'shape-rendering':'crispEdges',
 	            'stroke-width': 0 
