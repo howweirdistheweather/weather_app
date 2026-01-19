@@ -299,9 +299,9 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         else:
             time_dim_name = OLD_TIME_DIMENSION
 
-        total_num_hours = min( ds.dims[time_dim_name], total_num_hours )
-        num_lat         = ds.dims['latitude']
-        num_long        = ds.dims['longitude']
+        total_num_hours = min( ds.sizes[time_dim_name], total_num_hours )
+        num_lat         = ds.sizes['latitude']
+        num_long        = ds.sizes['longitude']
         num_dimensions  = len(ds.dims)
 
         assert total_num_hours >= 0
