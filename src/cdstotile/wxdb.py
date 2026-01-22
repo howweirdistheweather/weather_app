@@ -32,6 +32,7 @@ WXDB_NUM_YEARS  = WXDB_END_YEAR - WXDB_START_YEAR
 WXDB_NUM_WEEKS  = 52
 WXDB_NUM_LONGIDX_GLOBAL = 1440
 WXDB_NUM_LATIDX_GLOBAL  = 721
+WXDB_NULL_FILL = 255
 
 WXDB_DATASET = 'wxdb'
 WXDB_FILE_ID = 'WXDB0001'
@@ -105,7 +106,7 @@ def create_wxdb( filename:str ):
     #
     wxchunk = (100,1,1,52,wxdb_num_vars)
     # fill with our special/null value 255
-    wxds = wxfile.create_dataset( WXDB_DATASET, wxshape, dtype='uint8', fillvalue=255, chunks=wxchunk )
+    wxds = wxfile.create_dataset( WXDB_DATASET, wxshape, dtype='uint8', fillvalue=WXDB_NULL_FILL, chunks=wxchunk )
     print( 'debug: wxdb done create_dataset' )
     wxds.attrs['WXDB_FILE_ID']          = WXDB_FILE_ID
     wxds.attrs['WXDB_START_YEAR']       = WXDB_START_YEAR
@@ -174,12 +175,22 @@ def flush_wxdb():
 
 
 # write 1 years worth of data for all locations. can be a full 52 weeks or less
-def write_wxdb_lat( year:int, all_array:numpy.array ):
+def write_wxdb_lat( fupdate:bool, year:int, all_array:numpy.array ):
     global wxdb_wxfile, wxdb_ds, wxdb_num_vars, wxdb_vartable
     year_idx = year - WXDB_START_YEAR
     num_wk = len(all_array[0,0])
-    print( f'debug: num_wk {num_wk}' )
-    wxdb_ds[ :, :, year_idx, :num_wk ] = all_array[:,:,:num_wk]
+    print( f'debug: num_wk {num_wk}', flush=True )
+    if fupdate:
+        # do update/fast check
+        # we will let location 0,0 be the test for all locations for this year.
+        # check each week to see if it is unset. set it if needed.
+        for week_idx in range(num_wk):
+            if numpy.all(wxdb_ds[0, 0, year_idx, week_idx] == WXDB_NULL_FILL):
+                print( f'debug: week_idx {week_idx} not set', flush=True )
+                wxdb_ds[ :, :, year_idx, week_idx ] = all_array[:,:,week_idx]
+    else:
+        # do full year assignment. this is slow!
+        wxdb_ds[ :, :, year_idx, :num_wk ] = all_array[:,:,:num_wk]
 
 
 # write 1 years worth of data at one location, however many weeks are present

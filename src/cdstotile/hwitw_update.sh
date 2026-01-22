@@ -10,7 +10,7 @@ tool=$1
 : ${DATA_OUTPUT_DIR:='.'}
 : ${CDS_TOOL_DIR:=.}
 
-# Start from the current year, or from $CDS_START_YEAR if it is already set
+# Start from the current year minus one, or from $CDS_START_YEAR if it is already set
 : ${CDS_START_YEAR:=$(date -d '1 year ago'  +%Y)}
 : ${CDS_END_YEAR:=$(date +%Y)}
 
