@@ -100,3 +100,4 @@ docker buildx inspect --bootstrap
 docker buildx build --platform linux/arm64/v8,linux/amd64 --push -t ghcr.io/nceas/hwitw:1.0.0 -f helm/Dockerfile ./src
 ```
 
+This should be blocked
