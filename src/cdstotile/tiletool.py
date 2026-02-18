@@ -299,9 +299,9 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         else:
             time_dim_name = OLD_TIME_DIMENSION
 
-        total_num_hours = min( ds.dims[time_dim_name], total_num_hours )
-        num_lat         = ds.dims['latitude']
-        num_long        = ds.dims['longitude']
+        total_num_hours = min( ds.sizes[time_dim_name], total_num_hours )
+        num_lat         = ds.sizes['latitude']
+        num_long        = ds.sizes['longitude']
         num_dimensions  = len(ds.dims)
 
         assert total_num_hours >= 0
@@ -317,6 +317,7 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         } )
 
     start_week = 0
+    # calculate number of FULL weeks in the input data (note the integer divide //)
     num_weeks = min( total_num_hours // HOURS_PER_WEEK, WEEKS_PER_YEAR )
     # create netcdf Output file
     if fcalc == True or (fupdate == True and fout_exists == False) or fupdate == False:
@@ -334,7 +335,6 @@ def process_data_group( flag_args:dict, inp_path:str, out_path:str, dir_name:str
         print( f'\rOutput {o_names["filename"]}', flush=True )
 
     # for each week present in the input data
-    #debug
     for week_i in range( start_week, num_weeks ):
 
         # for each Dataset needed by the data_group
@@ -531,6 +531,7 @@ def update_wxdb( flag_args:dict, out_path:str, start_year:int, end_year:int ):
             grab_data_array = numpy.zeros(
                 (NUM_LATIDX_GLOBAL, NUM_LONGIDX_GLOBAL, num_weeks, num_wx_vars),
                 dtype=numpy.uint8 )
+
             # for each variable, get all weeks of data for year for all locations
             var_idx = 0
             for var_name in wxvtable:
@@ -544,8 +545,8 @@ def update_wxdb( flag_args:dict, out_path:str, start_year:int, end_year:int ):
                 var_idx += 1
 
             # write the years worth of data to disk
-            print( 'debug: write wxdb' )
-            write_wxdb_lat( year, grab_data_array )
+            print( 'debug: write wxdb', flush=True )
+            write_wxdb_lat( fupdate, year, grab_data_array )
 
             # clear the progress output line from screen
             if show_progress:
@@ -617,7 +618,7 @@ def main():
     load_netcdfs( flag_args, input_path, output_path, start_year, end_year )
 
     # process the netcdfs into the wxdb
-    # import cProfile,pstats
+    # code for profiling: import cProfile,pstats
     # profob = cProfile.Profile()
     # profob.enable()
     update_wxdb( flag_args, output_path, start_year, end_year )

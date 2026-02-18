@@ -46,7 +46,7 @@ DAYS_PER_YEAR = 365
 # download era5 or era5 back extention data to netcdf files
 def download_dataset( output_path:str, start_year:int, end_year:int,
                       area_lat_long, cds_variables, force_download=False ):
-    
+
     assert start_year <= end_year
     years = list( range( start_year, end_year + 1 ) )
 
@@ -69,7 +69,7 @@ def download_dataset( output_path:str, start_year:int, end_year:int,
         era5t_end_date = current_date - datetime.timedelta( days=5 )
         if year >= era5t_end_date.year:
             end_day = era5t_end_date.timetuple().tm_yday
-            
+
         for var_name in cds_variables:
             for day in range( 1, end_day + 1 ):
                 lfut.append(
@@ -99,7 +99,7 @@ def download_cds_var( output_path:str, cds_ds_name, dir_name, year, day_of_year,
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
     #clog = logging.getLogger[ 'cdsapi' ]
     logging.disable( level=logging.CRITICAL+1 )
-    
+
     # file naming scheme
     doy_str = str( day_of_year ).zfill( 3 )
     pathname = f'{output_path}/{dir_name}/{year}/{cds_var_name}/'
@@ -123,7 +123,7 @@ def download_cds_var( output_path:str, cds_ds_name, dir_name, year, day_of_year,
         return
 
     req_date = datetime.date(year, 1, 1) + dateutil.relativedelta.relativedelta( days=+(day_of_year-1) )
-    
+
     request_dict = {
         'product_type': 'reanalysis',
         'format': 'netcdf',
@@ -146,8 +146,9 @@ def download_cds_var( output_path:str, cds_ds_name, dir_name, year, day_of_year,
 
     tempfullname = fullname + f'.tempdl'
     print(f'{filename} requested.')
+    # request file  (expect SSL warnings here if verify:0 in .cdsapirc)
     r = cds.retrieve( cds_ds_name, request_dict, tempfullname )
-    ## rename completed download
+    # rename completed download
     os.rename( tempfullname, fullname )
     pass
 
@@ -177,7 +178,7 @@ def main():
     parsl.clear()
     parsl.load(local_threads)
 
-    app_version = "0.9.6"
+    APP_VERSION = "1.1.0"
     current_time = datetime.datetime.now()
     start_year = 1950
     end_year = current_time.year
@@ -185,7 +186,7 @@ def main():
     output_path = '.'
 
     # hello
-    print( f'** HWITW Copernicus data download tool v{app_version} **\n')
+    print( f'** HWITW Copernicus data download tool v{APP_VERSION} **\n')
 
     # Initialize parser
     parser = argparse.ArgumentParser()

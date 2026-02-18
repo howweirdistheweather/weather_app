@@ -27,7 +27,7 @@ def remove_expver( filename:str ):
     #ERA5 = xarray.open_mfdataset( filename, combine='by_coords', chunks={'time': 52} )
     ERA5 = xarray.open_dataset( filename, chunks={'time': 52} )
 
-    if 'expver' not in ERA5.dims.keys():
+    if 'expver' not in ERA5.dims:
         return
 
     print( 'debug: remove_expver ' + filename )

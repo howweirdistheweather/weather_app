@@ -4,7 +4,7 @@
 FROM python:3.13.5
 LABEL org.opencontainers.image.source="https://github.com/howweirdistheweather/weather_app"
 LABEL org.opencontainers.image.title="How Weird is the Weather (HWITW)"
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.version="1.2.0"
 WORKDIR /app
 RUN groupadd -g 1004 datateam && useradd -m -u 1065 -g 1004 -s /bin/bash hwitw
 RUN apt update && apt install -y vim libhdf5-dev
