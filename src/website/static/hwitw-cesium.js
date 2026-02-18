@@ -25,6 +25,7 @@ console.log('awerstdyfg')
 let lastPositionString = [];
 
 // Set up the Cesium viewer.
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwNDVhMmIxNi0zN2Y3LTQ5MmMtYTkzZS0wNWI3YzBlNTI5ZWQiLCJpZCI6MzkxNTQyLCJpYXQiOjE3NzEzOTAyNjZ9.MAOZNa6Kzi11FCjsGqA6nPgEMf_BT6BLQ2hyhNaX5Ig';
 const viewer = new Cesium.Viewer("cesiumContainer", {
       selectionIndicator: false,
       infoBox: false,
