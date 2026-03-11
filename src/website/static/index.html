@@ -19,7 +19,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>HWITW Viewer</title>
+  <title>How weird is the weather</title>
   <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.0/dist/svg.min.js"></script>
   <link rel="icon" href="favicon_no16.ico">
   <style>
@@ -164,6 +164,58 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 	  -webkit-user-select: none;
 	  pointer-events: none; /* optional: clicks pass through text */
 	}
+	.switch {
+	  position: relative;
+	  display: inline-block;
+	  width: 46px;
+	  height: 20px;
+	}
+
+	.switch input { 
+	  opacity: 0;
+	  width: 0;
+	  height: 0;
+	}
+
+	.slider {
+	  position: absolute;
+	  cursor: pointer;
+	  top: 0;
+	  left: 0;
+	  right: 0;
+	  bottom: 0;
+	  background-color: #ccc;
+	  -webkit-transition: 0s;
+	  transition: 0s;
+	  border-radius: 10px;
+	}
+
+	.slider:before {
+	  position: absolute;
+	  content: "";
+	  height: 14px;
+	  width: 16px;
+	  left: 4px;
+	  bottom: 3px;
+	  background-color: white;
+	  -webkit-transition: 0s;
+	  transition: 0s;
+	  border-radius: 50%;
+	}
+
+	input:checked + .slider {
+	  background-color: #ccc;
+	}
+
+	input:focus + .slider {
+	  box-shadow: 0 0 1px #ccc;
+	}
+
+	input:checked + .slider:before {
+	  -webkit-transform: translateX(22px);
+	  -ms-transform: translateX(22px);
+	  transform: translateX(22px);
+	}
 	html, body {
 	  overflow-anchor: none;
 	}
@@ -171,6 +223,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 </head>
 <body>
   <a id="downloadAnchorElem" style="display:none"></a>
+  
   <img src="720px_HWITW_logo_2color.png" alt="Description of the image" width="144" height="103">
   <div style="display: inline-block;">
 	  <div style="display: inline-block;">
@@ -180,6 +233,8 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 		  <select id=color_selector style="display: inline-block;"><option value="0">purple</option><option value="1">red</option><option value="2">blue</option><option value="3">green</option><option value="4">sepia</option><option value="5">hot-cold</option><option value="6">pastell</option></select>
 		  <input type="checkbox" id="color_grad" style="display: inline-block; margin-left: 10px" name="color_grad" value="1"> Use color gradients
 		  <div id=extream_weeks style="display: inline-block; margin-left: 10px;"></div>
+		  <button id="undo" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;" value="1">Undo</button>
+		  <button id="redo" type="button" style="display: inline-block; margin-left: 0px; background-color: #fff; border-width: thin; border-radius: 2px;" value="1">Redo</button>
 		  <button id="next" type="button" style="display: inline-block; margin-left: 10px; background-color: #fff; border-width: thin; border-radius: 2px;" value="1">Next</button>
 		  <div></div>
 		  <input type="checkbox" id="seasonal_adjust" style="display: inline-block;" name="seasonal_adjust" value="1"> Seasonally adjusted metrics
@@ -209,6 +264,14 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 	    <input type="checkbox" id="trend" style="display: inline-block; margin-left: 10px" name="enable_line_editing" value="1"> Display streaks
 	    <div id=sensetivity_slider_holder style="display: inline-block; margin-left: 20px;"></div>
 		<input type="checkbox" id="do_PDO" style="display: inline-block; margin-left: 20px" name="enable_line_editing" value="1"> Display PDO and ENSO
+	  </div>
+	  <div id="advanced2" style="visibility: hidden;">
+		<div style="display: inline-block;"> Arithmetic mean </div>
+	    <label class="switch">
+	      <input type="checkbox" id="avg">
+	      <span class="slider"></span>
+	    </label>
+		<div style="display: inline-block;"> Geometric mean </div>
 	  </div>
 	</div>
   <!--input type="checkbox" id="temp" style="display: inline-block; margin-left: 20px" name="temp" value="1"> Display PDO and ENSO-->
