@@ -182,30 +182,14 @@ document.onkeydown = function() {
 		select_draws = []
 	}
 	if (key == 90 && event.metaKey){
-		is_undoing = true
-		if (event.shiftKey && redo_states.length > 0){
-			saveState("undo")
-			prev_states.push(state_dict)
-			state_dict = redo_states[redo_states.length-1]
-			loadState()
-			redo_states.splice(-1)
-			is_shifting = false
-			is_weigth_sliding = false
-			is_range_sliding = false
-			is_sensetivity_sliding = false
+		
+		if (!event.shiftKey && prev_states.length > 0){
+			undo()
 		}
-		else if (!event.shiftKey && prev_states.length > 0){
-			saveState("undo")
-			redo_states.push(state_dict)
-			state_dict = prev_states[prev_states.length-1]
-			loadState()
-			prev_states.splice(-1)
-			is_shifting = false
-			is_weigth_sliding = false
-			is_range_sliding = false
-			is_sensetivity_sliding = false
+		else if (event.shiftKey && redo_states.length > 0){
+			redo()
 		}
-		is_undoing = false
+		
 	}
 };
 
@@ -226,6 +210,34 @@ function download(filename, text) {
 
 	document.body.removeChild(element);
 }
+function undo(){
+	is_undoing = true
+	saveState("undo")
+	redo_states.push(state_dict)
+	state_dict = prev_states[prev_states.length-1]
+	loadState()
+	prev_states.splice(-1)
+	is_shifting = false
+	is_weigth_sliding = false
+	is_range_sliding = false
+	is_sensetivity_sliding = false
+	is_undoing = false
+}
+function redo(){
+	is_undoing = true
+	saveState("undo")
+	prev_states.push(state_dict)
+	state_dict = redo_states[redo_states.length-1]
+	loadState()
+	redo_states.splice(-1)
+	is_shifting = false
+	is_weigth_sliding = false
+	is_range_sliding = false
+	is_sensetivity_sliding = false
+	is_undoing = false
+}
+
+var vertion = 1
 var state_dict = {}
 var prev_states = []
 var redo_states = []
@@ -245,6 +257,7 @@ var render_delay = 50
 var timerIDs = []
 var pre_time_weight = 0
 var timerIDs_weight = []
+var avg_type = 0
 
 var is_advanced_setting = false
 var is_trend = false
@@ -690,9 +703,9 @@ if (!querrySTR || querrySTR == "0" || tutorial !== false){
 	// }
 	// updateQuerry([false,1,false,[51],[74],0,1,0.33,0.66,{13:0,115:0,165:62.5,267:62.5},[1],0,['temperature'],['avg'],[1],false,false,0,0])
 	var url = new URL(window.location.href);
-	url.searchParams.set("state","[[false,2,ĂĄĆ[46],[74Đ0,1,0.33ę.66đĀ1ĝ0Đ[109ęħ165,62.5ħ27ĖĲĴ]ļđ1ĕđĦŁĭĐĊąĉăŇĖĖņeĕ]");
+	url.searchParams.set("state","[[false,2,ĂĄĆ[46],[74Đ0,1,0.33ę.66đĀ1ĝ0Đ[109ęħ165,62.5ħ27ĖĲĴ]ļđ1ĕđĦŁĭĐĊąĉăŇĖĖņĆōňċĐĿ");
 	window.history.pushState(null, null, url);
-	broken_querry = true
+	querrySTR = urlParams.get('state')
 }
 urlParams = new URLSearchParams(window.location.search);
 querrySTR = urlParams.get('state')
@@ -721,7 +734,7 @@ fetch(url , {   method:'GET',
 				let t0 = Date.now()
                 start_data = data;//JSON.parse( data.response );
 				if (devtools){
-					//start_data = data_temp
+					start_data = data_temp
 					console.log(start_data)
 				}
 				start_year = start_data["data_specs"]["start_year"];
@@ -806,13 +819,14 @@ fetch(url , {   method:'GET',
 				let t4 = Date.now()
 				if (querrySTR) {
 					loadFromeQuerry(querrySTR)
+				} else {
+					loadFromeQuerry(default_querry)
 				}
 				has_loaded = true
 				if (broken_querry){
 					LoadMethodDropdown(0,0)
 				}
 				saveState("no_save")
-				
 				// console.log("times")
 // 				console.log(t1-t0)
 // 				console.log(t2-t1)
@@ -1046,6 +1060,12 @@ if (tutorial === false){
 	}
 	
 }
+var undo_btn = document.getElementById("undo")
+undo_btn.addEventListener("click",undo);
+
+var redo_btn = document.getElementById("redo")
+redo_btn.addEventListener("click",redo);
+		
 
 
 var color_selector = document.getElementById("color_selector")
@@ -1092,15 +1112,17 @@ advanced_options.onchange =
 			is_advanced_setting = true
 			
 			if (advanced){
-				if (doPDO || enable_line_editing.checked || is_trend) {
+				if (doPDO || enable_line_editing.checked || is_trend || avg_type) {
 					advanced_options.checked = true
 				} else {
 					document.getElementById("advanced").style.visibility = 'hidden';
+					document.getElementById("advanced2").style.visibility = 'hidden';
 					advanced = !advanced
 				}
 				
 			} else {
 				document.getElementById("advanced").style.visibility = 'visible';
+				document.getElementById("advanced2").style.visibility = 'visible';
 				advanced = !advanced
 			}
 			is_advanced_setting = false
@@ -1254,6 +1276,20 @@ reset.addEventListener("click",function () {
 	window.location.reload();
 });
 
+var avg_checkbox = document.getElementById("avg")
+avg_checkbox.onchange =
+		function () {
+			if (avg_checkbox.checked){
+				avg_type = true
+			}
+			else {
+				avg_type = false
+			}
+			saveState()
+			RenderGrid()
+		};
+
+
 
 var unit_selector = document.getElementById("unit_selector")
 unit_selector.onchange =
@@ -1381,7 +1417,8 @@ function saveState(update_type="base"){
 		'color_num':color_num,
 		'unit_num':unit_num,
 		'color_grads':color_grads,
-		'preserve_metrics':preserve_metrics
+		'preserve_metrics':preserve_metrics,
+		'avg_type':avg_type
 	}
 	if (tutorial !== false){
 		is_matching = true
@@ -1483,7 +1520,7 @@ function getState(){
 	var t_click_coords = JSON.parse(JSON.stringify(click_coords));
 	let state = [is_trend,sensetivity,is_seasonaly_adjusted,mins.slice(),maxes.slice(),wx_grdata_min,
 		wx_grdata_max,wx_range_val0,wx_range_val1,t_click_coords.slice(),weight_vals.slice(),measurement_index,
-		reading_types.slice(),method_types.slice(),prevs.slice(),doPDO,enable_line_editing.checked,color_num,unit_num,color_grads,preserve_metrics]
+		reading_types.slice(),method_types.slice(),prevs.slice(),doPDO,enable_line_editing.checked,color_num,unit_num,color_grads,preserve_metrics,avg_type]
 	return state
 }
 
@@ -1502,7 +1539,7 @@ function updateQuerry(state=null){
 	}
 	state[7] = Math.round(state[7]*100)/100;
 	state[8] = Math.round(state[8]*100)/100;
-	state = [state,0]
+	state = [state,vertion]
 	let querry = lzw_encode(JSON.stringify(state))
 	var url = new URL(window.location.href);
 	url.searchParams.set("state", querry);
@@ -1521,7 +1558,11 @@ function loadFromeQuerry(querry) {
 		return
 	}
 	var state = JSON.parse(querry)
+	const s_vertion = state[1]
 	state = state[0]
+	for (i = s_vertion; i <= vertion; i++){
+		fixState(state,i)
+	}
 	for (var i = 0; i <= state[11]; i++){
 		state[12][i] = reading_options[state[12][i]]
 		state[13][i] = method_dict[state[12][i]][state[13][i]]
@@ -1547,62 +1588,18 @@ function loadFromeQuerry(querry) {
 		'color_num':state[17],
 		'unit_num':state[18],
 		'color_grads':state[19],
-		'preserve_metrics':state[20]
+		'preserve_metrics':state[20],
+		'avg_type':state[21]
 	}
+	
 	loadState()
 }
-
-function lzw_encode(s) {
-    var dict = {};
-    var data = (s + "").split("");
-    var out = [];
-    var currChar;
-    var phrase = data[0];
-    var code = 256;
-    for (var i=1; i<data.length; i++) {
-        currChar=data[i];
-        if (dict[phrase + currChar] != null) {
-            phrase += currChar;
-        }
-        else {
-            out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
-            dict[phrase + currChar] = code;
-            code++;
-            phrase=currChar;
-        }
-    }
-    out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
-    for (var i=0; i<out.length; i++) {
-        out[i] = String.fromCharCode(out[i]);
-    }
-    return out.join("");
+function fixState(state,i){
+	if (i === 0){
+		state.push(false)
+	}
 }
 
-// Decompress an LZW-encoded string
-function lzw_decode(s) {
-    var dict = {};
-    var data = (s + "").split("");
-    var currChar = data[0];
-    var oldPhrase = currChar;
-    var out = [currChar];
-    var code = 256;
-    var phrase;
-    for (var i=1; i<data.length; i++) {
-        var currCode = data[i].charCodeAt(0);
-        if (currCode < 256) {
-            phrase = data[i];
-        }
-        else {
-           phrase = dict[currCode] ? dict[currCode] : (oldPhrase + currChar);
-        }
-        out.push(phrase);
-        currChar = phrase.charAt(0);
-        dict[code] = oldPhrase + currChar;
-        code++;
-        oldPhrase = phrase;
-    }
-    return out.join("");
-}
 function loadState(){
 	is_loading = true
 	t_measurement_index = measurement_index
@@ -1633,6 +1630,8 @@ function loadState(){
 	if (is_trend){
 		updateTrends(sensetivity)
 	}
+	avg_type = state_dict['avg_type']
+	avg_checkbox.checked = avg_type
 	is_seasonaly_adjusted = state_dict['is_seasonaly_adjusted']
 	updateSeasonality(true)
 	document.getElementById("seasonal_adjust").checked = is_seasonaly_adjusted;
@@ -1689,15 +1688,70 @@ function loadState(){
 	if (tutorial === false){
 		document.getElementById("preserve_metrics").checked = state_dict['preserve_metrics']
 	}
-	LoadWXGrid()
-	RenderGrid()
+	
 	saveState("no_save")
-	if (doPDO || enable_line_editing.checked || is_trend) {
+	if (doPDO || enable_line_editing.checked || is_trend || avg_type) {
 		advanced_options.checked = true
 		document.getElementById("advanced").style.visibility = 'visible';
+		document.getElementById("advanced2").style.visibility = 'visible';
 		advanced = true
 	}
+	LoadWXGrid()
+	RenderGrid()
 }
+
+function lzw_encode(s) {
+    var dict = {};
+    var data = (s + "").split("");
+    var out = [];
+    var currChar;
+    var phrase = data[0];
+    var code = 256;
+    for (var i=1; i<data.length; i++) {
+        currChar=data[i];
+        if (dict[phrase + currChar] != null) {
+            phrase += currChar;
+        }
+        else {
+            out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
+            dict[phrase + currChar] = code;
+            code++;
+            phrase=currChar;
+        }
+    }
+    out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
+    for (var i=0; i<out.length; i++) {
+        out[i] = String.fromCharCode(out[i]);
+    }
+    return out.join("");
+}
+
+// Decompress an LZW-encoded string
+function lzw_decode(s) {
+    var dict = {};
+    var data = (s + "").split("");
+    var currChar = data[0];
+    var oldPhrase = currChar;
+    var out = [currChar];
+    var code = 256;
+    var phrase;
+    for (var i=1; i<data.length; i++) {
+        var currCode = data[i].charCodeAt(0);
+        if (currCode < 256) {
+            phrase = data[i];
+        }
+        else {
+           phrase = dict[currCode] ? dict[currCode] : (oldPhrase + currChar);
+        }
+        out.push(phrase);
+        currChar = phrase.charAt(0);
+        dict[code] = oldPhrase + currChar;
+        code++;
+        oldPhrase = phrase;
+    }
+    return out.join("");
+}
+
 
 function downloadData(){
 	let d_reading_options = Object.keys(all_data)
@@ -2016,6 +2070,25 @@ function makeNewMeasurmeant(curent_id_num,is_load_call) {
 	}
 	let t5 = Date.now()
 	
+}
+class Statistic {
+	constructor (parrent_div, onchange_func, slider_class, initial_state){
+		this.onchange_func = onchange_func;
+		this.slider_class = slider_class;
+		if (initial_state){
+			this.reading_type = initial_state['reading_type'];
+			this.method_type = initial_state['method_type'];
+			this.click_coords = initial_state['click_coords'];
+			this.weight = initial_state['weight'];
+		}
+		if (initial_state){
+			this.reading_type = initial_state['reading_type'];
+			this.method_type = initial_state['method_type'];
+			this.click_coords = initial_state['click_coords'];
+			this.weight = initial_state['weight'];
+		}
+		
+	}
 }
 // make wx_grdata an array of zeros
 function ClearWXGridData() {
@@ -3626,7 +3699,7 @@ function DetectGridClick(event,is_render_call){
 		}
 	}
 	if (save_clicks_x.length > 0){
-		document.getElementById( 'extream_weeks' ).innerHTML = "Extream weeks: " + extream_weeks + "/" + save_clicks_x.length
+		document.getElementById( 'extream_weeks' ).innerHTML = "Extreme weeks: " + extream_weeks + "/" + save_clicks_x.length
 	} else {
 		document.getElementById( 'extream_weeks' ).innerHTML = ""
 	}
@@ -4688,7 +4761,12 @@ function RenderGrid(mins_maxes){
 	for ( var n = 0; n < num_years; n++ ) {
 		wx_data.push([]);
 		for ( var m = 0; m < num_weeks; m++ ) {
-			var num = 0;
+			if (avg_type == 0){
+				var num = 0;
+			} else if (avg_type == 1){
+				var num = 1;
+			}
+			
 			for ( var k = 0; k < grids.length; k++ ){ 
 				if (grids[k][n][m] == null || grids[k][n][m] == 255){
 					num = null
@@ -4721,12 +4799,22 @@ function RenderGrid(mins_maxes){
 					var mul = (click_coords[k][ind][1]-click_coords[k][ind-1][1])*255/((relev_coords[1]-relev_coords[0])*histo_hights[k])
 				}
 				//console.log(((grid_val+15-relev_coords[0])*mul+ofset)*weight_vals[k])
-				num += ((grid_val+15-relev_coords[0])*mul+ofset)*weight_vals[k];
+				if (avg_type == 0){
+					num += ((grid_val+15-relev_coords[0])*mul+ofset)*weight_vals[k];
+				} else if (avg_type == 1){
+					num *= ((grid_val+15-relev_coords[0])*mul+ofset)**weight_vals[k];
+				}
+				
 			}
 			if (num == null){
 				wx_data[n].push(null)
 			} else {
-				wx_data[n].push(num/total_weight);
+				if (avg_type == 0){
+					wx_data[n].push(num/total_weight);
+				} else if (avg_type == 1){
+					wx_data[n].push(num**(1/total_weight));
+				}
+				
 			}
 		}
 	}
