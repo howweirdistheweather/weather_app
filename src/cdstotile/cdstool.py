@@ -66,7 +66,7 @@ def download_dataset( output_path:str, start_year:int, end_year:int,
         # handle 5 day data embargo
         end_day = DAYS_PER_YEAR
         current_date = datetime.datetime.now().date()
-        era5t_end_date = current_date - datetime.timedelta( days=5 )
+        era5t_end_date = current_date - datetime.timedelta( days=6 ) # minus 6 so no partial days
         if year >= era5t_end_date.year:
             end_day = era5t_end_date.timetuple().tm_yday
 
@@ -74,7 +74,7 @@ def download_dataset( output_path:str, start_year:int, end_year:int,
             for day in range( 1, end_day + 1 ):
                 lfut.append(
                     download_cds_var( output_path, ds_name, dir_name, year, day,
-                                      area_lat_long, var_name, force_download)
+                                      area_lat_long, var_name, force_download )
                 )
 
     # Wait for the results
