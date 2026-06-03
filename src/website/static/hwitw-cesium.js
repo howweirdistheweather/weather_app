@@ -167,7 +167,7 @@ viewer.baseLayerPicker.viewModel.terrainProviderViewModels.removeAll()
 const scene = viewer.scene;
 
 // Base URL for How Weird Is The Weather.
-const urlBase = "https://hwitw-dev.arcticdata.io/static/index.html?";
+const urlBase = "/static/index.html?";
 //const urlBase = "http://192.168.194.103:5001/static/index.html?";
 
 // Create the Cesium mouse event handler
