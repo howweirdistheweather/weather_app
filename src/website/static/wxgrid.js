@@ -410,7 +410,7 @@ function return2(){
 }
 const input_dict = {"temperature":[-60,131.25,0.75],"ceiling":[0,6375,25], "precipitation":[0,.00255,.00001], "cloud cover":[0,1,0.004]};
 //var wxgrid_url = http://localhost:5001/wxapp/getwxvar?lat=1000&lon=1000
-var wxgrid_url = `/wxapp/getwxvar`;
+var wxgrid_url = `https://hwitw-dev.arcticdata.io/wxapp/getwxvar`;
 var urlParams = new URLSearchParams(window.location.search);
 var tutorial = urlParams.get('tutorial');
 var states = [[tutorial0,[{
