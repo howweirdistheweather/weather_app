@@ -178,7 +178,7 @@ def main():
     parsl.clear()
     parsl.load(local_threads)
 
-    APP_VERSION = "1.1.0"
+    APP_VERSION = "1.3.0"
     current_time = datetime.datetime.now()
     start_year = 1950
     end_year = current_time.year
