@@ -2,6 +2,7 @@
 
 - Project: How Weird is the Weather?
 - Development website: https://hwitw-dev.arcticdata.io
+- Version with a map: https://hwitw-dev.arcticdata.io/static/hwitw-cesium.html
 - Github repo: https://github.com/howweirdistheweather/weather_app
 
 This is the general repository for the web app and managing data from How Weird is the Weather.
